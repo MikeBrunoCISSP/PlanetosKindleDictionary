@@ -5,6 +5,7 @@ public class WordDefinition {
     public string Definition { get; set; }
     public HashSet<InflectionGroup> InflectionGroups { get; set; }
     public int IndexId { get; set; }
+    public bool IsApproved { get; set; } = false;
 
     public override bool Equals(object? obj) {
         return !ReferenceEquals(null, obj)

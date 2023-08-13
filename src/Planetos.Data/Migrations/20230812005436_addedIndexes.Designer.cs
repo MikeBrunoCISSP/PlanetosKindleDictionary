@@ -3,6 +3,7 @@ using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Planetos.Data;
 
@@ -11,9 +12,11 @@ using Planetos.Data;
 namespace Planetos.Data.Migrations
 {
     [DbContext(typeof(PlanetosContext))]
-    partial class PlanetosContextModelSnapshot : ModelSnapshot
+    [Migration("20230812005436_addedIndexes")]
+    partial class addedIndexes
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -113,9 +116,6 @@ namespace Planetos.Data.Migrations
 
                     b.Property<int>("IndexId")
                         .HasColumnType("int");
-
-                    b.Property<bool>("IsApproved")
-                        .HasColumnType("bit");
 
                     b.Property<string>("Name")
                         .IsRequired()

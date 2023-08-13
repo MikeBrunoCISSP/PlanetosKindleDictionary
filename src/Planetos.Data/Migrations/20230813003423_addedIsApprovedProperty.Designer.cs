@@ -3,6 +3,7 @@ using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Planetos.Data;
 
@@ -11,9 +12,11 @@ using Planetos.Data;
 namespace Planetos.Data.Migrations
 {
     [DbContext(typeof(PlanetosContext))]
-    partial class PlanetosContextModelSnapshot : ModelSnapshot
+    [Migration("20230813003423_addedIsApprovedProperty")]
+    partial class addedIsApprovedProperty
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
