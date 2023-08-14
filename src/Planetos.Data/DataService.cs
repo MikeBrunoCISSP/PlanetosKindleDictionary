@@ -8,33 +8,10 @@ public class DataService : IDataService {
     public DataService() {
         _context = new PlanetosContext();
     }
-    public async Task<IServiceOperationResult> AddCharacter(string name, string definition) {
-        return await addWordDefinition("Characters", name, definition);
-    }
 
-    public async Task<IServiceOperationResult> UpdateCharacter(string name, string definition) {
-        throw new NotImplementedException();
-    }
-
-    public async Task<IServiceOperationResult> DeleteCharacter(string name) {
-        throw new NotImplementedException();
-    }
-
-    public async Task<IServiceOperationResult> AddLocation(string name, string definition) {
-        return await addWordDefinition("Locations", name, definition);
-    }
-
-    public async Task<IServiceOperationResult> UpdateLocation(string name, string definition) {
-        throw new NotImplementedException();
-    }
-
-    public async Task<IServiceOperationResult> DeleteLocation(string name) {
-        throw new NotImplementedException();
-    }
-
-    async Task<IServiceOperationResult> addWordDefinition(string indexName, string name, string definition) {
+    public async Task<IServiceOperationResult> CreateWord(string indexName, string name, string definition) {
         var result = new ServiceOperationResult();
-        var idxResult = await getIndex(indexName);
+        var idxResult = await getDictionaryIndex(indexName);
         if (idxResult.IsSuccess) {
             result.ErrorMessage = idxResult.ErrorMessage;
             return result;
@@ -54,15 +31,111 @@ public class DataService : IDataService {
         return result;
     }
 
-    async Task<IServiceOperationResult<DictionaryIndex>> getIndex(string indexName) {
-        var result = new ServiceOperationResult<DictionaryIndex>();
-        var charIdx = _context.Indices.AsNoTracking()
-            .FirstOrDefault(idx => idx.Name == indexName);
-        if (charIdx is not null) {
-            result.Value = charIdx;
+    public async Task<IServiceOperationResult<WordDefinition>> ReadWord(string name) {
+        var result = new ServiceOperationResult<WordDefinition>();
+        try {
+            IQueryable<WordDefinition> query = _context.WordDefinitions;
+            var word = await query.FirstOrDefaultAsync(x => x.Name == name);
+            if (word is null) {
+                result.HResult = ErrorCode.E_FILENOTFOUND;
+                result.ErrorMessage = $"'{name}': Word does not exist.";
+            } else {
+                result.Value = word;
+            }
+        } catch (Exception ex) {
+            ex.SetErrorCode(result);
+        }
+
+        return result;
+    }
+
+    public async Task<IServiceOperationResult> AddCharacter(string name, string definition) {
+        return await addWordDefinition("Characters", name, definition);
+    }
+    public async Task<IServiceOperationResult> AddLocation(string name, string definition) {
+        return await addWordDefinition("Locations", name, definition);
+    }
+    public async Task<IServiceOperationResult> UpdateWord(string name, string newDefinition) {
+        var result = new ServiceOperationResult();
+        try {
+            var findResult = await ReadWord(name);
+            if (!findResult.IsSuccess) {
+                return new ServiceOperationResult(findResult.HResult);
+            }
+            findResult.Value.Definition = newDefinition;
+            await _context.SaveChangesAsync();
+        } catch (Exception ex) {
+            ex.SetErrorCode(result);
+        }
+
+        return result;
+    }
+
+    public async Task<IServiceOperationResult> DeleteWord(string name) {
+        var result = new ServiceOperationResult();
+        try {
+            int delResult = await _context.WordDefinitions.Where(w => w.Name == name).ExecuteDeleteAsync();
+            if (delResult != 1) {
+                //log something.
+            }
+        } catch (Exception ex) {
+            ex.SetErrorCode(result);
+        }
+
+        return result;
+    }
+
+    async Task<IServiceOperationResult> addWordDefinition(string indexName, string name, string definition) {
+        var result = new ServiceOperationResult();
+        var idxResult = await getDictionaryIndex(indexName);
+        if (idxResult.IsSuccess) {
+            result.ErrorMessage = idxResult.ErrorMessage;
             return result;
         }
+
+        var word = new WordDefinition {
+            Name = name,
+            Definition = definition
+        };
         try {
+            idxResult.Value.WordDefinitions.Add(word);
+            await _context.SaveChangesAsync();
+        } catch (Exception ex) {
+            ex.SetErrorCode(result);
+        }
+
+        return result;
+    }
+
+    async Task<IServiceOperationResult> updateWordDefinition(string wordName, string newDefinition) {
+        var result = new ServiceOperationResult();
+        try {
+            var word = _context.WordDefinitions.FirstOrDefault(w => w.Name == wordName);
+            if (word is null) {
+                result.HResult = ErrorCode.E_FILENOTFOUND;
+                result.ErrorMessage = $"'{wordName}': Word does not exist.";
+                return result;
+            }
+
+            word.Definition = newDefinition;
+            await _context.SaveChangesAsync();
+        } catch (Exception ex) {
+            ex.SetErrorCode(result);
+        }
+
+        return result;
+
+    }
+    async Task<IServiceOperationResult<DictionaryIndex>> getDictionaryIndex(string indexName) {
+        var result = new ServiceOperationResult<DictionaryIndex>();
+        try {
+            var charIdx = _context.Indices.AsNoTracking()
+            .FirstOrDefault(idx => idx.Name == indexName);
+            if (charIdx is not null) {
+                result.Value = charIdx;
+                return result;
+            }
+
             charIdx = new DictionaryIndex { Name = indexName };
             _context.Indices.Add(charIdx);
             await _context.SaveChangesAsync();
