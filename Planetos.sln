@@ -7,6 +7,8 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Planetos.Data", "src\Planet
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Planetos.Shared", "src\Planetos.Shared\Planetos.Shared.csproj", "{CC9FF96E-6593-46E2-BA9E-EECB49A241C0}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Tests", "Tests\Tests.csproj", "{9C707030-8E33-4C10-963F-CC21651FC805}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -21,6 +23,10 @@ Global
 		{CC9FF96E-6593-46E2-BA9E-EECB49A241C0}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{CC9FF96E-6593-46E2-BA9E-EECB49A241C0}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{CC9FF96E-6593-46E2-BA9E-EECB49A241C0}.Release|Any CPU.Build.0 = Release|Any CPU
+		{9C707030-8E33-4C10-963F-CC21651FC805}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{9C707030-8E33-4C10-963F-CC21651FC805}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{9C707030-8E33-4C10-963F-CC21651FC805}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{9C707030-8E33-4C10-963F-CC21651FC805}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

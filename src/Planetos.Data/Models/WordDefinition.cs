@@ -1,11 +1,13 @@
 ﻿namespace Planetos.Data.Models;
 public class WordDefinition {
-    public int Id { get; set; }
-    public string Name { get; set; }
-    public string Definition { get; set; }
-    public HashSet<InflectionGroup> InflectionGroups { get; set; }
-    public int IndexId { get; set; }
-    public bool IsApproved { get; set; } = false;
+    public int id { get; set; }
+    public string name { get; set; }
+    public string definition { get; set; }
+    public HashSet<InflectionGroup> inflectionGroups { get; set; }
+    public int indexId { get; set; }
+    public bool isApproved { get; set; } = false;
+    public DateTime dateCreated { get; set; } = DateTime.Now;
+    public DateTime lastUpdated { get; set; } = DateTime.Now;
 
     public override bool Equals(object? obj) {
         return !ReferenceEquals(null, obj)
@@ -13,12 +15,12 @@ public class WordDefinition {
                || (obj is WordDefinition other && equals(other));
     }
     public override int GetHashCode() {
-        return Id.GetHashCode() ^
-               StringComparer.InvariantCultureIgnoreCase.GetHashCode(Name);
+        return id.GetHashCode() ^
+               StringComparer.InvariantCultureIgnoreCase.GetHashCode(name);
     }
 
     protected bool equals(WordDefinition other) {
-        return Id == other.Id
-               || Name.Equals(other.Name, StringComparison.InvariantCultureIgnoreCase);
+        return id == other.id
+               || name.Equals(other.name, StringComparison.InvariantCultureIgnoreCase);
     }
 }

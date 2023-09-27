@@ -2,9 +2,12 @@
 using Planetos.Shared;
 
 namespace Planetos.Data;
-interface IDataService : IDisposable {
-    Task<IServiceOperationResult> CreateWord(string indexName, string name, string definition);
+public interface IDataService : IDisposable {
+    Task<IServiceOperationResult<WordDefinition>> CreateWord(string indexName, string name, string definition);
+    Task<IServiceOperationResult<KindleIndex>> CreateIndex(String indexName);
     Task<IServiceOperationResult<WordDefinition>> ReadWord(string name);
-    Task<IServiceOperationResult> UpdateWord(string name, string newDefinition);
+    Task<IServiceOperationResult<WordDefinition>> UpdateWord(string name, string newDefinition);
     Task<IServiceOperationResult> DeleteWord(string name);
+    Task<IServiceOperationResult> DeleteIndex(string indexName);
+    Task<IServiceOperationResult> DeleteAll();
 }

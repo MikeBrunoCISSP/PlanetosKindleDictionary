@@ -1,10 +1,12 @@
 ﻿namespace Planetos.Data.Models;
 public class Inflection {
-    public int Id { get; set; }
-    public string Name { get; set; }
-    public string Value { get; set; }
-    public bool IsExactMatch { get; set; }
-    public int InflectionGroupId { get; set; }
+    public int id { get; set; }
+    public string name { get; set; }
+    public string value { get; set; }
+    public bool isExactMatch { get; set; }
+    public int inflectionGroupId { get; set; }
+    public DateTime dateCreated { get; set; } = DateTime.Now;
+    public DateTime lastUpdated { get; set; } = DateTime.Now;
 
     public override bool Equals(object? obj) {
         return !ReferenceEquals(null, obj)
@@ -13,12 +15,12 @@ public class Inflection {
     }
 
     public override int GetHashCode() {
-        return Id.GetHashCode() ^
-               StringComparer.InvariantCultureIgnoreCase.GetHashCode(Name);
+        return id.GetHashCode() ^
+               StringComparer.InvariantCultureIgnoreCase.GetHashCode(name);
     }
 
     protected bool equals(Inflection other) {
-        return Id == other.Id ||
-               Name.Equals(other.Name, StringComparison.InvariantCultureIgnoreCase);
+        return id == other.id ||
+               name.Equals(other.name, StringComparison.InvariantCultureIgnoreCase);
     }
 }
