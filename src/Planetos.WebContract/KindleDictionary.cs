@@ -1,4 +1,4 @@
-﻿namespace Planetos.Data.Models;
+﻿namespace Planetos.WebContract;
 public class KindleDictionary {
     public Int32 id { get; set; }
     public String name { get; set; }

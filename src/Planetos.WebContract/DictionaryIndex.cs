@@ -1,26 +1,23 @@
-﻿namespace Planetos.Data.Models;
-public class Inflection {
+﻿namespace Planetos.WebContract;
+public class KindleIndex {
     public int id { get; set; }
     public string name { get; set; }
-    public string value { get; set; }
-    public bool isExactMatch { get; set; }
-    public int inflectionGroupId { get; set; }
+    public HashSet<WordDefinition> wordDefinitions { get; set; } = new();
     public DateTime dateCreated { get; set; } = DateTime.Now;
     public DateTime lastUpdated { get; set; } = DateTime.Now;
 
     public override bool Equals(object? obj) {
         return !ReferenceEquals(null, obj)
                && ReferenceEquals(this, obj)
-               || (obj is Inflection other && equals(other));
+               || (obj is WordDefinition other && equals(other));
     }
-
     public override int GetHashCode() {
         return id.GetHashCode() ^
                StringComparer.InvariantCultureIgnoreCase.GetHashCode(name);
     }
 
-    protected bool equals(Inflection other) {
-        return id == other.id ||
-               name.Equals(other.name, StringComparison.InvariantCultureIgnoreCase);
+    protected bool equals(WordDefinition other) {
+        return id == other.id
+               || name.Equals(other.name, StringComparison.InvariantCultureIgnoreCase);
     }
 }

@@ -1,6 +1,6 @@
 using Planetos.Data;
-using Planetos.Data.Models;
 using Planetos.Shared;
+using Planetos.WebContract;
 
 namespace Tests;
 

@@ -1,5 +1,5 @@
 ﻿using Microsoft.EntityFrameworkCore;
-using Planetos.Data.Models;
+using Planetos.WebContract;
 
 namespace Planetos.Data;
 public class PlanetosContext : DbContext {

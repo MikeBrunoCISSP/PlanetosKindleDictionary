@@ -1,6 +1,6 @@
 ﻿using Microsoft.EntityFrameworkCore;
-using Planetos.Data.Models;
 using Planetos.Shared;
+using Planetos.WebContract;
 
 namespace Planetos.Data;
 public class DataService : IDataService {
@@ -15,7 +15,7 @@ public class DataService : IDataService {
             return result;
         }
 
-        var idxResult = await getDictionaryIndex(indexName);
+        var idxResult = await getKindleIndex(indexName);
         if (!idxResult.IsSuccess) {
             result.HResult = idxResult.HResult;
             result.ErrorMessage = idxResult.ErrorMessage;
@@ -43,8 +43,8 @@ public class DataService : IDataService {
             return result;
         }
         try {
-            var idxResult = await getDictionaryIndex(indexName);
-            if ((await getDictionaryIndex(indexName)).HResult != ErrorCode.E_NOTFOUND) {
+            var idxResult = await getKindleIndex(indexName);
+            if ((await getKindleIndex(indexName)).HResult != ErrorCode.E_NOTFOUND) {
                 result.HResult = ErrorCode.E_DUPLICATE;
                 result.ErrorMessage = $"{indexName}: Index exists.";
                 return result;
@@ -71,6 +71,31 @@ public class DataService : IDataService {
                 result.ErrorMessage = $"'{name}': Word does not exist.";
             } else {
                 result.Value = word;
+            }
+        } catch (Exception ex) {
+            ex.SetErrorCode(result);
+        }
+
+        return result;
+    }
+
+    public async Task<IServiceOperationResult<IEnumerable<WordDefinition>>> ReadIndex(string indexName, string searchPattern = "") {
+        var result = new ServiceOperationResult<IEnumerable<WordDefinition>>();
+        try {
+            var index = await getKindleIndex(indexName);
+            if (!index.IsSuccess) {
+                result.HResult = index.HResult;
+                result.ErrorMessage = index.ErrorMessage;
+                return result;
+            }
+
+            if (String.IsNullOrEmpty(searchPattern)) {
+                var payload = _context.wordDefinitions.Where(w => w.indexId == index.Value.id).AsEnumerable();
+                result.Value = payload;
+            } else {
+                var payload = _context.wordDefinitions.Where(w => w.indexId == index.Value.id
+                && w.name.Contains(searchPattern, StringComparison.OrdinalIgnoreCase)).AsEnumerable();
+                result.Value = payload;
             }
         } catch (Exception ex) {
             ex.SetErrorCode(result);
@@ -115,7 +140,7 @@ public class DataService : IDataService {
     }
 
     public async Task<IServiceOperationResult> DeleteIndex(string indexName) {
-        var findResult = await getDictionaryIndex(indexName);
+        var findResult = await getKindleIndex(indexName);
         if (!findResult.IsSuccess) {
             return findResult;
         }
@@ -149,7 +174,7 @@ public class DataService : IDataService {
         return result;
     }
 
-    async Task<IServiceOperationResult<KindleIndex>> getDictionaryIndex(string indexName) {
+    async Task<IServiceOperationResult<KindleIndex>> getKindleIndex(string indexName) {
         var result = indexName.TestValidIdentifier<KindleIndex>();
         if (!result.IsSuccess) {
             return result;

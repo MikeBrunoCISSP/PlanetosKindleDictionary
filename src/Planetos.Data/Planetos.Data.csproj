@@ -16,6 +16,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\Planetos.Shared\Planetos.Shared.csproj" />
+    <ProjectReference Include="..\Planetos.WebContract\Planetos.WebContract.csproj" />
   </ItemGroup>
 
   <ItemGroup>
