@@ -1,22 +1,21 @@
 ﻿using Microsoft.AspNetCore.Mvc;
-using Planetos.WebContract;
+using Planetos.Data;
 
 namespace Planetos.Web.Api.Controllers;
 
 [ApiController]
 [Route("api/[controller]")]
-public class CharactersController : ControllerBase {
+public class CharactersController : BaseApiController {
+    readonly IDataService _dataService;
+    readonly ILogger<CharactersController> _logger;
+
+    public CharactersController(IDataService dataService, ILogger<CharactersController> logger) {
+        _dataService = dataService;
+        _logger = logger;
+    }
+
     [HttpGet]
-    public JsonResult GetCharacters() {
-        return new JsonResult(new List<WordDefinition>() {
-            new()  {
-                name = "Cercei",
-                definition = "Dowager queen"
-            },
-            new()  {
-                name = "Snow",
-                definition = "Bastard of Winterfell"
-            }
-        });
+    public async Task<IActionResult> GetCharacters() {
+        return GenerateResult(await _dataService.ReadIndex("characters"));
     }
 }
