@@ -148,6 +148,7 @@ public class DataService : IDataService {
             }
             _context.Entry(findResult).CurrentValues.SetValues(updatedWord);
             await _context.SaveChangesAsync();
+            result.Value = findResult;
         } catch (Exception ex) {
             ex.SetErrorCode(result);
         }
@@ -155,13 +156,16 @@ public class DataService : IDataService {
         return result;
     }
 
-    public async Task<IServiceOperationResult> DeleteWord(string name) {
+    public async Task<IServiceOperationResult> DeleteWord(WordDefinition wordDefinition) {
         var result = new ServiceOperationResult();
         try {
-            int delResult = await _context.wordDefinitions.Where(w => w.name == name).ExecuteDeleteAsync();
-            if (delResult != 1) {
-                result.HResult = ErrorCode.E_UNEXPECTED;
+            var findResult = await _context.wordDefinitions.FindAsync(wordDefinition.id);
+            if (findResult == null) {
+                result.HResult = ErrorCode.E_NOTFOUND;
+                return result;
             }
+            _context.wordDefinitions.Remove(wordDefinition);
+            await _context.SaveChangesAsync();
         } catch (Exception ex) {
             ex.SetErrorCode(result);
         }
@@ -169,20 +173,16 @@ public class DataService : IDataService {
         return result;
     }
 
-    public async Task<IServiceOperationResult> DeleteIndex(string indexName) {
-        var findResult = await getKindleIndex(indexName);
-        if (!findResult.IsSuccess) {
-            return findResult;
-        }
-
+    public async Task<IServiceOperationResult> DeleteIndex(KindleIndex kindleIndex) {
         var result = new ServiceOperationResult();
         try {
-            var indexToDelete = findResult.Value;
-            await _context.wordDefinitions.Where(w => w.kindleIndexId == indexToDelete.kindleIndexId).ExecuteDeleteAsync();
-            int rowsEffected = await _context.indices.Where(i => i.kindleIndexId == indexToDelete.kindleIndexId).ExecuteDeleteAsync();
-            if (rowsEffected != 1) {
-                result.HResult = ErrorCode.E_UNEXPECTED;
+            var findResult = await _context.indices.FindAsync(kindleIndex.kindleIndexId);
+            if (findResult == null) {
+                result.HResult = ErrorCode.E_NOTFOUND;
+                return result;
             }
+            _context.indices.Remove(kindleIndex);
+            await _context.SaveChangesAsync();
         } catch (Exception ex) {
             ex.SetErrorCode(result);
         }

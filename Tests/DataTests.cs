@@ -10,7 +10,7 @@ public class DataTests {
     [TestMethod]
     public async Task DataTest() {
         const String indexName = "characters";
-        const String wordName = "Tywin";
+        const String TYWIN = "Tywin";
         const String firstDefinition = "Does not shit gold.";
         const String secondDefinition = "Lord of Casterly Rock.";
 
@@ -19,16 +19,32 @@ public class DataTests {
 
         var tywin = new WordDefinition {
             kindleIndexId = IndexId.Characters,
-            name = wordName,
+            name = TYWIN,
             definition = firstDefinition,
             inflections = new List<Inflection> {
                 new() { value = "Lannister" }
             }
         };
-        //tywin.inflectionGroups.First()!.inflections = new HashSet<Inflection>() { new() { name = "firstInflection" } };
         IServiceOperationResult<WordDefinition> wordResult = await dataService.AddWord(tywin);
         Assert.IsTrue(wordResult.IsSuccess);
-        Assert.AreEqual(wordName, wordResult.Value.name);
+        Assert.AreEqual(TYWIN, wordResult.Value.name);
+
+        const string WINTERFELL = "Winterfell";
+        wordResult = await dataService.AddWord(IndexId.Locations, WINTERFELL, "Seat of House Stark");
+        Assert.IsTrue(wordResult.IsSuccess);
+        Assert.AreEqual(WINTERFELL, wordResult.Value.name);
+
+        wordResult = await dataService.ReadWord(TYWIN);
+        Assert.IsTrue(wordResult.IsSuccess);
+        Assert.AreEqual(TYWIN, wordResult.Value.name);
+
+        var updatedWord = wordResult.Value;
+        updatedWord.definition = secondDefinition;
+        wordResult = await dataService.UpdateWord(updatedWord);
+        Assert.IsTrue(wordResult.IsSuccess);
+        Assert.AreEqual(secondDefinition, wordResult.Value.definition);
+
+
 
         //wordResult = await dataService.UpdateWord(wordName, secondDefinition);
         //Assert.IsTrue(wordResult.IsSuccess);

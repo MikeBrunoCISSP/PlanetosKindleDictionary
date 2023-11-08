@@ -80,10 +80,10 @@ namespace Planetos.Data.Migrations
                 columns: new[] { "kindleIndexId", "dateCreated", "lastUpdated", "name" },
                 values: new object[,]
                 {
-                    { 1, new DateTime(2023, 11, 8, 15, 11, 48, 961, DateTimeKind.Utc).AddTicks(9393), new DateTime(2023, 11, 8, 15, 11, 48, 961, DateTimeKind.Utc).AddTicks(9393), "Characters" },
-                    { 2, new DateTime(2023, 11, 8, 15, 11, 48, 961, DateTimeKind.Utc).AddTicks(9396), new DateTime(2023, 11, 8, 15, 11, 48, 961, DateTimeKind.Utc).AddTicks(9397), "Locations" },
-                    { 3, new DateTime(2023, 11, 8, 15, 11, 48, 961, DateTimeKind.Utc).AddTicks(9400), new DateTime(2023, 11, 8, 15, 11, 48, 961, DateTimeKind.Utc).AddTicks(9400), "Houses" },
-                    { 4, new DateTime(2023, 11, 8, 15, 11, 48, 961, DateTimeKind.Utc).AddTicks(9403), new DateTime(2023, 11, 8, 15, 11, 48, 961, DateTimeKind.Utc).AddTicks(9403), "Terms" }
+                    { 1, new DateTime(2023, 11, 8, 22, 9, 35, 641, DateTimeKind.Utc).AddTicks(2585), new DateTime(2023, 11, 8, 22, 9, 35, 641, DateTimeKind.Utc).AddTicks(2585), "Characters" },
+                    { 2, new DateTime(2023, 11, 8, 22, 9, 35, 641, DateTimeKind.Utc).AddTicks(2589), new DateTime(2023, 11, 8, 22, 9, 35, 641, DateTimeKind.Utc).AddTicks(2589), "Locations" },
+                    { 3, new DateTime(2023, 11, 8, 22, 9, 35, 641, DateTimeKind.Utc).AddTicks(2593), new DateTime(2023, 11, 8, 22, 9, 35, 641, DateTimeKind.Utc).AddTicks(2593), "Houses" },
+                    { 4, new DateTime(2023, 11, 8, 22, 9, 35, 641, DateTimeKind.Utc).AddTicks(2596), new DateTime(2023, 11, 8, 22, 9, 35, 641, DateTimeKind.Utc).AddTicks(2596), "Terms" }
                 });
 
             migrationBuilder.CreateIndex(

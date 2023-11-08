@@ -82,29 +82,29 @@ namespace Planetos.Data.Migrations
                         new
                         {
                             kindleIndexId = 1,
-                            dateCreated = new DateTime(2023, 11, 8, 15, 11, 48, 961, DateTimeKind.Utc).AddTicks(9393),
-                            lastUpdated = new DateTime(2023, 11, 8, 15, 11, 48, 961, DateTimeKind.Utc).AddTicks(9393),
+                            dateCreated = new DateTime(2023, 11, 8, 22, 9, 35, 641, DateTimeKind.Utc).AddTicks(2585),
+                            lastUpdated = new DateTime(2023, 11, 8, 22, 9, 35, 641, DateTimeKind.Utc).AddTicks(2585),
                             name = "Characters"
                         },
                         new
                         {
                             kindleIndexId = 2,
-                            dateCreated = new DateTime(2023, 11, 8, 15, 11, 48, 961, DateTimeKind.Utc).AddTicks(9396),
-                            lastUpdated = new DateTime(2023, 11, 8, 15, 11, 48, 961, DateTimeKind.Utc).AddTicks(9397),
+                            dateCreated = new DateTime(2023, 11, 8, 22, 9, 35, 641, DateTimeKind.Utc).AddTicks(2589),
+                            lastUpdated = new DateTime(2023, 11, 8, 22, 9, 35, 641, DateTimeKind.Utc).AddTicks(2589),
                             name = "Locations"
                         },
                         new
                         {
                             kindleIndexId = 3,
-                            dateCreated = new DateTime(2023, 11, 8, 15, 11, 48, 961, DateTimeKind.Utc).AddTicks(9400),
-                            lastUpdated = new DateTime(2023, 11, 8, 15, 11, 48, 961, DateTimeKind.Utc).AddTicks(9400),
+                            dateCreated = new DateTime(2023, 11, 8, 22, 9, 35, 641, DateTimeKind.Utc).AddTicks(2593),
+                            lastUpdated = new DateTime(2023, 11, 8, 22, 9, 35, 641, DateTimeKind.Utc).AddTicks(2593),
                             name = "Houses"
                         },
                         new
                         {
                             kindleIndexId = 4,
-                            dateCreated = new DateTime(2023, 11, 8, 15, 11, 48, 961, DateTimeKind.Utc).AddTicks(9403),
-                            lastUpdated = new DateTime(2023, 11, 8, 15, 11, 48, 961, DateTimeKind.Utc).AddTicks(9403),
+                            dateCreated = new DateTime(2023, 11, 8, 22, 9, 35, 641, DateTimeKind.Utc).AddTicks(2596),
+                            lastUpdated = new DateTime(2023, 11, 8, 22, 9, 35, 641, DateTimeKind.Utc).AddTicks(2596),
                             name = "Terms"
                         });
                 });

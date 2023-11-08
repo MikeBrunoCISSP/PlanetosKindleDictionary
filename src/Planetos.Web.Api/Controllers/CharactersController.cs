@@ -1,5 +1,6 @@
 ﻿using Microsoft.AspNetCore.Mvc;
 using Planetos.Data;
+using Planetos.Shared;
 
 namespace Planetos.Web.Api.Controllers;
 
@@ -16,6 +17,6 @@ public class CharactersController : BaseApiController {
 
     [HttpGet]
     public async Task<IActionResult> GetCharacters() {
-        return GenerateResult(await _dataService.ReadIndex("characters"));
+        return GenerateResult(await _dataService.ReadIndex(IndexId.Characters));
     }
 }
