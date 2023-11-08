@@ -3,6 +3,8 @@ using Microsoft.EntityFrameworkCore.Migrations;
 
 #nullable disable
 
+#pragma warning disable CA1814 // Prefer jagged arrays over multidimensional
+
 namespace Planetos.Data.Migrations
 {
     /// <inheritdoc />
@@ -15,7 +17,7 @@ namespace Planetos.Data.Migrations
                 name: "indices",
                 columns: table => new
                 {
-                    id = table.Column<int>(type: "int", nullable: false)
+                    kindleIndexId = table.Column<int>(type: "int", nullable: false)
                         .Annotation("SqlServer:Identity", "1, 1"),
                     name = table.Column<string>(type: "nvarchar(450)", nullable: false),
                     dateCreated = table.Column<DateTime>(type: "datetime2", nullable: false),
@@ -23,7 +25,7 @@ namespace Planetos.Data.Migrations
                 },
                 constraints: table =>
                 {
-                    table.PrimaryKey("PK_indices", x => x.id);
+                    table.PrimaryKey("PK_indices", x => x.kindleIndexId);
                 });
 
             migrationBuilder.CreateTable(
@@ -34,65 +36,54 @@ namespace Planetos.Data.Migrations
                         .Annotation("SqlServer:Identity", "1, 1"),
                     name = table.Column<string>(type: "nvarchar(450)", nullable: false),
                     definition = table.Column<string>(type: "nvarchar(max)", nullable: false),
-                    indexId = table.Column<int>(type: "int", nullable: false),
+                    kindleIndexId = table.Column<int>(type: "int", nullable: false),
                     isApproved = table.Column<bool>(type: "bit", nullable: false),
                     dateCreated = table.Column<DateTime>(type: "datetime2", nullable: false),
-                    lastUpdated = table.Column<DateTime>(type: "datetime2", nullable: false),
-                    KindleIndexid = table.Column<int>(type: "int", nullable: true)
+                    lastUpdated = table.Column<DateTime>(type: "datetime2", nullable: false)
                 },
                 constraints: table =>
                 {
                     table.PrimaryKey("PK_wordDefinitions", x => x.id);
                     table.ForeignKey(
-                        name: "FK_wordDefinitions_indices_KindleIndexid",
-                        column: x => x.KindleIndexid,
+                        name: "FK_wordDefinitions_indices_kindleIndexId",
+                        column: x => x.kindleIndexId,
                         principalTable: "indices",
-                        principalColumn: "id");
-                });
-
-            migrationBuilder.CreateTable(
-                name: "inflectionGroups",
-                columns: table => new
-                {
-                    id = table.Column<int>(type: "int", nullable: false)
-                        .Annotation("SqlServer:Identity", "1, 1"),
-                    name = table.Column<string>(type: "nvarchar(max)", nullable: false),
-                    dateCreated = table.Column<DateTime>(type: "datetime2", nullable: false),
-                    lastUpdated = table.Column<DateTime>(type: "datetime2", nullable: false),
-                    WordDefinitionid = table.Column<int>(type: "int", nullable: true)
-                },
-                constraints: table =>
-                {
-                    table.PrimaryKey("PK_inflectionGroups", x => x.id);
-                    table.ForeignKey(
-                        name: "FK_inflectionGroups_wordDefinitions_WordDefinitionid",
-                        column: x => x.WordDefinitionid,
-                        principalTable: "wordDefinitions",
-                        principalColumn: "id");
+                        principalColumn: "kindleIndexId",
+                        onDelete: ReferentialAction.Cascade);
                 });
 
             migrationBuilder.CreateTable(
                 name: "inflections",
                 columns: table => new
                 {
-                    id = table.Column<int>(type: "int", nullable: false)
+                    inflectionId = table.Column<int>(type: "int", nullable: false)
                         .Annotation("SqlServer:Identity", "1, 1"),
-                    name = table.Column<string>(type: "nvarchar(max)", nullable: false),
                     value = table.Column<string>(type: "nvarchar(max)", nullable: false),
                     isExactMatch = table.Column<bool>(type: "bit", nullable: false),
-                    inflectionGroupId = table.Column<int>(type: "int", nullable: false),
+                    wordDefinitionId = table.Column<int>(type: "int", nullable: false),
                     dateCreated = table.Column<DateTime>(type: "datetime2", nullable: false),
                     lastUpdated = table.Column<DateTime>(type: "datetime2", nullable: false)
                 },
                 constraints: table =>
                 {
-                    table.PrimaryKey("PK_inflections", x => x.id);
+                    table.PrimaryKey("PK_inflections", x => x.inflectionId);
                     table.ForeignKey(
-                        name: "FK_inflections_inflectionGroups_inflectionGroupId",
-                        column: x => x.inflectionGroupId,
-                        principalTable: "inflectionGroups",
+                        name: "FK_inflections_wordDefinitions_wordDefinitionId",
+                        column: x => x.wordDefinitionId,
+                        principalTable: "wordDefinitions",
                         principalColumn: "id",
                         onDelete: ReferentialAction.Cascade);
+                });
+
+            migrationBuilder.InsertData(
+                table: "indices",
+                columns: new[] { "kindleIndexId", "dateCreated", "lastUpdated", "name" },
+                values: new object[,]
+                {
+                    { 1, new DateTime(2023, 11, 8, 15, 11, 48, 961, DateTimeKind.Utc).AddTicks(9393), new DateTime(2023, 11, 8, 15, 11, 48, 961, DateTimeKind.Utc).AddTicks(9393), "Characters" },
+                    { 2, new DateTime(2023, 11, 8, 15, 11, 48, 961, DateTimeKind.Utc).AddTicks(9396), new DateTime(2023, 11, 8, 15, 11, 48, 961, DateTimeKind.Utc).AddTicks(9397), "Locations" },
+                    { 3, new DateTime(2023, 11, 8, 15, 11, 48, 961, DateTimeKind.Utc).AddTicks(9400), new DateTime(2023, 11, 8, 15, 11, 48, 961, DateTimeKind.Utc).AddTicks(9400), "Houses" },
+                    { 4, new DateTime(2023, 11, 8, 15, 11, 48, 961, DateTimeKind.Utc).AddTicks(9403), new DateTime(2023, 11, 8, 15, 11, 48, 961, DateTimeKind.Utc).AddTicks(9403), "Terms" }
                 });
 
             migrationBuilder.CreateIndex(
@@ -102,19 +93,14 @@ namespace Planetos.Data.Migrations
                 unique: true);
 
             migrationBuilder.CreateIndex(
-                name: "IX_inflectionGroups_WordDefinitionid",
-                table: "inflectionGroups",
-                column: "WordDefinitionid");
-
-            migrationBuilder.CreateIndex(
-                name: "IX_inflections_inflectionGroupId",
+                name: "IX_inflections_wordDefinitionId",
                 table: "inflections",
-                column: "inflectionGroupId");
+                column: "wordDefinitionId");
 
             migrationBuilder.CreateIndex(
-                name: "IX_wordDefinitions_KindleIndexid",
+                name: "IX_wordDefinitions_kindleIndexId",
                 table: "wordDefinitions",
-                column: "KindleIndexid");
+                column: "kindleIndexId");
 
             migrationBuilder.CreateIndex(
                 name: "IX_wordDefinitions_name",
@@ -128,9 +114,6 @@ namespace Planetos.Data.Migrations
         {
             migrationBuilder.DropTable(
                 name: "inflections");
-
-            migrationBuilder.DropTable(
-                name: "inflectionGroups");
 
             migrationBuilder.DropTable(
                 name: "wordDefinitions");

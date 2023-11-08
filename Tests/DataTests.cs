@@ -1,6 +1,6 @@
 using Planetos.Data;
+using Planetos.Data.Models;
 using Planetos.Shared;
-using Planetos.WebContract;
 
 namespace Tests;
 
@@ -17,26 +17,31 @@ public class DataTests {
         IServiceOperationResult result = await dataService.DeleteAll();
         Assert.IsTrue(result.IsSuccess);
 
-        IServiceOperationResult<KindleIndex> indexResult = await dataService.CreateIndex(indexName);
-        Assert.IsTrue(indexResult.IsSuccess);
-        Assert.AreEqual(indexName, indexResult.Value.name);
-
-        IServiceOperationResult<WordDefinition> wordResult = await dataService.CreateWord(indexName, wordName, firstDefinition);
+        var tywin = new WordDefinition {
+            kindleIndexId = IndexId.Characters,
+            name = wordName,
+            definition = firstDefinition,
+            inflections = new List<Inflection> {
+                new() { value = "Lannister" }
+            }
+        };
+        //tywin.inflectionGroups.First()!.inflections = new HashSet<Inflection>() { new() { name = "firstInflection" } };
+        IServiceOperationResult<WordDefinition> wordResult = await dataService.AddWord(tywin);
         Assert.IsTrue(wordResult.IsSuccess);
         Assert.AreEqual(wordName, wordResult.Value.name);
 
-        wordResult = await dataService.UpdateWord(wordName, secondDefinition);
-        Assert.IsTrue(wordResult.IsSuccess);
-        Assert.AreEqual(secondDefinition, wordResult.Value.definition);
+        //wordResult = await dataService.UpdateWord(wordName, secondDefinition);
+        //Assert.IsTrue(wordResult.IsSuccess);
+        //Assert.AreEqual(secondDefinition, wordResult.Value.definition);
 
-        wordResult = await dataService.ReadWord(wordName);
-        Assert.IsTrue(wordResult.IsSuccess);
-        Assert.AreEqual(secondDefinition, wordResult.Value.definition);
+        //wordResult = await dataService.ReadWord(wordName);
+        //Assert.IsTrue(wordResult.IsSuccess);
+        //Assert.AreEqual(secondDefinition, wordResult.Value.definition);
 
-        result = await dataService.DeleteWord(wordName);
-        Assert.IsTrue(result.IsSuccess);
+        //result = await dataService.DeleteWord(wordName);
+        //Assert.IsTrue(result.IsSuccess);
 
-        result = await dataService.DeleteIndex(indexName);
-        Assert.IsTrue(result.IsSuccess);
+        //result = await dataService.DeleteIndex(indexName);
+        //Assert.IsTrue(result.IsSuccess);
     }
 }

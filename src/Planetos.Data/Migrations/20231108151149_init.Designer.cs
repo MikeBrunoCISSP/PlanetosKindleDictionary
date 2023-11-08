@@ -12,7 +12,7 @@ using Planetos.Data;
 namespace Planetos.Data.Migrations
 {
     [DbContext(typeof(PlanetosContext))]
-    [Migration("20230927181414_init")]
+    [Migration("20231108151149_init")]
     partial class init
     {
         /// <inheritdoc />
@@ -20,24 +20,21 @@ namespace Planetos.Data.Migrations
         {
 #pragma warning disable 612, 618
             modelBuilder
-                .HasAnnotation("ProductVersion", "7.0.10")
+                .HasAnnotation("ProductVersion", "7.0.12")
                 .HasAnnotation("Relational:MaxIdentifierLength", 128);
 
             SqlServerModelBuilderExtensions.UseIdentityColumns(modelBuilder);
 
             modelBuilder.Entity("Planetos.Data.Models.Inflection", b =>
                 {
-                    b.Property<int>("id")
+                    b.Property<int>("inflectionId")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("int");
 
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("id"));
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("inflectionId"));
 
                     b.Property<DateTime>("dateCreated")
                         .HasColumnType("datetime2");
-
-                    b.Property<int>("inflectionGroupId")
-                        .HasColumnType("int");
 
                     b.Property<bool>("isExactMatch")
                         .HasColumnType("bit");
@@ -45,56 +42,27 @@ namespace Planetos.Data.Migrations
                     b.Property<DateTime>("lastUpdated")
                         .HasColumnType("datetime2");
 
-                    b.Property<string>("name")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
                     b.Property<string>("value")
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
-                    b.HasKey("id");
+                    b.Property<int>("wordDefinitionId")
+                        .HasColumnType("int");
 
-                    b.HasIndex("inflectionGroupId");
+                    b.HasKey("inflectionId");
+
+                    b.HasIndex("wordDefinitionId");
 
                     b.ToTable("inflections");
                 });
 
-            modelBuilder.Entity("Planetos.Data.Models.InflectionGroup", b =>
-                {
-                    b.Property<int>("id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("id"));
-
-                    b.Property<int?>("WordDefinitionid")
-                        .HasColumnType("int");
-
-                    b.Property<DateTime>("dateCreated")
-                        .HasColumnType("datetime2");
-
-                    b.Property<DateTime>("lastUpdated")
-                        .HasColumnType("datetime2");
-
-                    b.Property<string>("name")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.HasKey("id");
-
-                    b.HasIndex("WordDefinitionid");
-
-                    b.ToTable("inflectionGroups");
-                });
-
             modelBuilder.Entity("Planetos.Data.Models.KindleIndex", b =>
                 {
-                    b.Property<int>("id")
+                    b.Property<int>("kindleIndexId")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("int");
 
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("id"));
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("kindleIndexId"));
 
                     b.Property<DateTime>("dateCreated")
                         .HasColumnType("datetime2");
@@ -106,12 +74,42 @@ namespace Planetos.Data.Migrations
                         .IsRequired()
                         .HasColumnType("nvarchar(450)");
 
-                    b.HasKey("id");
+                    b.HasKey("kindleIndexId");
 
                     b.HasIndex("name")
                         .IsUnique();
 
                     b.ToTable("indices");
+
+                    b.HasData(
+                        new
+                        {
+                            kindleIndexId = 1,
+                            dateCreated = new DateTime(2023, 11, 8, 15, 11, 48, 961, DateTimeKind.Utc).AddTicks(9393),
+                            lastUpdated = new DateTime(2023, 11, 8, 15, 11, 48, 961, DateTimeKind.Utc).AddTicks(9393),
+                            name = "Characters"
+                        },
+                        new
+                        {
+                            kindleIndexId = 2,
+                            dateCreated = new DateTime(2023, 11, 8, 15, 11, 48, 961, DateTimeKind.Utc).AddTicks(9396),
+                            lastUpdated = new DateTime(2023, 11, 8, 15, 11, 48, 961, DateTimeKind.Utc).AddTicks(9397),
+                            name = "Locations"
+                        },
+                        new
+                        {
+                            kindleIndexId = 3,
+                            dateCreated = new DateTime(2023, 11, 8, 15, 11, 48, 961, DateTimeKind.Utc).AddTicks(9400),
+                            lastUpdated = new DateTime(2023, 11, 8, 15, 11, 48, 961, DateTimeKind.Utc).AddTicks(9400),
+                            name = "Houses"
+                        },
+                        new
+                        {
+                            kindleIndexId = 4,
+                            dateCreated = new DateTime(2023, 11, 8, 15, 11, 48, 961, DateTimeKind.Utc).AddTicks(9403),
+                            lastUpdated = new DateTime(2023, 11, 8, 15, 11, 48, 961, DateTimeKind.Utc).AddTicks(9403),
+                            name = "Terms"
+                        });
                 });
 
             modelBuilder.Entity("Planetos.Data.Models.WordDefinition", b =>
@@ -122,9 +120,6 @@ namespace Planetos.Data.Migrations
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("id"));
 
-                    b.Property<int?>("KindleIndexid")
-                        .HasColumnType("int");
-
                     b.Property<DateTime>("dateCreated")
                         .HasColumnType("datetime2");
 
@@ -132,11 +127,11 @@ namespace Planetos.Data.Migrations
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
-                    b.Property<int>("indexId")
-                        .HasColumnType("int");
-
                     b.Property<bool>("isApproved")
                         .HasColumnType("bit");
+
+                    b.Property<int>("kindleIndexId")
+                        .HasColumnType("int");
 
                     b.Property<DateTime>("lastUpdated")
                         .HasColumnType("datetime2");
@@ -147,7 +142,7 @@ namespace Planetos.Data.Migrations
 
                     b.HasKey("id");
 
-                    b.HasIndex("KindleIndexid");
+                    b.HasIndex("kindleIndexId");
 
                     b.HasIndex("name")
                         .IsUnique();
@@ -157,30 +152,20 @@ namespace Planetos.Data.Migrations
 
             modelBuilder.Entity("Planetos.Data.Models.Inflection", b =>
                 {
-                    b.HasOne("Planetos.Data.Models.InflectionGroup", null)
+                    b.HasOne("Planetos.Data.Models.WordDefinition", null)
                         .WithMany("inflections")
-                        .HasForeignKey("inflectionGroupId")
+                        .HasForeignKey("wordDefinitionId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
-                });
-
-            modelBuilder.Entity("Planetos.Data.Models.InflectionGroup", b =>
-                {
-                    b.HasOne("Planetos.Data.Models.WordDefinition", null)
-                        .WithMany("inflectionGroups")
-                        .HasForeignKey("WordDefinitionid");
                 });
 
             modelBuilder.Entity("Planetos.Data.Models.WordDefinition", b =>
                 {
                     b.HasOne("Planetos.Data.Models.KindleIndex", null)
                         .WithMany("wordDefinitions")
-                        .HasForeignKey("KindleIndexid");
-                });
-
-            modelBuilder.Entity("Planetos.Data.Models.InflectionGroup", b =>
-                {
-                    b.Navigation("inflections");
+                        .HasForeignKey("kindleIndexId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
                 });
 
             modelBuilder.Entity("Planetos.Data.Models.KindleIndex", b =>
@@ -190,7 +175,7 @@ namespace Planetos.Data.Migrations
 
             modelBuilder.Entity("Planetos.Data.Models.WordDefinition", b =>
                 {
-                    b.Navigation("inflectionGroups");
+                    b.Navigation("inflections");
                 });
 #pragma warning restore 612, 618
         }

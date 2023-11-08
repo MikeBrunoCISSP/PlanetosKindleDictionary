@@ -1,10 +1,10 @@
 ﻿using Microsoft.EntityFrameworkCore;
-using Planetos.WebContract;
+using Planetos.Data.Models;
+using Planetos.Shared;
 
 namespace Planetos.Data;
 public class PlanetosContext : DbContext {
     public DbSet<Inflection> inflections { get; set; }
-    public DbSet<InflectionGroup> inflectionGroups { get; set; }
     public DbSet<WordDefinition> wordDefinitions { get; set; }
     public DbSet<KindleIndex> indices { get; set; }
 
@@ -19,5 +19,13 @@ public class PlanetosContext : DbContext {
         modelBuilder.Entity<KindleIndex>()
             .HasIndex(w => w.name)
             .IsUnique();
+
+        var indexes = new KindleIndex[] {
+            new() { kindleIndexId = IndexId.Characters, name = "Characters", dateCreated = DateTime.UtcNow, lastUpdated = DateTime.UtcNow },
+            new() { kindleIndexId = IndexId.Locations, name="Locations", dateCreated = DateTime.UtcNow, lastUpdated = DateTime.UtcNow},
+            new() { kindleIndexId = IndexId.Houses, name="Houses", dateCreated = DateTime.UtcNow, lastUpdated = DateTime.UtcNow},
+            new() { kindleIndexId = IndexId.Terms, name = "Terms", dateCreated = DateTime.UtcNow, lastUpdated = DateTime.UtcNow}
+        };
+        modelBuilder.Entity<KindleIndex>().HasData(indexes);
     }
 }
