@@ -1,0 +1,139 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  MEMBER
+  ADMIN
+}
+
+enum RevisionAction {
+  CREATE
+  UPDATE
+  DELETE
+  ROLLBACK
+}
+
+enum EntryStatus {
+  PUBLISHED
+  DELETED
+}
+
+enum BuildStatus {
+  QUEUED
+  RUNNING
+  SUCCESS
+  FAILED
+}
+
+model User {
+  id            String     @id @default(cuid())
+  email         String     @unique
+  displayName   String     @unique
+  passwordHash  String
+  role          Role       @default(MEMBER)
+  isActive      Boolean    @default(true)
+  emailVerified Boolean    @default(false)
+  createdAt     DateTime   @default(now())
+  revisions     Revision[]
+  createdSeries Series[]
+}
+
+model Series {
+  id          String   @id @default(cuid())
+  slug        String   @unique
+  title       String
+  author      String?
+  description String?
+  inLanguage  String   @default("en")
+  outLanguage String   @default("en")
+  books       Book[]
+  entries     Entry[]
+  builds      Build[]
+  contentHash String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  createdById String?
+  createdBy   User?    @relation(fields: [createdById], references: [id], onDelete: SetNull)
+}
+
+model Book {
+  id       String @id @default(cuid())
+  seriesId String
+  series   Series @relation(fields: [seriesId], references: [id], onDelete: Cascade)
+  ordinal  Int
+  title    String
+
+  @@unique([seriesId, ordinal])
+}
+
+model Entry {
+  id               String      @id @default(cuid())
+  seriesId         String
+  series           Series      @relation(fields: [seriesId], references: [id], onDelete: Cascade)
+  headword         String
+  lookupValue      String?
+  sortKey          String
+  definitionHtml   String
+  partOfSpeech     String?
+  pronunciation    String?
+  inflections      Inflection[]
+  spoilerAfterBook Int?
+  status           EntryStatus @default(PUBLISHED)
+  revisions        Revision[]
+  createdAt        DateTime    @default(now())
+  updatedAt        DateTime    @updatedAt
+
+  @@unique([seriesId, headword])
+  @@index([seriesId, sortKey])
+}
+
+model Inflection {
+  id      String  @id @default(cuid())
+  entryId String
+  entry   Entry   @relation(fields: [entryId], references: [id], onDelete: Cascade)
+  value   String
+  group   String?
+  name    String?
+  exact   Boolean @default(false)
+
+  @@unique([entryId, value])
+}
+
+model Revision {
+  id        String         @id @default(cuid())
+  entryId   String
+  entry     Entry          @relation(fields: [entryId], references: [id], onDelete: Cascade)
+  authorId  String?
+  author    User?          @relation(fields: [authorId], references: [id], onDelete: SetNull)
+  action    RevisionAction
+  snapshot  Json
+  comment   String?
+  createdAt DateTime       @default(now())
+
+  @@index([entryId, createdAt])
+}
+
+model Build {
+  id          String      @id @default(cuid())
+  seriesId    String
+  series      Series      @relation(fields: [seriesId], references: [id], onDelete: Cascade)
+  status      BuildStatus
+  contentHash String
+  entryCount  Int
+  epubKey     String?
+  epubBytes   Int?
+  sourceKey   String?
+  log         String?
+  error       String?
+  startedAt   DateTime?
+  finishedAt  DateTime?
+  createdAt   DateTime    @default(now())
+
+  @@index([seriesId, createdAt])
+}

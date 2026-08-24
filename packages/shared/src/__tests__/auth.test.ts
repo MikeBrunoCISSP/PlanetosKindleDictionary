@@ -1,0 +1,91 @@
+import { describe, expect, it } from "vitest";
+import { passwordSchema, registerSchema, loginSchema } from "../auth.js";
+
+describe("passwordSchema", () => {
+  it("accepts a valid password", () => {
+    const result = passwordSchema.safeParse("Abc12345");
+    expect(result.success).toBe(true);
+  });
+
+  it("rejects passwords shorter than 8 characters", () => {
+    const result = passwordSchema.safeParse("Ab1");
+    expect(result.success).toBe(false);
+    expect(result.error?.issues[0]?.message).toMatch(/at least 8 characters/i);
+  });
+
+  it("rejects passwords with no uppercase letter", () => {
+    const result = passwordSchema.safeParse("abc12345");
+    expect(result.success).toBe(false);
+    const messages = result.error?.issues.map((i) => i.message) ?? [];
+    expect(messages.some((m) => /uppercase/i.test(m))).toBe(true);
+  });
+
+  it("rejects passwords with no lowercase letter", () => {
+    const result = passwordSchema.safeParse("ABC12345");
+    expect(result.success).toBe(false);
+    const messages = result.error?.issues.map((i) => i.message) ?? [];
+    expect(messages.some((m) => /lowercase/i.test(m))).toBe(true);
+  });
+
+  it("rejects passwords with no digit", () => {
+    const result = passwordSchema.safeParse("AbcdefgH");
+    expect(result.success).toBe(false);
+    const messages = result.error?.issues.map((i) => i.message) ?? [];
+    expect(messages.some((m) => /digit/i.test(m))).toBe(true);
+  });
+
+  it("reports multiple violations at once", () => {
+    const result = passwordSchema.safeParse("alllower");
+    expect(result.success).toBe(false);
+    const messages = result.error?.issues.map((i) => i.message) ?? [];
+    expect(messages.some((m) => /uppercase/i.test(m))).toBe(true);
+    expect(messages.some((m) => /digit/i.test(m))).toBe(true);
+  });
+});
+
+describe("registerSchema", () => {
+  it("accepts valid registration data", () => {
+    const result = registerSchema.safeParse({
+      email: "test@example.com",
+      displayName: "TestUser",
+      password: "SecureP4ss",
+    });
+    expect(result.success).toBe(true);
+  });
+
+  it("rejects invalid email", () => {
+    const result = registerSchema.safeParse({
+      email: "not-an-email",
+      displayName: "TestUser",
+      password: "SecureP4ss",
+    });
+    expect(result.success).toBe(false);
+  });
+
+  it("rejects empty displayName", () => {
+    const result = registerSchema.safeParse({
+      email: "test@example.com",
+      displayName: "",
+      password: "SecureP4ss",
+    });
+    expect(result.success).toBe(false);
+  });
+});
+
+describe("loginSchema", () => {
+  it("accepts valid login data", () => {
+    const result = loginSchema.safeParse({
+      email: "test@example.com",
+      password: "anypassword",
+    });
+    expect(result.success).toBe(true);
+  });
+
+  it("rejects empty password", () => {
+    const result = loginSchema.safeParse({
+      email: "test@example.com",
+      password: "",
+    });
+    expect(result.success).toBe(false);
+  });
+});
