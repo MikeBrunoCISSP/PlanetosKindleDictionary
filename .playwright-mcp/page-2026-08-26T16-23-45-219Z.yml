@@ -1,0 +1,40 @@
+- generic [ref=f30e1]:
+  - generic [ref=f30e2]:
+    - generic [ref=f30e3]:
+      - banner [ref=f30e4]:
+        - link [ref=f30e27] [cursor=pointer]:
+          - /url: /
+          - text: Planetos
+        - button [ref=f30e28]
+      - generic [ref=f30e8]:
+        - heading [level=1] [ref=f30e29]: Approval Queue
+        - table [ref=f30e11]:
+          - rowgroup [ref=f30e12]:
+            - row [ref=f30e30]:
+              - columnheader [ref=f30e31]: Type
+              - columnheader [ref=f30e32]: Headword
+              - columnheader [ref=f30e33]: Approve/Reject
+          - rowgroup [ref=f30e17]:
+            - row [ref=f30e34]:
+              - cell [ref=f30e35]:
+                - generic [ref=f30e20]: Edit
+              - cell [ref=f30e36]:
+                - button [ref=f30e37]: Stark
+              - cell [ref=f30e38]:
+                - generic [ref=f30e24]:
+                  - button [ref=f30e39]: Approve
+                  - button [ref=f30e40]: Reject
+    - region "Notifications alt+T"
+  - dialog [ref=f30e44]:
+    - heading "Stark" [level=2] [ref=f30e46]
+    - generic [ref=f30e47]:
+      - generic [ref=f30e48]:
+        - paragraph [ref=f30e49]: Current Definition (changed)
+        - generic [ref=f30e50]: House Stark of Winterfell is one of the Great Houses of Westeros and the principal noble house of the north. In days of old they ruled as Kings of Winter, but since Aegon's Conquest they have been Wardens of the North and ruled as Lords of Winterfell. Their seat, Winterfell, is an ancient castle renowned for its strength. Their sigil is a grey direwolf racing across a field of white. Their words are "Winter Is Coming", one of only a few house mottoes to be a warning rather than a boast.[3] Several of the POV characters of A Song of Ice and Fire are members of House Stark. Aside from the Karstarks of Karhold, the Starks of Winterfell may have other, distant relatives in the north. White Harbor and Barrowton are considered to be likely options for offshoot branches.[2] Some younger Starks have also held vassal holdfasts for the Lords of Winterfell.
+      - generic [ref=f30e51]:
+        - paragraph [ref=f30e52]: Proposed Definition
+        - paragraph [ref=f30e54]: House Stark of Winterfell is one of the Great Houses of Westeros and the principal noble house of the north.
+      - generic [ref=f30e55]:
+        - paragraph [ref=f30e56]: Inflections
+        - generic [ref=f30e57]: + Direwolf
+    - button "Close" [active] [ref=f30e59]

@@ -1,0 +1,27 @@
+- generic [ref=f25e2]:
+  - generic [ref=f25e3]:
+    - banner [ref=f25e4]:
+      - link "Planetos" [ref=f25e77] [cursor=pointer]:
+        - /url: /
+      - button "Open menu" [ref=f25e78]
+    - generic [ref=f25e8]:
+      - heading "Approval Queue" [level=1] [ref=f25e79]
+      - table [ref=f25e11]:
+        - rowgroup [ref=f25e12]:
+          - row [ref=f25e80]:
+            - columnheader "Type" [ref=f25e81]
+            - columnheader "Headword" [ref=f25e82]
+            - columnheader "Approve/Reject" [ref=f25e83]
+        - rowgroup [ref=f25e17]:
+          - row [ref=f25e84]:
+            - cell "Edit" [ref=f25e85]
+            - cell [ref=f25e86]:
+              - button "Stark" [ref=f25e87]
+            - cell [ref=f25e88]:
+              - generic [ref=f25e33]:
+                - button "Approve" [ref=f25e89]
+                - button "Reject" [ref=f25e90]
+  - region "Notifications alt+T":
+    - list:
+      - listitem [ref=f25e91]:
+        - generic [ref=f25e95]: Entry approved.

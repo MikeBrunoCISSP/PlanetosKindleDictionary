@@ -1,0 +1,15 @@
+- generic [ref=f34e2]:
+  - generic [ref=f34e3]:
+    - banner [ref=f34e4]:
+      - link "Planetos" [ref=f34e56] [cursor=pointer]:
+        - /url: /
+      - button "Open menu" [ref=f34e57]
+    - generic [ref=f34e66]:
+      - heading "Planetos" [level=1] [ref=f34e67]
+      - generic [ref=f34e68]:
+        - textbox "Search dictionary entries…" [active] [ref=f34e69]
+        - button "Search" [ref=f34e70]
+  - region "Notifications alt+T":
+    - list:
+      - listitem [ref=f34e71]:
+        - generic [ref=f34e75]: Your entry has been saved and is now live.

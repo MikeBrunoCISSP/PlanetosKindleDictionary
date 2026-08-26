@@ -1,0 +1,15 @@
+- generic [ref=f44e2]:
+  - generic [ref=f44e3]:
+    - banner [ref=f44e4]:
+      - link "Planetos" [ref=f44e5] [cursor=pointer]:
+        - /url: /
+      - generic [ref=f44e6]:
+        - button "Account menu" [active] [ref=f44e7]:
+          - generic [ref=f44e11]: AccountMenuWalkthrough
+        - button "Open menu" [ref=f44e12]
+    - generic [ref=f44e15]:
+      - heading "Planetos" [level=1] [ref=f44e16]
+      - generic [ref=f44e17]:
+        - textbox "Search dictionary entries…" [ref=f44e18]
+        - button "Search" [ref=f44e19]
+  - region "Notifications alt+T"

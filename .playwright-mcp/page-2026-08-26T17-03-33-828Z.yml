@@ -1,0 +1,26 @@
+- generic [ref=f39e2]:
+  - generic [ref=f39e3]:
+    - banner [ref=f39e4]:
+      - link "Planetos" [ref=f39e56] [cursor=pointer]:
+        - /url: /
+      - button "Open menu" [ref=f39e57]
+    - generic [ref=f39e8]:
+      - heading "Add Entry" [level=1] [ref=f39e58]
+      - generic [ref=f39e10]:
+        - generic [ref=f39e11]:
+          - generic [ref=f39e12]: Dictionary
+          - button "ASOIAF" [active] [ref=f39e59]
+        - generic [ref=f39e14]:
+          - generic [ref=f39e15]: Headword
+          - textbox "Headword" [ref=f39e60]
+        - generic [ref=f39e17]:
+          - generic [ref=f39e18]: Definition
+          - textbox "Definition" [ref=f39e61]
+        - generic [ref=f39e20]:
+          - generic [ref=f39e21]: Inflections
+          - generic [ref=f39e22]:
+            - textbox "Inflections" [ref=f39e62]:
+              - /placeholder: Add an inflection
+            - button "Add" [ref=f39e63]
+        - button "Add Entry" [ref=f39e64]
+  - region "Notifications alt+T"

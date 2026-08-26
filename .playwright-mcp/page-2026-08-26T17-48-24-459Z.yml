@@ -1,0 +1,27 @@
+- generic [ref=f44e1]:
+  - generic [ref=f44e2]:
+    - generic [ref=f44e3]:
+      - banner [ref=f44e4]:
+        - link "Planetos" [ref=f44e5] [cursor=pointer]:
+          - /url: /
+        - generic [ref=f44e6]:
+          - button "Account menu" [ref=f44e7]:
+            - generic [ref=f44e11]: AccountMenuWalkthrough
+          - button "Open menu" [ref=f44e12]
+      - generic [ref=f44e52]:
+        - generic [ref=f44e53]:
+          - heading "Preferences" [level=1] [ref=f44e54]
+          - paragraph [ref=f44e55]: Customize your experience.
+        - generic [ref=f44e56]:
+          - heading "Appearance" [level=2] [ref=f44e57]
+          - generic [ref=f44e58]:
+            - generic [ref=f44e59] [cursor=pointer]:
+              - generic [ref=f44e60]: Dark Mode
+              - generic [ref=f44e61]: Switch between light and dark themes.
+            - switch "Dark Mode Switch between light and dark themes." [checked] [ref=f44e62]
+            - checkbox [checked] [ref=f44e63]
+    - region "Notifications alt+T"
+  - generic:
+    - menu "Account menu":
+      - menuitem "Preferences" [active]
+      - menuitem "Log out"

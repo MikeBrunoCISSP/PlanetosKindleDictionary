@@ -1,0 +1,12 @@
+- generic [ref=f24e2]:
+  - generic [ref=f24e3]:
+    - banner [ref=f24e4]:
+      - link "Planetos" [ref=f24e5] [cursor=pointer]:
+        - /url: /
+      - button "Open menu" [ref=f24e29]
+    - generic [ref=f24e32]:
+      - heading "Planetos" [level=1] [ref=f24e33]
+      - generic [ref=f24e34]:
+        - textbox "Search dictionary entries…" [active] [ref=f24e35]
+        - button "Search" [ref=f24e36]
+  - region "Notifications alt+T"

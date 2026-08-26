@@ -1,0 +1,23 @@
+- generic [ref=f42e2]:
+  - generic [ref=f42e3]:
+    - banner [ref=f42e4]:
+      - link "Planetos" [ref=f42e5] [cursor=pointer]:
+        - /url: /
+      - button "Open menu" [ref=f42e6]
+    - generic [ref=f42e16]:
+      - generic [ref=f42e17]:
+        - generic [ref=f42e18]: Headword
+        - textbox "Headword" [disabled]: Lannister
+      - generic [ref=f42e19]:
+        - generic [ref=f42e20]: Definition
+        - textbox "Definition" [ref=f42e21]: House Lannister of Casterly Rock is one of the Great Houses of Seven Kingdoms, and the principal house of the westerlands. Their seat is Casterly Rock, though another branch exists in nearby Lannisport. Their sigil is a golden roaring lion on a field of crimson. Their official motto is "Hear Me Roar!" However, their unofficial motto, equally well known, is "A Lannister always pays his debts." The Warden of the West is a Lannister by tradition. Their gold mines have made the Lannisters the wealthiest of the Great Houses, and the Lannister fleet is anchored at Lannisport. Through the female line the Lannisters boast of descent from Lann the Clever, the legendary trickster of the Age of Heroes who tricked the members of House Casterly into giving him Casterly Rock during the era of the First Men. Later marrying Andals, the Lannisters reigned as Kings of the Rock until the Targaryen conquest, when they were defeated at the Field of Fire. King Loren I Lannister's surrender to Aegon the Conqueror allowed the Lannisters to remain the liege lords of the westerlands. The current Lord of Casterly Rock is Tywin Lannister, whose daughter Cersei is the queen of King Robert I Baratheon, while her twin, Ser Jaime, is a knight of Robert's Kingsguard. Tywin's youngest child is Tyrion, a dwarf.
+      - generic [ref=f42e22]:
+        - generic [ref=f42e23]: Inflections
+        - generic [ref=f42e24]:
+          - textbox "Inflections" [ref=f42e25]:
+            - /placeholder: Add an inflection
+          - button "Add" [ref=f42e26]
+      - generic [ref=f42e27]:
+        - button "Cancel" [ref=f42e28]
+        - button "Submit" [disabled]
+  - region "Notifications alt+T"

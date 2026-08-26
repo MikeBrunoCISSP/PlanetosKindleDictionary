@@ -6,7 +6,7 @@ Defines the behavioral contract for user-controlled application preferences, beg
 
 ### Requirement: Preferences Page Accessibility
 
-The system SHALL expose a `/preferences` route accessible to all authenticated users. Unauthenticated visitors SHALL be redirected to `/login`. The page SHALL be reachable from the application header menu via Settings → Preferences.
+The system SHALL expose a `/preferences` route accessible to all authenticated users. Unauthenticated visitors SHALL be redirected to `/login`. The page SHALL be reachable from the application header's Account Menu (the user-icon/username button next to the hamburger menu) via Preferences.
 
 #### Scenario: Authenticated user reaches preferences page
 

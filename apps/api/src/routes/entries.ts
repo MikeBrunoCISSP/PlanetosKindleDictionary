@@ -6,6 +6,7 @@ import {
   rejectEntrySchema,
   type EntryDto,
   type EntrySummaryDto,
+  type PublicEntryDto,
 } from "@planetos/shared";
 import { sanitizeDefinitionHtml } from "@planetos/shared/sanitize";
 import { makeRequireAdmin } from "../plugins/requireAdmin.js";
@@ -26,7 +27,7 @@ type EntryWithInflections = {
   createdAt: Date;
 };
 
-function toEntryDto(entry: EntryWithInflections): EntryDto {
+export function toEntryDto(entry: EntryWithInflections): EntryDto {
   return {
     id: entry.id,
     seriesId: entry.seriesId,
@@ -46,13 +47,50 @@ function toEntrySummaryDto(entry: { id: string; headword: string; createdAt: Dat
   return { id: entry.id, headword: entry.headword, createdAt: entry.createdAt.toISOString() };
 }
 
-const entryInclude = { inflections: { select: { id: true, value: true } } } as const;
+function toPublicEntryDto(entry: {
+  id: string;
+  seriesId: string;
+  series: { slug: string };
+  headword: string;
+  definitionHtml: string;
+  approvalStatus: "PENDING" | "APPROVED" | "REJECTED";
+  inflections: { id: string; value: string }[];
+}): PublicEntryDto {
+  return {
+    id: entry.id,
+    seriesId: entry.seriesId,
+    seriesSlug: entry.series.slug,
+    headword: entry.headword,
+    definitionHtml: entry.definitionHtml,
+    approvalStatus: entry.approvalStatus as "PENDING" | "APPROVED",
+    inflections: entry.inflections.map((inflection) => ({ id: inflection.id, value: inflection.value })),
+  };
+}
+
+export const entryInclude = { inflections: { select: { id: true, value: true } } } as const;
 
 const entriesRoutes: FastifyPluginAsync<{ prisma: PrismaClient }> = async (fastify, opts) => {
   const { prisma } = opts;
   const requireAuth = makeRequireAuth(prisma);
   const requireApproved = makeRequireApproved(prisma);
   const requireAdmin = makeRequireAdmin(prisma);
+
+  // Public entry detail. Pending entries are shown too (with the approval
+  // status surfaced for the frontend's "awaiting review" banner) - only
+  // Rejected and soft-Deleted entries are treated as not found.
+  fastify.get("/api/entries/:id", async (request, reply) => {
+    const { id } = request.params as { id: string };
+    const entry = await prisma.entry.findUnique({
+      where: { id },
+      include: { inflections: { select: { id: true, value: true } }, series: { select: { slug: true } } },
+    });
+
+    if (!entry || entry.status !== "PUBLISHED" || entry.approvalStatus === "REJECTED") {
+      throw Errors.NOT_FOUND();
+    }
+
+    return reply.status(200).send(toPublicEntryDto(entry));
+  });
 
   fastify.post(
     "/api/series/:slug/entries",
@@ -61,6 +99,7 @@ const entriesRoutes: FastifyPluginAsync<{ prisma: PrismaClient }> = async (fasti
       const { slug } = request.params as { slug: string };
       const body = createEntrySchema.parse(request.body);
       const userId = request.authUser!.id;
+      const isAdmin = request.authUser!.role === "ADMIN";
 
       const series = await prisma.series.findUnique({ where: { slug }, select: { id: true } });
       if (!series) throw Errors.NOT_FOUND();
@@ -77,8 +116,12 @@ const entriesRoutes: FastifyPluginAsync<{ prisma: PrismaClient }> = async (fasti
                 headword: body.headword,
                 sortKey,
                 definitionHtml,
-                approvalStatus: "PENDING",
+                approvalStatus: isAdmin ? "APPROVED" : "PENDING",
                 submittedById: userId,
+                // An administrator's own submission is self-reviewed
+                // immediately - see proposal.md/design.md for
+                // admin-auto-approve-submissions.
+                ...(isAdmin ? { reviewedById: userId, reviewedAt: new Date() } : {}),
               },
             });
 

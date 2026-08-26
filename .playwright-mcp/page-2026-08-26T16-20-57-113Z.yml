@@ -1,0 +1,42 @@
+- generic [ref=f29e1]:
+  - generic [ref=f29e2]:
+    - generic [ref=f29e3]:
+      - banner [ref=f29e4]:
+        - link [ref=f29e27] [cursor=pointer]:
+          - /url: /
+          - text: Planetos
+        - button [ref=f29e28]
+      - generic [ref=f29e8]:
+        - heading [level=1] [ref=f29e29]: Approval Queue
+        - table [ref=f29e11]:
+          - rowgroup [ref=f29e12]:
+            - row [ref=f29e30]:
+              - columnheader [ref=f29e31]: Type
+              - columnheader [ref=f29e32]: Headword
+              - columnheader [ref=f29e33]: Approve/Reject
+          - rowgroup [ref=f29e17]:
+            - row [ref=f29e34]:
+              - cell [ref=f29e35]:
+                - generic [ref=f29e20]: Edit
+              - cell [ref=f29e36]:
+                - button [ref=f29e37]: Lannister
+              - cell [ref=f29e38]:
+                - generic [ref=f29e24]:
+                  - button [ref=f29e39]: Approve
+                  - button [ref=f29e40]: Reject
+    - region "Notifications alt+T"
+  - dialog [ref=f29e44]:
+    - generic [ref=f29e45]:
+      - heading "Reject Edit" [level=2] [ref=f29e46]
+      - paragraph [ref=f29e47]:
+        - text: Optionally explain why
+        - strong [ref=f29e48]: Lannister
+        - text: is being rejected.
+    - generic [ref=f29e49]:
+      - generic [ref=f29e50]: Note
+      - textbox "Note" [active] [ref=f29e51]:
+        - /placeholder: Optional note
+    - generic [ref=f29e52]:
+      - button "Cancel" [ref=f29e53]
+      - button "Reject" [ref=f29e54]
+    - button "Close" [ref=f29e55]

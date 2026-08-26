@@ -54,10 +54,14 @@ Before an entry can be submitted, the system SHALL verify the Headword does not 
 
 ### Requirement: Definition Field
 
-The Add Entry form SHALL provide a required, multiline Definition field with a maximum length of 5,000 characters. Input exceeding the maximum SHALL be rejected, not silently truncated.
+The Add Entry form SHALL provide a required, multiline Definition field with a maximum length of 5,000 characters. Input exceeding the maximum SHALL be rejected, not silently truncated. The Definition SHALL be trimmed of leading/trailing whitespace before the required check is applied, so a whitespace-only value is rejected the same as an empty one.
 
 #### Scenario: Submission blocked without a Definition
 - **WHEN** a user attempts to submit the Add Entry form with an empty Definition
+- **THEN** the form does not submit and indicates the Definition is required
+
+#### Scenario: Submission blocked with a whitespace-only Definition
+- **WHEN** a user attempts to submit the Add Entry form with a Definition consisting only of whitespace
 - **THEN** the form does not submit and indicates the Definition is required
 
 #### Scenario: Over-length Definition is rejected, not truncated
@@ -98,11 +102,15 @@ When a user attempts to add an Inflection, the system SHALL verify the word does
 
 ### Requirement: Saving a New Entry
 
-When a user saves a valid entry, the system SHALL persist the Headword, Definition, and all associated Inflections; associate the entry with the selected dictionary and with the submitting authenticated user; record the submission timestamp; and set the entry's approval status to Pending. The entry SHALL NOT be included in any generated dictionary output while Pending. A success toast SHALL be displayed only after the server confirms the entry was persisted, worded similarly to "Your entry has been saved. It must be approved before it can be included in the generated Kindle dictionary." The system SHALL prevent duplicate submissions caused by repeated clicks while a save request is already in progress.
+When a user saves a valid entry, the system SHALL persist the Headword, Definition, and all associated Inflections; associate the entry with the selected dictionary and with the submitting authenticated user; record the submission timestamp; and set the entry's approval status to Pending — except that when the submitting user's role is Administrator, the entry SHALL instead be saved with approval status Approved immediately, recorded as reviewed by that same administrator at the submission time. The entry SHALL NOT be included in any generated dictionary output while Pending. A success toast SHALL be displayed only after the server confirms the entry was persisted, worded similarly to "Your entry has been saved. It must be approved before it can be included in the generated Kindle dictionary." for a non-administrator, or acknowledging immediate approval for an administrator. The system SHALL prevent duplicate submissions caused by repeated clicks while a save request is already in progress. Whether the submission auto-approves SHALL be decided solely from the authenticated session's role on the server; no client-supplied input can trigger it.
 
 #### Scenario: Valid entry is saved as Pending
-- **WHEN** an authenticated user submits a valid entry (dictionary selected, Headword and Definition provided, no duplicate word)
+- **WHEN** an authenticated non-administrator user submits a valid entry (dictionary selected, Headword and Definition provided, no duplicate word)
 - **THEN** the entry is persisted with approval status Pending, attributed to the submitting user, with a recorded creation timestamp
+
+#### Scenario: Administrator's entry is saved as Approved
+- **WHEN** an authenticated administrator submits a valid entry
+- **THEN** the entry is persisted with approval status Approved, attributed to the submitting administrator as both submitter and reviewer, with a recorded review time equal to the submission time, and it is immediately eligible for inclusion in generated dictionary output
 
 #### Scenario: Success toast only follows a confirmed save
 - **WHEN** a valid entry submission is in flight and has not yet received a server response
@@ -114,11 +122,15 @@ When a user saves a valid entry, the system SHALL persist the Headword, Definiti
 
 ### Requirement: Entry Approval Status
 
-Every entry SHALL have an approval status capable of representing at least Pending, Approved, and Rejected. An entry created through normal submission SHALL start in the Pending state. The system SHALL support storing an optional rejection note associated with an entry's review outcome.
+Every entry SHALL have an approval status capable of representing at least Pending, Approved, and Rejected. An entry created through normal submission by a non-administrator SHALL start in the Pending state; an entry submitted by an administrator SHALL start in the Approved state, recorded as self-reviewed. The system SHALL support storing an optional rejection note associated with an entry's review outcome.
 
 #### Scenario: New entry starts Pending
-- **WHEN** a new entry is successfully saved
+- **WHEN** a non-administrator successfully saves a new entry
 - **THEN** its approval status is Pending
+
+#### Scenario: Administrator-submitted entry starts Approved
+- **WHEN** an administrator successfully saves a new entry
+- **THEN** its approval status is Approved from the moment it is created, with no separate review step required
 
 ### Requirement: Word Uniqueness Scope and Concurrency Safety
 

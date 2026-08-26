@@ -1,0 +1,43 @@
+- generic [ref=f30e1]:
+  - generic [ref=f30e2]:
+    - generic [ref=f30e3]:
+      - banner [ref=f30e4]:
+        - link [ref=f30e77] [cursor=pointer]:
+          - /url: /
+          - text: Planetos
+        - button [ref=f30e78]
+      - generic [ref=f30e8]:
+        - heading [level=1] [ref=f30e79]: Approval Queue
+        - table [ref=f30e11]:
+          - rowgroup [ref=f30e12]:
+            - row [ref=f30e80]:
+              - columnheader [ref=f30e81]: Type
+              - columnheader [ref=f30e82]: Headword
+              - columnheader [ref=f30e83]: Approve/Reject
+          - rowgroup [ref=f30e17]:
+            - row [ref=f30e84]:
+              - cell [ref=f30e85]:
+                - generic [ref=f30e20]: Edit
+              - cell [ref=f30e86]:
+                - button [ref=f30e87]: Stark
+              - cell [ref=f30e88]:
+                - generic [ref=f30e24]:
+                  - button [ref=f30e89]: Approve
+                  - button [ref=f30e90]: Reject
+                  - generic [ref=f30e76]: This entry has changed since this edit was submitted. Please review the current entry before approving.
+    - region "Notifications alt+T"
+  - dialog [ref=f30e94]:
+    - generic [ref=f30e95]:
+      - heading "Reject Edit" [level=2] [ref=f30e96]
+      - paragraph [ref=f30e97]:
+        - text: Optionally explain why
+        - strong [ref=f30e98]: Stark
+        - text: is being rejected.
+    - generic [ref=f30e99]:
+      - generic [ref=f30e100]: Note
+      - textbox "Note" [active] [ref=f30e101]:
+        - /placeholder: Optional note
+    - generic [ref=f30e102]:
+      - button "Cancel" [ref=f30e103]
+      - button "Reject" [ref=f30e104]
+    - button "Close" [ref=f30e105]

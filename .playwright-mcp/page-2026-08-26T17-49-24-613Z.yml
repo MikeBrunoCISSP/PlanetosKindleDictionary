@@ -1,0 +1,28 @@
+- generic [ref=f46e2]:
+  - generic [ref=f46e3]:
+    - banner [ref=f46e4]:
+      - link "Planetos" [ref=f46e5] [cursor=pointer]:
+        - /url: /
+      - generic [ref=f46e6]:
+        - button "Account menu" [ref=f46e7]:
+          - generic [ref=f46e11]: Administrator
+        - button "Open menu" [expanded] [ref=f46e12]
+        - menu "Open menu" [ref=f46e24]:
+          - generic [ref=f46e25]:
+            - paragraph [ref=f46e26]: Administrator
+            - paragraph [ref=f46e27]: admin@example.com
+          - separator [ref=f46e28]
+          - menuitem "Dictionaries" [ref=f46e29]
+          - separator [ref=f46e30]
+          - menuitem "Entries" [ref=f46e31]
+          - separator [ref=f46e32]
+          - menuitem "Administration" [active] [ref=f46e33]
+          - menuitem "Approval Queue" [ref=f46e36]
+          - menuitem "User Management" [ref=f46e37]
+          - menuitem "Turnstile" [ref=f46e38]
+    - generic [ref=f46e15]:
+      - heading "Planetos" [level=1] [ref=f46e16]
+      - generic [ref=f46e17]:
+        - textbox "Search dictionary entries…" [ref=f46e18]
+        - button "Search" [ref=f46e19]
+  - region "Notifications alt+T"

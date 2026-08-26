@@ -42,23 +42,31 @@ enum UserApprovalStatus {
   APPROVED
 }
 
+enum EntryEditProposalStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
 model User {
-  id                       String              @id @default(cuid())
-  email                    String              @unique
-  username                 String              @unique
-  usernameNormalized       String              @unique
-  reasonForJoining         String?
-  passwordHash             String
-  role                     Role                @default(MEMBER)
-  isActive                 Boolean             @default(true)
-  emailVerified            Boolean             @default(false)
-  approvalStatus           UserApprovalStatus  @default(PENDING)
-  createdAt                DateTime            @default(now())
-  revisions                Revision[]
-  createdSeries            Series[]
-  submittedEntries         Entry[]             @relation("EntrySubmittedBy")
-  reviewedEntries          Entry[]             @relation("EntryReviewedBy")
-  updatedTurnstileSettings TurnstileSettings[]
+  id                          String              @id @default(cuid())
+  email                       String              @unique
+  username                    String              @unique
+  usernameNormalized          String              @unique
+  reasonForJoining            String?
+  passwordHash                String
+  role                        Role                @default(MEMBER)
+  isActive                    Boolean             @default(true)
+  emailVerified               Boolean             @default(false)
+  approvalStatus              UserApprovalStatus  @default(PENDING)
+  createdAt                   DateTime            @default(now())
+  revisions                   Revision[]
+  createdSeries               Series[]
+  submittedEntries            Entry[]             @relation("EntrySubmittedBy")
+  reviewedEntries             Entry[]             @relation("EntryReviewedBy")
+  updatedTurnstileSettings    TurnstileSettings[]
+  submittedEntryEditProposals EntryEditProposal[] @relation("EntryEditProposalSubmittedBy")
+  reviewedEntryEditProposals  EntryEditProposal[] @relation("EntryEditProposalReviewedBy")
 }
 
 // Application-local Cloudflare Turnstile configuration. Single row
@@ -120,16 +128,21 @@ model Entry {
   status           EntryStatus  @default(PUBLISHED)
   revisions        Revision[]
   createdAt        DateTime     @default(now())
+  // Doubles as the EntryEditProposal concurrency token (see baseEntryUpdatedAt
+  // below) - any code path that mutates this entry's content must go through
+  // an explicit update on this row so this keeps advancing, or stale-revision
+  // detection silently breaks.
   updatedAt        DateTime     @updatedAt
 
-  approvalStatus EntryApprovalStatus @default(PENDING)
-  submittedById  String?
-  submittedBy    User?               @relation("EntrySubmittedBy", fields: [submittedById], references: [id], onDelete: SetNull)
-  reviewedById   String?
-  reviewedBy     User?               @relation("EntryReviewedBy", fields: [reviewedById], references: [id], onDelete: SetNull)
-  reviewedAt     DateTime?
-  rejectionNote  String?
-  words          SeriesWord[]
+  approvalStatus     EntryApprovalStatus @default(PENDING)
+  submittedById      String?
+  submittedBy        User?               @relation("EntrySubmittedBy", fields: [submittedById], references: [id], onDelete: SetNull)
+  reviewedById       String?
+  reviewedBy         User?               @relation("EntryReviewedBy", fields: [reviewedById], references: [id], onDelete: SetNull)
+  reviewedAt         DateTime?
+  rejectionNote      String?
+  words              SeriesWord[]
+  entryEditProposals EntryEditProposal[]
 
   @@unique([seriesId, headword])
   @@index([seriesId, sortKey])
@@ -164,6 +177,45 @@ model SeriesWord {
 
   @@unique([seriesId, normalizedWord])
   @@index([normalizedWord(ops: raw("gin_trgm_ops"))], type: Gin)
+}
+
+// A not-yet-applied proposal to change an already-approved Entry's Definition
+// and/or Inflections. Distinct from Revision below (an append-only audit log
+// of changes that already happened): this is a staging area reviewed by an
+// admin before anything is applied to the live Entry.
+model EntryEditProposal {
+  id                     String                        @id @default(cuid())
+  entryId                String
+  entry                  Entry                         @relation(fields: [entryId], references: [id], onDelete: Cascade)
+  proposedDefinitionHtml String
+  status                 EntryEditProposalStatus       @default(PENDING)
+  submittedById          String?
+  submittedBy            User?                         @relation("EntryEditProposalSubmittedBy", fields: [submittedById], references: [id], onDelete: SetNull)
+  reviewedById           String?
+  reviewedBy             User?                         @relation("EntryEditProposalReviewedBy", fields: [reviewedById], references: [id], onDelete: SetNull)
+  reviewedAt             DateTime?
+  rejectionNote          String?
+  // Entry.updatedAt captured server-side at submission time - the
+  // optimistic-concurrency token checked at approval time. Never
+  // client-supplied.
+  baseEntryUpdatedAt     DateTime
+  createdAt              DateTime                      @default(now())
+  inflections            EntryEditProposalInflection[]
+  // A hand-authored partial unique index (Prisma's schema DSL has no partial-
+  // index syntax) enforces at most one PENDING proposal per entry - see the
+  // add_entry_edit_proposals migration's hand-appended SQL.
+
+  @@index([status, createdAt])
+  @@index([entryId])
+}
+
+model EntryEditProposalInflection {
+  id         String            @id @default(cuid())
+  proposalId String
+  proposal   EntryEditProposal @relation(fields: [proposalId], references: [id], onDelete: Cascade)
+  value      String
+
+  @@index([proposalId])
 }
 
 model Revision {

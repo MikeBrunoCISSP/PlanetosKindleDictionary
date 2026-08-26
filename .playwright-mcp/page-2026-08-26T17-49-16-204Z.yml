@@ -1,0 +1,15 @@
+- generic [ref=f46e2]:
+  - generic [ref=f46e3]:
+    - banner [ref=f46e4]:
+      - link "Planetos" [ref=f46e5] [cursor=pointer]:
+        - /url: /
+      - generic [ref=f46e6]:
+        - button "Account menu" [ref=f46e7]:
+          - generic [ref=f46e11]: Administrator
+        - button "Open menu" [active] [ref=f46e12]
+    - generic [ref=f46e15]:
+      - heading "Planetos" [level=1] [ref=f46e16]
+      - generic [ref=f46e17]:
+        - textbox "Search dictionary entries…" [ref=f46e18]
+        - button "Search" [ref=f46e19]
+  - region "Notifications alt+T"

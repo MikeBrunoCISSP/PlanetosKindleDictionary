@@ -1,0 +1,15 @@
+- generic [ref=f39e2]:
+  - generic [ref=f39e3]:
+    - banner [ref=f39e4]:
+      - link "Planetos" [ref=f39e56] [cursor=pointer]:
+        - /url: /
+      - button "Open menu" [ref=f39e57]
+    - generic [ref=f39e66]:
+      - heading "Planetos" [level=1] [ref=f39e67]
+      - generic [ref=f39e68]:
+        - textbox "Search dictionary entries…" [active] [ref=f39e69]
+        - button "Search" [ref=f39e70]
+  - region "Notifications alt+T":
+    - list:
+      - listitem [ref=f39e71]:
+        - generic [ref=f39e75]: Your entry has been saved. It must be approved before it can be included in the generated Kindle dictionary.

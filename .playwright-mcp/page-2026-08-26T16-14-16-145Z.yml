@@ -1,0 +1,15 @@
+- generic [ref=f16e2]:
+  - generic [ref=f16e3]:
+    - banner [ref=f16e4]:
+      - link "Planetos" [ref=f16e5] [cursor=pointer]:
+        - /url: /
+      - button "Open menu" [ref=f16e6]
+    - generic [ref=f16e33]:
+      - button "Edit" [ref=f16e34]
+      - generic [ref=f16e35]:
+        - heading "Stark" [level=1] [ref=f16e36]
+        - generic [ref=f16e37]: House Stark of Winterfell is one of the Great Houses of Westeros and the principal noble house of the north. In days of old they ruled as Kings of Winter, but since Aegon's Conquest they have been Wardens of the North and ruled as Lords of Winterfell. Their seat, Winterfell, is an ancient castle renowned for its strength. Their sigil is a grey direwolf racing across a field of white. Their words are "Winter Is Coming", one of only a few house mottoes to be a warning rather than a boast.[3] Several of the POV characters of A Song of Ice and Fire are members of House Stark. Aside from the Karstarks of Karhold, the Starks of Winterfell may have other, distant relatives in the north. White Harbor and Barrowton are considered to be likely options for offshoot branches.[2] Some younger Starks have also held vassal holdfasts for the Lords of Winterfell.
+        - generic [ref=f16e38]:
+          - paragraph [ref=f16e39]: Inflections
+          - paragraph [ref=f16e40]: No inflections.
+  - region "Notifications alt+T"

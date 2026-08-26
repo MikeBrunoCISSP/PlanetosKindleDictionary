@@ -1,0 +1,28 @@
+- generic [ref=f22e2]:
+  - generic [ref=f22e3]:
+    - banner [ref=f22e4]:
+      - link "Planetos" [ref=f22e5] [cursor=pointer]:
+        - /url: /
+    - generic [ref=f22e7]:
+      - generic [ref=f22e8]:
+        - heading "Planetos" [level=1] [ref=f22e9]
+        - paragraph [ref=f22e10]: Kindle Series Dictionaries
+      - generic [ref=f22e11]:
+        - tablist [ref=f22e12]:
+          - tab "Sign In" [selected] [ref=f22e13]
+          - tab "Register" [ref=f22e14]
+        - tabpanel "Sign In" [ref=f22e15]:
+          - generic [ref=f22e16]:
+            - generic [ref=f22e17]:
+              - generic [ref=f22e18]: Sign In
+              - generic [ref=f22e19]: Enter your username or email and password to sign in.
+            - generic [ref=f22e21]:
+              - generic [ref=f22e22]:
+                - generic [ref=f22e23]: Username or Email
+                - textbox "Username or Email" [ref=f22e24]:
+                  - /placeholder: you@example.com
+              - generic [ref=f22e25]:
+                - generic [ref=f22e26]: Password
+                - textbox "Password" [ref=f22e27]
+              - button "Sign In" [ref=f22e28]
+  - region "Notifications alt+T"

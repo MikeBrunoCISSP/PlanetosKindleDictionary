@@ -5,7 +5,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { XIcon } from "lucide-react";
-import { createEntrySchema, normalizeWord, type CreateEntryDto } from "@planetos/shared";
+import { createEntrySchema, normalizeWord, DUPLICATE_WORD_MESSAGE, type CreateEntryDto } from "@planetos/shared";
 import type { SeriesListItemDto } from "@planetos/shared";
 import { apiMe, apiGetSeriesList, apiGetSeriesWords, apiCreateEntry, ApiError } from "@/lib/api";
 import { Button } from "@/components/ui/button";
@@ -21,8 +21,6 @@ import {
   CommandItem,
   CommandList,
 } from "@/components/ui/command";
-
-const DUPLICATE_WORD_MESSAGE = "The word already exists in the dictionary.";
 
 export const Route = createFileRoute("/entries/new")({
   beforeLoad: async ({ context }) => {
@@ -88,11 +86,14 @@ function CreateEntryForm() {
 
   const mutation = useMutation({
     mutationFn: (data: CreateEntryDto) => apiCreateEntry(selectedSeries!.slug, data),
-    onSuccess: async () => {
+    onSuccess: async (entry) => {
       toast.success(
-        "Your entry has been saved. It must be approved before it can be included in the generated Kindle dictionary."
+        entry.approvalStatus === "APPROVED"
+          ? "Your entry has been saved and is now live."
+          : "Your entry has been saved. It must be approved before it can be included in the generated Kindle dictionary."
       );
       await queryClient.invalidateQueries({ queryKey: ["admin", "entries", "pending"] });
+      await queryClient.invalidateQueries({ queryKey: ["admin", "review-queue"] });
       await navigate({ to: "/" });
     },
     onError: (err) => {

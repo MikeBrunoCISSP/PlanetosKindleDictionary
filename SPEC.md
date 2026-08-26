@@ -234,6 +234,39 @@ model SeriesWord {
   @@unique([seriesId, normalizedWord])
 }
 
+// A staging area for a NOT-YET-APPLIED edit to an already-APPROVED entry -
+// distinct from Revision (an append-only audit log of changes that already
+// happened). At most one PENDING proposal per entry, enforced by a partial
+// unique index on (entryId) WHERE status = 'PENDING'. baseEntryUpdatedAt is
+// captured server-side at submission time and re-checked against the
+// entry's current updatedAt at approval time, to detect the entry having
+// changed underneath a pending proposal (optimistic concurrency, no
+// separate version column).
+model EntryEditProposal {
+  id                     String   @id @default(cuid())
+  entryId                String
+  entry                  Entry    @relation(fields: [entryId], references: [id], onDelete: Cascade)
+  proposedDefinitionHtml String                       // proposed replacement, sanitized subset - see §5.4
+  inflections            EntryEditProposalInflection[] // proposed replacement inflection set
+  baseEntryUpdatedAt     DateTime                      // Entry.updatedAt at submission time - concurrency token
+  status                 EntryEditProposalStatus @default(PENDING) // PENDING | APPROVED | REJECTED
+  submittedById          String?
+  submittedBy            User?    @relation("EntryEditProposalSubmittedBy", fields: [submittedById], references: [id], onDelete: SetNull)
+  reviewedById           String?
+  reviewedBy             User?    @relation("EntryEditProposalReviewedBy", fields: [reviewedById], references: [id], onDelete: SetNull)
+  reviewedAt             DateTime?
+  rejectionNote          String?
+  createdAt              DateTime @default(now())
+}
+
+model EntryEditProposalInflection {
+  id         String @id @default(cuid())
+  proposalId String
+  proposal   EntryEditProposal @relation(fields: [proposalId], references: [id], onDelete: Cascade)
+  value      String
+  @@index([proposalId])
+}
+
 model Revision {
   id        String   @id @default(cuid())
   entryId   String
@@ -446,6 +479,9 @@ GET    /api/series/:slug
 GET    /api/series/:slug/entries         ?q=&letter=&maxBook=&page=&limit=
 GET    /api/series/:slug/entries/:id
 GET    /api/series/:slug/entries/:id/revisions
+GET    /api/entries/:id                  public entry detail (by id, not scoped to a series slug);
+                                          PENDING entries are visible with a "pending review" banner,
+                                          REJECTED/DELETED entries 404
 GET    /api/series/:slug/builds          latest N builds, newest first
 GET    /api/series/:slug/download        302 → presigned URL for latest SUCCESS build
 GET    /api/series/:slug/download/source 302 → presigned URL for sources.zip
@@ -461,12 +497,25 @@ GET    /api/search                       ?q=&page= — cross-dictionary search (
 ```
 POST   /api/series                       create series (+ books)
 PATCH  /api/series/:slug
-POST   /api/series/:slug/entries         submit a new entry; starts approvalStatus=PENDING
+POST   /api/series/:slug/entries         submit a new entry; starts approvalStatus=PENDING, except an
+                                          administrator's own submission is saved as APPROVED immediately,
+                                          self-reviewed (reviewedById/reviewedAt set to that admin)
 GET    /api/series/:slug/entries/words   existing headwords + inflections in the dictionary, for client-side duplicate-word checks
 PATCH  /api/series/:slug/entries/:id
 DELETE /api/series/:slug/entries/:id      soft delete → status=DELETED + Revision
 POST   /api/series/:slug/rebuild          admin only; enqueue immediate build
 POST   /api/series/:slug/entries/:id/rollback  { revisionId } — admin only
+POST   /api/entries/:id/edit-proposals    { definitionHtml, inflections } — propose an edit to an
+                                           APPROVED entry; requires auth; entry stays authoritative
+                                           and unchanged while the proposal is pending review; at
+                                           most one pending proposal per entry (enforced by a partial
+                                           unique index, not just an application check), enforced
+                                           identically for an administrator's own submission - an
+                                           admin does not bypass or replace another pending proposal.
+                                           An administrator's own submission is instead applied to the
+                                           entry immediately in the same request, self-reviewed; the
+                                           response's `status` field distinguishes PENDING from this
+                                           immediate APPROVED outcome
 ```
 
 ### Admin: entry approval queue
@@ -476,6 +525,20 @@ GET    /api/admin/entries/pending             entries with approvalStatus=PENDIN
 GET    /api/admin/entries/:id                 full entry detail (for the review dialog)
 POST   /api/admin/entries/:id/approve         approvalStatus → APPROVED
 POST   /api/admin/entries/:id/reject          { note? } — approvalStatus → REJECTED
+
+GET    /api/admin/review-queue                 merged queue: pending new-entry submissions AND
+                                                pending edit proposals together, oldest first
+                                                (discriminated by a `type: "NEW_ENTRY" | "EDIT"` field)
+GET    /api/admin/entry-edit-proposals/:id     full proposal detail (current vs. proposed, for the
+                                                review dialog)
+POST   /api/admin/entry-edit-proposals/:id/approve
+                                                applies the proposed Definition/Inflections to the
+                                                entry + writes a Revision, in one transaction; fails
+                                                with 409 if the entry changed since the proposal was
+                                                submitted (`updatedAt` mismatch) or if a proposed
+                                                inflection now collides with another entry's word
+POST   /api/admin/entry-edit-proposals/:id/reject
+                                                { note? } — entry is left untouched
 ```
 
 ### Admin: registration approval
@@ -587,12 +650,19 @@ objects in the `maintenance` queue. Never delete the newest.
 /series/:slug                       Entry browser, download panel, build status
 /series/:slug/entries/:id           Entry detail + revision history
 /series/:slug/entries/:id/edit      Editor for an existing entry (auth)
+/entries/$id                        Public entry detail (view/edit toggle) - reachable from search
+                                    results; PENDING entries show with a "pending review" banner,
+                                    REJECTED/DELETED 404; Edit button (auth, APPROVED entries only)
+                                    submits a pending edit proposal for Definition + Inflections
+                                    (Headword is never editable) rather than writing the entry directly
 /entries/new                        Add Entry - dictionary picker + Headword/Definition/Inflections (auth); saves as Pending
 /entries/delete                     Placeholder only, no workflow yet (admin)
 /series/new                         Series creation (auth)
 /login  /register  /reset-password
 /admin                              Builds, users, pending registrations, job dashboard link (admin)
-/admin/approval-queue               Pending entries, oldest first; approve/reject (admin)
+/admin/approval-queue               Merged queue of pending new-entry submissions and pending edit
+                                    proposals, oldest first, with a Type badge; approve/reject each
+                                    from the same table (admin)
 /admin/turnstile                    Cloudflare Turnstile configuration (admin)
 ```
 

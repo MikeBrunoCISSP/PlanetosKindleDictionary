@@ -1,0 +1,13 @@
+- generic [ref=f45e2]:
+  - generic [ref=f45e3]:
+    - banner [ref=f45e4]:
+      - link "Planetos" [ref=f45e5] [cursor=pointer]:
+        - /url: /
+      - link "Log In" [ref=f45e29] [cursor=pointer]:
+        - /url: /login
+    - generic [ref=f45e15]:
+      - heading "Planetos" [level=1] [ref=f45e16]
+      - generic [ref=f45e17]:
+        - textbox "Search dictionary entries…" [ref=f45e18]
+        - button "Search" [ref=f45e19]
+  - region "Notifications alt+T"

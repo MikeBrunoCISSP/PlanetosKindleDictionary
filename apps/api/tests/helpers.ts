@@ -8,6 +8,7 @@ import seriesRoutes from "../src/routes/series.js";
 import entriesRoutes from "../src/routes/entries.js";
 import turnstileRoutes from "../src/routes/turnstile.js";
 import searchRoutes from "../src/routes/search.js";
+import entryEditProposalRoutes from "../src/routes/entryEditProposals.js";
 
 export async function buildApp() {
   const prisma = new PrismaClient();
@@ -21,6 +22,7 @@ export async function buildApp() {
   await app.register(entriesRoutes, { prisma });
   await app.register(turnstileRoutes, { prisma });
   await app.register(searchRoutes, { prisma });
+  await app.register(entryEditProposalRoutes, { prisma });
 
   return { app, prisma };
 }

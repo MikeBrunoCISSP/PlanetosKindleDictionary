@@ -1,0 +1,18 @@
+- generic [ref=f40e2]:
+  - generic [ref=f40e3]:
+    - banner [ref=f40e4]:
+      - link "Planetos" [ref=f40e5] [cursor=pointer]:
+        - /url: /
+      - button "Open menu" [ref=f40e6]
+    - generic [ref=f40e8]:
+      - button "Edit" [ref=f40e36]
+      - generic [ref=f40e37]:
+        - heading "Lannister" [level=1] [ref=f40e38]
+        - generic [ref=f40e39]: House Lannister of Casterly Rock is one of the Great Houses of Seven Kingdoms, and the principal house of the westerlands. Their seat is Casterly Rock, though another branch exists in nearby Lannisport. Their sigil is a golden roaring lion on a field of crimson. Their official motto is "Hear Me Roar!" However, their unofficial motto, equally well known, is "A Lannister always pays his debts." The Warden of the West is a Lannister by tradition. Their gold mines have made the Lannisters the wealthiest of the Great Houses, and the Lannister fleet is anchored at Lannisport. Through the female line the Lannisters boast of descent from Lann the Clever, the legendary trickster of the Age of Heroes who tricked the members of House Casterly into giving him Casterly Rock during the era of the First Men. Later marrying Andals, the Lannisters reigned as Kings of the Rock until the Targaryen conquest, when they were defeated at the Field of Fire. King Loren I Lannister's surrender to Aegon the Conqueror allowed the Lannisters to remain the liege lords of the westerlands. The current Lord of Casterly Rock is Tywin Lannister, whose daughter Cersei is the queen of King Robert I Baratheon, while her twin, Ser Jaime, is a knight of Robert's Kingsguard. Tywin's youngest child is Tyrion, a dwarf.
+        - generic [ref=f40e40]:
+          - paragraph [ref=f40e41]: Inflections
+          - paragraph [ref=f40e42]: No inflections.
+  - region "Notifications alt+T":
+    - list:
+      - listitem [ref=f40e43]:
+        - generic [ref=f40e47]: Your edit has been submitted for approval.

@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Link, useNavigate } from "@tanstack/react-router";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { MenuIcon, ChevronDownIcon } from "lucide-react";
+import { MenuIcon, ChevronDownIcon, UserIcon } from "lucide-react";
 import type { SeriesListItemDto, UserDto } from "@planetos/shared";
 import {
   DropdownMenu,
@@ -39,8 +39,49 @@ export function AppHeader() {
       <Link to="/" className="font-semibold text-lg">
         Planetos
       </Link>
-      {me && <AppMenu me={me} />}
+      <div className="flex items-center gap-1">
+        {me ? (
+          <AccountMenu me={me} />
+        ) : (
+          <Link to="/login" className="rounded-md px-2 py-2 text-sm font-medium hover:bg-accent">
+            Log In
+          </Link>
+        )}
+        {me && <AppMenu me={me} />}
+      </div>
     </header>
+  );
+}
+
+function AccountMenu({ me }: { me: UserDto }) {
+  const navigate = useNavigate();
+  const queryClient = useQueryClient();
+
+  const handleLogout = async () => {
+    await apiLogout();
+    queryClient.setQueryData(ME_QUERY_KEY, null);
+    void navigate({ to: "/" });
+  };
+
+  return (
+    <DropdownMenu>
+      <DropdownMenuTrigger
+        aria-label="Account menu"
+        className="flex items-center gap-1.5 rounded-md px-2 py-2 text-sm font-medium hover:bg-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+      >
+        <UserIcon className="size-5" />
+        <span className="max-w-32 truncate">{me.username}</span>
+      </DropdownMenuTrigger>
+
+      <DropdownMenuContent align="end" className="w-40">
+        <DropdownMenuItem onClick={() => { void navigate({ to: "/preferences" }); }}>
+          Preferences
+        </DropdownMenuItem>
+        <DropdownMenuItem onClick={() => { void handleLogout(); }}>
+          Log out
+        </DropdownMenuItem>
+      </DropdownMenuContent>
+    </DropdownMenu>
   );
 }
 
@@ -48,9 +89,7 @@ function AppMenu({ me }: { me: UserDto }) {
   const isAdmin = me.role === "ADMIN";
   const navigate = useNavigate();
   const queryClient = useQueryClient();
-  const [openSection, setOpenSection] = useState<"dictionary" | "entries" | "administration" | "settings" | null>(
-    null
-  );
+  const [openSection, setOpenSection] = useState<"dictionary" | "entries" | "administration" | null>(null);
   const [commandOpen, setCommandOpen] = useState(false);
   const [deleteCommandOpen, setDeleteCommandOpen] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<SeriesListItemDto | null>(null);
@@ -74,15 +113,9 @@ function AppMenu({ me }: { me: UserDto }) {
     },
   });
 
-  function toggleSection(section: "dictionary" | "entries" | "administration" | "settings") {
+  function toggleSection(section: "dictionary" | "entries" | "administration") {
     setOpenSection((prev) => (prev === section ? null : section));
   }
-
-  const handleLogout = async () => {
-    await apiLogout();
-    queryClient.setQueryData(ME_QUERY_KEY, null);
-    void navigate({ to: "/" });
-  };
 
   return (
     <>
@@ -173,11 +206,11 @@ function AppMenu({ me }: { me: UserDto }) {
             </>
           )}
 
-          <DropdownMenuSeparator />
-
           {/* Administration section - unlike other sections, hidden entirely for non-admins */}
           {isAdmin && (
             <>
+              <DropdownMenuSeparator />
+
               <DropdownMenuItem
                 closeOnClick={false}
                 onClick={() => toggleSection("administration")}
@@ -214,37 +247,6 @@ function AppMenu({ me }: { me: UserDto }) {
                   </DropdownMenuItem>
                 </>
               )}
-
-              <DropdownMenuSeparator />
-            </>
-          )}
-
-          {/* Settings section */}
-          <DropdownMenuItem
-            closeOnClick={false}
-            onClick={() => toggleSection("settings")}
-            className="flex items-center justify-between font-medium"
-          >
-            Settings
-            <ChevronDownIcon
-              className={cn("size-4 transition-transform", openSection === "settings" && "rotate-180")}
-            />
-          </DropdownMenuItem>
-
-          {openSection === "settings" && (
-            <>
-              <DropdownMenuItem
-                className="pl-6"
-                onClick={() => { void navigate({ to: "/preferences" }); }}
-              >
-                Preferences
-              </DropdownMenuItem>
-              <DropdownMenuItem
-                className="pl-6"
-                onClick={() => { void handleLogout(); }}
-              >
-                Log out
-              </DropdownMenuItem>
             </>
           )}
         </DropdownMenuContent>

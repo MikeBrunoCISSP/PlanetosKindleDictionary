@@ -51,4 +51,16 @@ export const Errors = {
       "Registration is temporarily unavailable. Please try again later.",
       503
     ),
+  EDIT_ALREADY_PENDING: () =>
+    new DomainError(
+      "EDIT_ALREADY_PENDING",
+      "An edit for this entry is already awaiting approval.",
+      409
+    ),
+  STALE_ENTRY_REVISION: () =>
+    new DomainError(
+      "STALE_ENTRY_REVISION",
+      "This entry has changed since this edit was submitted. Please review the current entry before approving.",
+      409
+    ),
 } as const;

@@ -1,0 +1,25 @@
+- generic [ref=f31e2]:
+  - generic [ref=f31e3]:
+    - banner [ref=f31e4]:
+      - link "Planetos" [ref=f31e5] [cursor=pointer]:
+        - /url: /
+      - button "Open menu" [ref=f31e6]
+    - generic [ref=f31e8]:
+      - heading "Approval Queue" [level=1] [ref=f31e9]
+      - table [ref=f31e11]:
+        - rowgroup [ref=f31e12]:
+          - row [ref=f31e13]:
+            - columnheader "Type" [ref=f31e14]
+            - columnheader "Headword" [ref=f31e15]
+            - columnheader "Approve/Reject" [ref=f31e16]
+        - rowgroup [ref=f31e17]:
+          - row [ref=f31e42]:
+            - cell "Edit" [ref=f31e19]
+            - cell [ref=f31e21]:
+              - button "Stark" [ref=f31e22]
+            - cell "Approve Reject The word already exists in the dictionary." [ref=f31e43]:
+              - generic [ref=f31e24]:
+                - button "Approve" [ref=f31e25]
+                - button "Reject" [ref=f31e26]
+                - generic [ref=f31e44]: The word already exists in the dictionary.
+  - region "Notifications alt+T"

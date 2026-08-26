@@ -140,6 +140,56 @@ describe("POST /api/series/:slug/entries", () => {
     expect(res.statusCode).toBe(201);
   });
 
+  it("saves an admin's own submission as Approved, self-reviewed, with a CREATE revision recording it", async () => {
+    const adminCookie = await setupAdmin();
+    const admin = await prisma.user.findUniqueOrThrow({ where: { email: ADMIN_EMAIL } });
+    const series = await createTestSeries("admin-auto-approve");
+
+    const res = await app.inject({
+      method: "POST",
+      url: `/api/series/${series.slug}/entries`,
+      headers: { cookie: adminCookie },
+      payload: { headword: "Admin Approved Word", definitionHtml: "<p>Definition</p>", inflections: [] },
+    });
+
+    expect(res.statusCode).toBe(201);
+    const body = res.json<{
+      id: string;
+      approvalStatus: string;
+      submittedById: string | null;
+      reviewedById: string | null;
+      reviewedAt: string | null;
+    }>();
+    expect(body.approvalStatus).toBe("APPROVED");
+    expect(body.submittedById).toBe(admin.id);
+    expect(body.reviewedById).toBe(admin.id);
+    expect(body.reviewedAt).toBeTruthy();
+
+    const revisions = await prisma.revision.findMany({ where: { entryId: body.id } });
+    expect(revisions).toHaveLength(1);
+    expect(revisions[0]?.action).toBe("CREATE");
+    const snapshot = revisions[0]?.snapshot as { approvalStatus?: string } | null;
+    expect(snapshot?.approvalStatus).toBe("APPROVED");
+  });
+
+  it("still saves a non-admin member's submission as Pending, not self-reviewed", async () => {
+    const memberCookie = await setupMember();
+    const series = await createTestSeries("member-still-pending");
+
+    const res = await app.inject({
+      method: "POST",
+      url: `/api/series/${series.slug}/entries`,
+      headers: { cookie: memberCookie },
+      payload: { headword: "Member Word", definitionHtml: "<p>Definition</p>", inflections: [] },
+    });
+
+    expect(res.statusCode).toBe(201);
+    const body = res.json<{ approvalStatus: string; reviewedById: string | null; reviewedAt: string | null }>();
+    expect(body.approvalStatus).toBe("PENDING");
+    expect(body.reviewedById).toBeNull();
+    expect(body.reviewedAt).toBeNull();
+  });
+
   it("returns 404 for an unknown series slug", async () => {
     const memberCookie = await setupMember();
     const res = await app.inject({

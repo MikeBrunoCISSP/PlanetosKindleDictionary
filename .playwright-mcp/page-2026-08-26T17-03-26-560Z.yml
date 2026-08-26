@@ -1,0 +1,41 @@
+- generic [ref=f39e1]:
+  - generic [ref=f39e2]:
+    - generic [ref=f39e3]:
+      - banner [ref=f39e4]:
+        - link [ref=f39e26] [cursor=pointer]:
+          - /url: /
+          - text: Planetos
+        - button [ref=f39e27]
+      - generic [ref=f39e8]:
+        - heading [level=1] [ref=f39e28]: Add Entry
+        - generic [ref=f39e10]:
+          - generic [ref=f39e11]:
+            - generic [ref=f39e12]: Dictionary
+            - button [ref=f39e29]: Select a dictionary...
+          - generic [ref=f39e14]:
+            - generic [ref=f39e15]: Headword
+            - textbox [ref=f39e30]:
+              - /placeholder: Headword
+          - generic [ref=f39e17]:
+            - generic [ref=f39e18]: Definition
+            - textbox [ref=f39e31]:
+              - /placeholder: Definition
+          - generic [ref=f39e20]:
+            - generic [ref=f39e21]: Inflections
+            - generic [ref=f39e22]:
+              - textbox [ref=f39e32]:
+                - /placeholder: Add an inflection
+              - button [ref=f39e33]: Add
+          - button [ref=f39e34]: Add Entry
+    - region "Notifications alt+T"
+  - dialog [ref=f39e38]:
+    - generic [ref=f39e39]:
+      - heading "Select Dictionary" [level=2] [ref=f39e40]
+      - paragraph [ref=f39e41]: Search for a command to run...
+    - generic [ref=f39e42]:
+      - group [ref=f39e45]:
+        - combobox [expanded] [active] [ref=f39e46]
+        - group [ref=f39e47]
+      - listbox "Suggestions" [ref=f39e51]:
+        - group [ref=f39e53]:
+          - option "ASOIAF" [selected] [ref=f39e54]

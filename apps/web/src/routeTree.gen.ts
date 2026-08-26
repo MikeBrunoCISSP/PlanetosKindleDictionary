@@ -15,6 +15,7 @@ import { Route as LoginRouteImport } from './routes/login'
 import { Route as PreferencesRouteImport } from './routes/preferences'
 import { Route as AdminApprovalQueueRouteImport } from './routes/admin_.approval-queue'
 import { Route as AdminTurnstileRouteImport } from './routes/admin_.turnstile'
+import { Route as EntriesIdRouteImport } from './routes/entries/$id'
 import { Route as EntriesDeleteRouteImport } from './routes/entries/delete'
 import { Route as EntriesNewRouteImport } from './routes/entries/new'
 import { Route as SeriesNewRouteImport } from './routes/series/new'
@@ -50,6 +51,11 @@ const AdminTurnstileRoute = AdminTurnstileRouteImport.update({
   path: '/admin/turnstile',
   getParentRoute: () => rootRouteImport,
 } as any)
+const EntriesIdRoute = EntriesIdRouteImport.update({
+  id: '/entries/$id',
+  path: '/entries/$id',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const EntriesDeleteRoute = EntriesDeleteRouteImport.update({
   id: '/entries/delete',
   path: '/entries/delete',
@@ -78,6 +84,7 @@ export interface FileRoutesByFullPath {
   '/preferences': typeof PreferencesRoute
   '/admin/approval-queue': typeof AdminApprovalQueueRoute
   '/admin/turnstile': typeof AdminTurnstileRoute
+  '/entries/$id': typeof EntriesIdRoute
   '/entries/delete': typeof EntriesDeleteRoute
   '/entries/new': typeof EntriesNewRoute
   '/series/new': typeof SeriesNewRoute
@@ -90,6 +97,7 @@ export interface FileRoutesByTo {
   '/preferences': typeof PreferencesRoute
   '/admin/approval-queue': typeof AdminApprovalQueueRoute
   '/admin/turnstile': typeof AdminTurnstileRoute
+  '/entries/$id': typeof EntriesIdRoute
   '/entries/delete': typeof EntriesDeleteRoute
   '/entries/new': typeof EntriesNewRoute
   '/series/new': typeof SeriesNewRoute
@@ -103,6 +111,7 @@ export interface FileRoutesById {
   '/preferences': typeof PreferencesRoute
   '/admin_/approval-queue': typeof AdminApprovalQueueRoute
   '/admin_/turnstile': typeof AdminTurnstileRoute
+  '/entries/$id': typeof EntriesIdRoute
   '/entries/delete': typeof EntriesDeleteRoute
   '/entries/new': typeof EntriesNewRoute
   '/series/new': typeof SeriesNewRoute
@@ -117,6 +126,7 @@ export interface FileRouteTypes {
     | '/preferences'
     | '/admin/approval-queue'
     | '/admin/turnstile'
+    | '/entries/$id'
     | '/entries/delete'
     | '/entries/new'
     | '/series/new'
@@ -129,6 +139,7 @@ export interface FileRouteTypes {
     | '/preferences'
     | '/admin/approval-queue'
     | '/admin/turnstile'
+    | '/entries/$id'
     | '/entries/delete'
     | '/entries/new'
     | '/series/new'
@@ -141,6 +152,7 @@ export interface FileRouteTypes {
     | '/preferences'
     | '/admin_/approval-queue'
     | '/admin_/turnstile'
+    | '/entries/$id'
     | '/entries/delete'
     | '/entries/new'
     | '/series/new'
@@ -154,6 +166,7 @@ export interface RootRouteChildren {
   PreferencesRoute: typeof PreferencesRoute
   AdminApprovalQueueRoute: typeof AdminApprovalQueueRoute
   AdminTurnstileRoute: typeof AdminTurnstileRoute
+  EntriesIdRoute: typeof EntriesIdRoute
   EntriesDeleteRoute: typeof EntriesDeleteRoute
   EntriesNewRoute: typeof EntriesNewRoute
   SeriesNewRoute: typeof SeriesNewRoute
@@ -204,6 +217,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminTurnstileRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/entries/$id': {
+      id: '/entries/$id'
+      path: '/entries/$id'
+      fullPath: '/entries/$id'
+      preLoaderRoute: typeof EntriesIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/entries/delete': {
       id: '/entries/delete'
       path: '/entries/delete'
@@ -242,6 +262,7 @@ const rootRouteChildren: RootRouteChildren = {
   PreferencesRoute: PreferencesRoute,
   AdminApprovalQueueRoute: AdminApprovalQueueRoute,
   AdminTurnstileRoute: AdminTurnstileRoute,
+  EntriesIdRoute: EntriesIdRoute,
   EntriesDeleteRoute: EntriesDeleteRoute,
   EntriesNewRoute: EntriesNewRoute,
   SeriesNewRoute: SeriesNewRoute,

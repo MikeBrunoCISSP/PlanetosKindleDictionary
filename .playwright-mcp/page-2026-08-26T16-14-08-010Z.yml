@@ -1,0 +1,29 @@
+- generic [ref=f16e2]:
+  - generic [ref=f16e3]:
+    - banner [ref=f16e4]:
+      - link "Planetos" [ref=f16e5] [cursor=pointer]:
+        - /url: /
+      - button "Open menu" [ref=f16e6]
+    - generic [ref=f16e8]:
+      - generic [ref=f16e14]:
+        - textbox "Search dictionary entries…" [ref=f16e15]: Stark
+        - button "Search" [ref=f16e16]
+      - generic [ref=f16e17]:
+        - table [ref=f16e19]:
+          - rowgroup [ref=f16e20]:
+            - row [ref=f16e21]:
+              - columnheader "Dictionary" [ref=f16e22]
+              - columnheader "Word" [ref=f16e23]
+          - rowgroup [ref=f16e24]:
+            - row [ref=f16e25]:
+              - cell "ASOIAF" [ref=f16e26]
+              - cell [ref=f16e27]:
+                - link [ref=f16e28] [cursor=pointer]:
+                  - /url: /entries/cmt9atys5000ai7ewmhyt9z7f
+                  - strong [ref=f16e29]: Stark
+                - paragraph [ref=f16e30]: House Stark of Winterfell is one of the Great Houses of Westeros and the principal noble house of the north. In days of old they ruled as Kings of Winter, but since Aegon's Conquest they have been Wardens of the North and ruled as Lords of Winterfell. Thei...
+        - generic [ref=f16e31]:
+          - button "Previous" [disabled]
+          - generic [ref=f16e32]: Page 1 of 1
+          - button "Next" [disabled]
+  - region "Notifications alt+T"

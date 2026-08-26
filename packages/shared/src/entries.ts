@@ -1,15 +1,18 @@
 import { z } from "zod";
 import { plainText } from "./validation.js";
 
-const DUPLICATE_WORD_MESSAGE = "The word already exists in the dictionary.";
+export const DUPLICATE_WORD_MESSAGE = "The word already exists in the dictionary.";
+
+export const definitionHtmlSchema = z
+  .string()
+  .trim()
+  .min(1, "Definition is required")
+  .max(5000, "Definition must be at most 5,000 characters");
 
 export const createEntrySchema = z
   .object({
     headword: plainText({ max: 200, minMessage: "Headword is required" }),
-    definitionHtml: z
-      .string()
-      .min(1, "Definition is required")
-      .max(5000, "Definition must be at most 5,000 characters"),
+    definitionHtml: definitionHtmlSchema,
     inflections: z.array(plainText({ max: 200, minMessage: "Inflection cannot be empty" })).default([]),
   })
   .refine(
@@ -19,6 +22,16 @@ export const createEntrySchema = z
       if (inflections.includes(headword)) return false;
       return new Set(inflections).size === inflections.length;
     },
+    { message: DUPLICATE_WORD_MESSAGE, path: ["inflections"] }
+  );
+
+export const submitEntryEditProposalSchema = z
+  .object({
+    definitionHtml: definitionHtmlSchema,
+    inflections: z.array(plainText({ max: 200, minMessage: "Inflection cannot be empty" })).default([]),
+  })
+  .refine(
+    (data) => new Set(data.inflections.map((value) => value.trim().toLowerCase())).size === data.inflections.length,
     { message: DUPLICATE_WORD_MESSAGE, path: ["inflections"] }
   );
 
@@ -51,8 +64,62 @@ export const entryDtoSchema = z.object({
   createdAt: z.string().datetime(),
 });
 
+export const publicEntryDtoSchema = z.object({
+  id: z.string(),
+  seriesId: z.string(),
+  seriesSlug: z.string(),
+  headword: z.string(),
+  definitionHtml: z.string(),
+  approvalStatus: z.enum(["PENDING", "APPROVED"]),
+  inflections: z.array(inflectionDtoSchema),
+});
+
+const entryEditProposalCurrentSchema = z.object({
+  headword: z.string(),
+  definitionHtml: z.string(),
+  inflections: z.array(inflectionDtoSchema),
+});
+
+const entryEditProposalProposedSchema = z.object({
+  definitionHtml: z.string(),
+  inflections: z.array(z.string()),
+});
+
+export const entryEditProposalDtoSchema = z.object({
+  id: z.string(),
+  entryId: z.string(),
+  status: z.enum(["PENDING", "APPROVED", "REJECTED"]),
+  submittedById: z.string().nullable(),
+  submittedAt: z.string().datetime(),
+  reviewedById: z.string().nullable(),
+  reviewedAt: z.string().datetime().nullable(),
+  rejectionNote: z.string().nullable(),
+  current: entryEditProposalCurrentSchema,
+  proposed: entryEditProposalProposedSchema,
+});
+
+export const pendingQueueItemDtoSchema = z.discriminatedUnion("type", [
+  z.object({
+    type: z.literal("NEW_ENTRY"),
+    id: z.string(),
+    headword: z.string(),
+    createdAt: z.string().datetime(),
+  }),
+  z.object({
+    type: z.literal("EDIT"),
+    id: z.string(),
+    entryId: z.string(),
+    headword: z.string(),
+    createdAt: z.string().datetime(),
+  }),
+]);
+
 export type CreateEntryDto = z.infer<typeof createEntrySchema>;
+export type SubmitEntryEditProposalDto = z.infer<typeof submitEntryEditProposalSchema>;
 export type RejectEntryDto = z.infer<typeof rejectEntrySchema>;
 export type InflectionDto = z.infer<typeof inflectionDtoSchema>;
 export type EntrySummaryDto = z.infer<typeof entrySummaryDtoSchema>;
 export type EntryDto = z.infer<typeof entryDtoSchema>;
+export type PublicEntryDto = z.infer<typeof publicEntryDtoSchema>;
+export type EntryEditProposalDto = z.infer<typeof entryEditProposalDtoSchema>;
+export type PendingQueueItemDto = z.infer<typeof pendingQueueItemDtoSchema>;

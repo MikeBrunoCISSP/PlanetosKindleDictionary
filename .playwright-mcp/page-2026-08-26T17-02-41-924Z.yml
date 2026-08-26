@@ -1,0 +1,19 @@
+- generic [ref=f37e2]:
+  - generic [ref=f37e3]:
+    - banner [ref=f37e4]:
+      - link "Planetos" [ref=f37e5] [cursor=pointer]:
+        - /url: /
+      - button "Open menu" [ref=f37e6]
+    - generic [ref=f37e8]:
+      - button "Edit" [ref=f37e36]
+      - generic [ref=f37e37]:
+        - heading "Admin Auto Approve Test" [level=1] [ref=f37e38]
+        - generic [ref=f37e39]: A test entry submitted directly by an administrator to verify auto-approval.
+        - generic [ref=f37e40]:
+          - paragraph [ref=f37e41]: Inflections
+          - list [ref=f37e42]:
+            - listitem [ref=f37e43]: Admin Test Inflection
+  - region "Notifications alt+T":
+    - list:
+      - listitem [ref=f37e44]:
+        - generic [ref=f37e48]: Your edit has been applied and is now live.

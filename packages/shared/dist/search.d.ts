@@ -34,10 +34,10 @@ export declare const searchResultItemSchema: z.ZodObject<{
         matched: boolean;
     }[];
     seriesId: string;
+    seriesSlug: string;
     entryId: string;
     headwordMatched: boolean;
     definitionExcerpt: string;
-    seriesSlug: string;
     seriesTitle: string;
 }, {
     headword: string;
@@ -46,10 +46,10 @@ export declare const searchResultItemSchema: z.ZodObject<{
         matched: boolean;
     }[];
     seriesId: string;
+    seriesSlug: string;
     entryId: string;
     headwordMatched: boolean;
     definitionExcerpt: string;
-    seriesSlug: string;
     seriesTitle: string;
 }>;
 export declare const searchResultsSchema: z.ZodObject<{
@@ -83,10 +83,10 @@ export declare const searchResultsSchema: z.ZodObject<{
             matched: boolean;
         }[];
         seriesId: string;
+        seriesSlug: string;
         entryId: string;
         headwordMatched: boolean;
         definitionExcerpt: string;
-        seriesSlug: string;
         seriesTitle: string;
     }, {
         headword: string;
@@ -95,10 +95,10 @@ export declare const searchResultsSchema: z.ZodObject<{
             matched: boolean;
         }[];
         seriesId: string;
+        seriesSlug: string;
         entryId: string;
         headwordMatched: boolean;
         definitionExcerpt: string;
-        seriesSlug: string;
         seriesTitle: string;
     }>, "many">;
 }, "strip", z.ZodTypeAny, {
@@ -114,10 +114,10 @@ export declare const searchResultsSchema: z.ZodObject<{
             matched: boolean;
         }[];
         seriesId: string;
+        seriesSlug: string;
         entryId: string;
         headwordMatched: boolean;
         definitionExcerpt: string;
-        seriesSlug: string;
         seriesTitle: string;
     }[];
 }, {
@@ -133,10 +133,10 @@ export declare const searchResultsSchema: z.ZodObject<{
             matched: boolean;
         }[];
         seriesId: string;
+        seriesSlug: string;
         entryId: string;
         headwordMatched: boolean;
         definitionExcerpt: string;
-        seriesSlug: string;
         seriesTitle: string;
     }[];
 }>;

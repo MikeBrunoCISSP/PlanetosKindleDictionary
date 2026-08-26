@@ -1,0 +1,15 @@
+- generic [ref=f22e2]:
+  - generic [ref=f22e3]:
+    - banner [ref=f22e4]:
+      - link "Planetos" [ref=f22e5] [cursor=pointer]:
+        - /url: /
+      - button "Open menu" [ref=f22e52]
+    - generic [ref=f22e55]:
+      - heading "Planetos" [level=1] [ref=f22e56]
+      - generic [ref=f22e57]:
+        - textbox "Search dictionary entries…" [active] [ref=f22e58]
+        - button "Search" [ref=f22e59]
+  - region "Notifications alt+T":
+    - list:
+      - listitem [ref=f22e60]:
+        - generic [ref=f22e64]: Your registration request has been submitted and is awaiting administrator approval.

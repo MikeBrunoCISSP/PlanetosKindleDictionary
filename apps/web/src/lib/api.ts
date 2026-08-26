@@ -3,14 +3,18 @@ import type {
   CreateEntryDto,
   CreateSeriesDto,
   EntryDto,
+  EntryEditProposalDto,
   EntrySummaryDto,
   LoginDto,
+  PendingQueueItemDto,
   PendingUserDto,
+  PublicEntryDto,
   RegisterDto,
   RejectEntryDto,
   SearchResultsDto,
   SeriesDto,
   SeriesListItemDto,
+  SubmitEntryEditProposalDto,
   TurnstileConfig,
   TurnstileSettingsDto,
   UpdateSeriesDto,
@@ -240,4 +244,53 @@ export async function apiRejectEntry(id: string, data: RejectEntryDto): Promise<
     credentials: "include",
   });
   return handleResponse<EntryDto>(res);
+}
+
+export async function apiGetEntryPublic(id: string): Promise<PublicEntryDto> {
+  const res = await fetch(`/api/entries/${id}`, { credentials: "include" });
+  return handleResponse<PublicEntryDto>(res);
+}
+
+export async function apiSubmitEntryEditProposal(
+  id: string,
+  data: SubmitEntryEditProposalDto
+): Promise<{ id: string; status: "PENDING" | "APPROVED" }> {
+  const res = await fetch(`/api/entries/${id}/edit-proposals`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(data),
+    credentials: "include",
+  });
+  return handleResponse<{ id: string; status: "PENDING" | "APPROVED" }>(res);
+}
+
+export async function apiGetReviewQueue(): Promise<PendingQueueItemDto[]> {
+  const res = await fetch("/api/admin/review-queue", { credentials: "include" });
+  return handleResponse<PendingQueueItemDto[]>(res);
+}
+
+export async function apiGetEntryEditProposal(id: string): Promise<EntryEditProposalDto> {
+  const res = await fetch(`/api/admin/entry-edit-proposals/${id}`, { credentials: "include" });
+  return handleResponse<EntryEditProposalDto>(res);
+}
+
+export async function apiApproveEntryEditProposal(id: string): Promise<EntryDto> {
+  const res = await fetch(`/api/admin/entry-edit-proposals/${id}/approve`, {
+    method: "POST",
+    credentials: "include",
+  });
+  return handleResponse<EntryDto>(res);
+}
+
+export async function apiRejectEntryEditProposal(
+  id: string,
+  data: RejectEntryDto
+): Promise<{ id: string; status: string; rejectionNote: string | null }> {
+  const res = await fetch(`/api/admin/entry-edit-proposals/${id}/reject`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(data),
+    credentials: "include",
+  });
+  return handleResponse<{ id: string; status: string; rejectionNote: string | null }>(res);
 }

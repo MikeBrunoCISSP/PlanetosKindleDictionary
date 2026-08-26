@@ -1,0 +1,26 @@
+- generic [ref=f37e2]:
+  - generic [ref=f37e3]:
+    - banner [ref=f37e4]:
+      - link "Planetos" [ref=f37e5] [cursor=pointer]:
+        - /url: /
+      - button "Open menu" [ref=f37e6]
+    - generic [ref=f37e16]:
+      - generic [ref=f37e17]:
+        - generic [ref=f37e18]: Headword
+        - textbox "Headword" [disabled]: Admin Auto Approve Test
+      - generic [ref=f37e19]:
+        - generic [ref=f37e20]: Definition
+        - textbox "Definition" [ref=f37e21]: A test entry submitted directly by an administrator to verify auto-approval.
+      - generic [ref=f37e22]:
+        - generic [ref=f37e23]: Inflections
+        - generic [ref=f37e24]:
+          - textbox "Inflections" [ref=f37e25]:
+            - /placeholder: Add an inflection
+          - button "Add" [active] [ref=f37e26]
+        - generic [ref=f37e30]:
+          - text: Admin Test Inflection
+          - button "Remove Admin Test Inflection" [ref=f37e31]
+      - generic [ref=f37e27]:
+        - button "Cancel" [ref=f37e28]
+        - button "Submit" [ref=f37e35]
+  - region "Notifications alt+T"

@@ -15,6 +15,7 @@ import seriesRoutes from "./routes/series.js";
 import entriesRoutes from "./routes/entries.js";
 import turnstileRoutes from "./routes/turnstile.js";
 import searchRoutes from "./routes/search.js";
+import entryEditProposalRoutes from "./routes/entryEditProposals.js";
 
 const prisma = new PrismaClient();
 const app = Fastify({ logger: true });
@@ -31,6 +32,7 @@ await app.register(seriesRoutes, { prisma });
 await app.register(entriesRoutes, { prisma });
 await app.register(turnstileRoutes, { prisma });
 await app.register(searchRoutes, { prisma });
+await app.register(entryEditProposalRoutes, { prisma });
 
 app.get("/health", async () => ({ status: "ok" }));
 

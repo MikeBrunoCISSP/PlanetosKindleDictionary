@@ -1,0 +1,13 @@
+- generic [ref=f30e2]:
+  - generic [ref=f30e3]:
+    - banner [ref=f30e4]:
+      - link "Planetos" [ref=f30e108] [cursor=pointer]:
+        - /url: /
+      - button "Open menu" [ref=f30e109]
+    - generic [ref=f30e8]:
+      - heading "Approval Queue" [level=1] [ref=f30e110]
+      - paragraph [ref=f30e111]: No pending entries.
+  - region "Notifications alt+T":
+    - list:
+      - listitem [ref=f30e112]:
+        - generic [ref=f30e116]: Edit rejected.

@@ -1,5 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
-import { useNavigate } from "@tanstack/react-router";
+import { Link, useNavigate } from "@tanstack/react-router";
 import type { SearchResultItemDto } from "@planetos/shared";
 import { apiSearchEntries } from "@/lib/api";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -67,7 +67,9 @@ function SearchResultRow({ item }: { item: SearchResultItemDto }) {
     <TableRow>
       <TableCell className="align-top whitespace-normal">{item.seriesTitle}</TableCell>
       <TableCell className="max-w-xl align-top whitespace-normal">
-        {item.headwordMatched ? <strong>{item.headword}</strong> : item.headword}
+        <Link to="/entries/$id" params={{ id: item.entryId }} className="underline underline-offset-2 hover:no-underline">
+          {item.headwordMatched ? <strong>{item.headword}</strong> : item.headword}
+        </Link>
         <p className="mt-1 text-sm text-muted-foreground">{item.definitionExcerpt}</p>
         {item.inflections.length > 0 && (
           <p className="mt-1 text-sm text-muted-foreground">
