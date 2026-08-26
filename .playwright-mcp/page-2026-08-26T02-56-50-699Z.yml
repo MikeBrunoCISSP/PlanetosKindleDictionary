@@ -1,0 +1,26 @@
+- generic [ref=f10e2]:
+  - generic [ref=f10e3]:
+    - banner [ref=f10e4]:
+      - link "Planetos" [ref=f10e5] [cursor=pointer]:
+        - /url: /
+    - generic [ref=f10e8]:
+      - textbox "Search dictionary entries…" [active] [ref=f10e34]: sedai
+      - generic [ref=f10e35]:
+        - table [ref=f10e37]:
+          - rowgroup [ref=f10e38]:
+            - row [ref=f10e39]:
+              - columnheader "Dictionary" [ref=f10e40]
+              - columnheader "Word" [ref=f10e41]
+          - rowgroup [ref=f10e42]:
+            - row [ref=f10e43]:
+              - cell "Wheel of Time Search Test" [ref=f10e44]
+              - cell [ref=f10e45]:
+                - strong [ref=f10e46]: Aes Sedai
+                - paragraph [ref=f10e47]: A channeler bound to the White Tower by the Three Oaths. Aes Sedai are organized into seven Ajahs, each with its own particular focus and philosophy regarding the use of the One Power.
+                - paragraph [ref=f10e48]:
+                  - strong [ref=f10e50]: Aes Sedai's
+        - generic [ref=f10e51]:
+          - button "Previous" [disabled]
+          - generic [ref=f10e52]: Page 1 of 1
+          - button "Next" [disabled]
+  - region "Notifications alt+T"

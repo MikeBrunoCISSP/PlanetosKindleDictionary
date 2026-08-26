@@ -44,30 +44,50 @@ describe("passwordSchema", () => {
 });
 
 describe("registerSchema", () => {
+  const valid = {
+    email: "test@example.com",
+    username: "TestUser",
+    reasonForJoining: "I'd like to contribute definitions for my favorite series.",
+    password: "SecureP4ss",
+  };
+
   it("accepts valid registration data", () => {
-    const result = registerSchema.safeParse({
-      email: "test@example.com",
-      displayName: "TestUser",
-      password: "SecureP4ss",
-    });
+    const result = registerSchema.safeParse(valid);
+    expect(result.success).toBe(true);
+  });
+
+  it("accepts an optional turnstileToken", () => {
+    const result = registerSchema.safeParse({ ...valid, turnstileToken: "abc123" });
     expect(result.success).toBe(true);
   });
 
   it("rejects invalid email", () => {
-    const result = registerSchema.safeParse({
-      email: "not-an-email",
-      displayName: "TestUser",
-      password: "SecureP4ss",
-    });
+    const result = registerSchema.safeParse({ ...valid, email: "not-an-email" });
     expect(result.success).toBe(false);
   });
 
-  it("rejects empty displayName", () => {
-    const result = registerSchema.safeParse({
-      email: "test@example.com",
-      displayName: "",
-      password: "SecureP4ss",
-    });
+  it("rejects empty username", () => {
+    const result = registerSchema.safeParse({ ...valid, username: "" });
+    expect(result.success).toBe(false);
+  });
+
+  it("rejects whitespace-only username", () => {
+    const result = registerSchema.safeParse({ ...valid, username: "   " });
+    expect(result.success).toBe(false);
+  });
+
+  it("rejects empty reasonForJoining", () => {
+    const result = registerSchema.safeParse({ ...valid, reasonForJoining: "" });
+    expect(result.success).toBe(false);
+  });
+
+  it("rejects whitespace-only reasonForJoining", () => {
+    const result = registerSchema.safeParse({ ...valid, reasonForJoining: "   " });
+    expect(result.success).toBe(false);
+  });
+
+  it("rejects reasonForJoining over 2000 characters", () => {
+    const result = registerSchema.safeParse({ ...valid, reasonForJoining: "a".repeat(2001) });
     expect(result.success).toBe(false);
   });
 });
@@ -75,7 +95,15 @@ describe("registerSchema", () => {
 describe("loginSchema", () => {
   it("accepts valid login data", () => {
     const result = loginSchema.safeParse({
-      email: "test@example.com",
+      identifier: "test@example.com",
+      password: "anypassword",
+    });
+    expect(result.success).toBe(true);
+  });
+
+  it("accepts a username as the identifier", () => {
+    const result = loginSchema.safeParse({
+      identifier: "TestUser",
       password: "anypassword",
     });
     expect(result.success).toBe(true);
@@ -83,8 +111,16 @@ describe("loginSchema", () => {
 
   it("rejects empty password", () => {
     const result = loginSchema.safeParse({
-      email: "test@example.com",
+      identifier: "test@example.com",
       password: "",
+    });
+    expect(result.success).toBe(false);
+  });
+
+  it("rejects empty identifier", () => {
+    const result = loginSchema.safeParse({
+      identifier: "",
+      password: "anypassword",
     });
     expect(result.success).toBe(false);
   });

@@ -1,49 +1,75 @@
-import { createFileRoute, redirect, useNavigate } from "@tanstack/react-router";
-import { useQueryClient } from "@tanstack/react-query";
-import { apiMe, apiLogout } from "@/lib/api";
-import { useMe, ME_QUERY_KEY } from "@/lib/useMe";
+import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { useEffect, useState, type FormEvent } from "react";
+import { z } from "zod";
+import { ArrowRightIcon } from "lucide-react";
+import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
+import { SearchResults } from "@/components/SearchResults";
+
+const homeSearchSchema = z.object({
+  q: z.string().trim().max(200).optional(),
+  page: z.coerce.number().int().min(1).default(1),
+});
 
 export const Route = createFileRoute("/")({
-  beforeLoad: async ({ context }) => {
-    const user = await context.queryClient.fetchQuery({
-      queryKey: ["auth", "me"],
-      queryFn: apiMe,
-      staleTime: 30 * 1000,
-    });
-    if (!user) throw redirect({ to: "/login" });
-  },
+  validateSearch: homeSearchSchema,
   component: IndexPage,
 });
 
 function IndexPage() {
+  const { q, page } = Route.useSearch();
   const navigate = useNavigate();
-  const queryClient = useQueryClient();
-  const me = useMe();
+  const [inputValue, setInputValue] = useState(q ?? "");
 
-  const handleLogout = async () => {
-    await apiLogout();
-    queryClient.setQueryData(ME_QUERY_KEY, null);
-    void navigate({ to: "/login" });
-  };
+  // Keep local input state in sync when the URL changes externally
+  // (e.g. browser back/forward).
+  useEffect(() => {
+    setInputValue(q ?? "");
+  }, [q]);
+
+  function handleSubmit(event: FormEvent) {
+    event.preventDefault();
+    const trimmed = inputValue.trim();
+    void navigate({ to: "/", search: (prev) => ({ ...prev, q: trimmed || undefined, page: 1 }) });
+  }
+
+  const hasQuery = Boolean(q && q.length > 0);
+
+  if (!hasQuery) {
+    return (
+      <div className="flex min-h-svh items-center justify-center p-4">
+        <div className="w-full max-w-xl text-center space-y-6">
+          <h1 className="text-4xl font-bold">Planetos</h1>
+          <form onSubmit={handleSubmit} className="flex gap-2">
+            <Input
+              autoFocus
+              value={inputValue}
+              onChange={(event) => setInputValue(event.target.value)}
+              placeholder="Search dictionary entries…"
+              className="h-12 text-lg"
+            />
+            <Button type="submit" size="icon" className="h-12 w-12" aria-label="Search">
+              <ArrowRightIcon className="size-5" />
+            </Button>
+          </form>
+        </div>
+      </div>
+    );
+  }
 
   return (
-    <div className="flex min-h-svh items-center justify-center p-4">
-      <div className="text-center space-y-4">
-        <h1 className="text-3xl font-bold">Welcome to Planetos</h1>
-        {me ? (
-          <>
-            <p className="text-muted-foreground">
-              Signed in as <strong>{me.displayName}</strong> ({me.email})
-            </p>
-            <Button variant="outline" onClick={() => void handleLogout()}>
-              Log out
-            </Button>
-          </>
-        ) : (
-          <p className="text-muted-foreground">You are not signed in.</p>
-        )}
-      </div>
+    <div className="mx-auto max-w-4xl space-y-6 p-4 sm:p-8">
+      <form onSubmit={handleSubmit} className="flex gap-2">
+        <Input
+          value={inputValue}
+          onChange={(event) => setInputValue(event.target.value)}
+          placeholder="Search dictionary entries…"
+        />
+        <Button type="submit" size="icon" aria-label="Search">
+          <ArrowRightIcon className="size-4" />
+        </Button>
+      </form>
+      <SearchResults query={q ?? ""} page={page} />
     </div>
   );
 }

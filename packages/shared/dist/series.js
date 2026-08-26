@@ -1,12 +1,13 @@
 import { z } from "zod";
+import { plainText } from "./validation.js";
 export const createSeriesSchema = z.object({
-    title: z.string().min(1, "Title is required"),
-    description: z.string().min(1, "Description is required"),
+    title: plainText({ max: 200, minMessage: "Title is required" }),
+    description: plainText({ max: 5000, minMessage: "Description is required" }),
 });
 export const updateSeriesSchema = z
     .object({
-    title: z.string().min(1, "Title cannot be empty"),
-    description: z.string().min(1, "Description cannot be empty"),
+    title: plainText({ max: 200, minMessage: "Title cannot be empty" }),
+    description: plainText({ max: 5000, minMessage: "Description cannot be empty" }),
 })
     .partial()
     .refine((v) => v.title !== undefined || v.description !== undefined, {

@@ -21,8 +21,8 @@ export class DomainError extends Error {
 export const Errors = {
   DUPLICATE_EMAIL: () =>
     new DomainError("DUPLICATE_EMAIL", "This email address is already registered.", 409),
-  DUPLICATE_DISPLAY_NAME: () =>
-    new DomainError("DUPLICATE_DISPLAY_NAME", "This display name is already taken.", 409),
+  DUPLICATE_USERNAME: () =>
+    new DomainError("DUPLICATE_USERNAME", "This username is already taken.", 409),
   INVALID_CREDENTIALS: () =>
     new DomainError("INVALID_CREDENTIALS", "Invalid credentials.", 401),
   ACCOUNT_DISABLED: () =>
@@ -35,4 +35,20 @@ export const Errors = {
     ),
   NOT_FOUND: () => new DomainError("NOT_FOUND", "The requested resource was not found.", 404),
   FORBIDDEN: () => new DomainError("FORBIDDEN", "Access denied.", 403),
+  DUPLICATE_WORD: () =>
+    new DomainError("DUPLICATE_WORD", "The word already exists in the dictionary.", 409),
+  ALREADY_REVIEWED: () =>
+    new DomainError("ALREADY_REVIEWED", "This entry has already been reviewed.", 409),
+  TURNSTILE_VERIFICATION_FAILED: () =>
+    new DomainError(
+      "TURNSTILE_VERIFICATION_FAILED",
+      "We couldn't verify you're not a robot. Please try again.",
+      400
+    ),
+  TURNSTILE_MISCONFIGURED: () =>
+    new DomainError(
+      "TURNSTILE_MISCONFIGURED",
+      "Registration is temporarily unavailable. Please try again later.",
+      503
+    ),
 } as const;

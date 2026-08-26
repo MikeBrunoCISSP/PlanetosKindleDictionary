@@ -1,0 +1,51 @@
+## Context
+
+See proposal.md - Why for motivation. This design builds on three confirmed gaps in the current codebase (no settings/config table, no outbound-HTTP-call precedent, no runtime-editable-secret pattern) and one confirmed non-collision (`/admin` has no nav entry point today, so "Administration → User Management" extends it rather than competing with it). It also builds directly on the entry-approval workflow shipped in the previous change: `SeriesWord.normalizedWord` is the direct precedent for `User.usernameNormalized`, and `Entry.approvalStatus`/`reviewedBy`/`reviewedAt` is the direct precedent for the new `User.approvalStatus` fields.
+
+## Goals / Non-Goals
+
+**Goals:**
+- Make username and email uniqueness genuinely case-insensitive and race-safe, using the same normalized-column technique already proven for word uniqueness.
+- Introduce a settings/secrets pattern that's honest about being new (no existing pattern to pretend to follow) but consistent in spirit with how this codebase already treats deployment secrets (`SESSION_SECRET`: long random string, documented in `.env.example`, never committed).
+- Keep the entry-creation authorization change minimal and additive: one new guard, swapped in on exactly the routes that need it.
+
+**Non-Goals:**
+- Any Cloudflare account/API-token management, widget lifecycle, or hostname management (out of scope per proposal.md).
+- A general settings/config framework — `TurnstileSettings` is a single-purpose singleton table, not the first piece of a generic key-value settings system.
+- Retrofitting CSRF protection — this change doesn't touch the session/CORS security model at all; Turnstile is an additive check inside the registration handler.
+
+## Decisions
+
+**`displayName` → `username` rename, not a new field.** Per your direction. Touches: `apps/api/prisma/schema.prisma`, `apps/api/src/routes/auth.ts`, `apps/api/src/routes/admin.ts`, `apps/api/src/plugins/requireAdmin.ts`/`requireAuth.ts` (their inline `AdminUser`/`AuthUser` types and `select` blocks), `packages/shared/src/auth.ts` (all schemas/DTOs), `apps/web/src/routes/login.tsx`, `apps/web/src/routes/admin.tsx` (table column), `apps/web/src/components/AppHeader.tsx` ("Signed in as..."), `apps/web/src/routes/index.tsx`, `apps/api/tests/*.test.ts`. A single Prisma `RENAME COLUMN` preserves all data.
+
+**Case-insensitive uniqueness: normalized shadow column for username, in-place lowercasing for email.** These are deliberately different techniques for a reason: `username` needs to preserve the user's chosen display casing (shown as "Signed in as X" throughout the UI), so it needs a *separate* comparison column (`usernameNormalized`, mirroring `SeriesWord.normalizedWord`). `email` has no display-casing concern — nobody's email is meaningfully "displayed" with intentional casing — so the simpler fix is to just always store and compare it lowercased, with no second column. Both migrate defensively: the migration checks for pre-existing case-insensitive collisions before applying either normalization, and fails loudly rather than silently merging two identity-bearing records if any are found (extremely unlikely in this dataset, checked anyway since these are irreversible identity changes).
+
+**`UserApprovalStatus` mirrors `EntryApprovalStatus`'s shape but isn't the same enum.** Two values only (`PENDING`, `APPROVED`) since a denied registration is deleted, not stored as `REJECTED` — unlike `Entry`, which keeps rejected entries around with a note. Reusing `EntryApprovalStatus` itself (adding a `REJECTED` value never used by `User`, or vice versa) would conflate two genuinely different lifecycles; a second, purpose-built enum is clearer.
+
+**Entry-creation guard: a new `makeRequireApproved`, not a modified `requireAuth`.** `requireAuth` still backs `GET /api/series/:slug/entries/words`, which should stay available to any authenticated user (low-sensitivity, read-only). Widening `requireAuth` itself to check approval status would incorrectly tighten that route too. `makeRequireApproved` lives next to `makeRequireAuth` in the same file, sharing its session/active-account checks, adding: `role === "ADMIN"` passes unconditionally; otherwise `approvalStatus === "APPROVED"` is required. This reads as "Approved-or-admin," matching the authorization matrix's treatment of Administrator as its own tier.
+
+**Turnstile Secret Key: AES-256-GCM via Node's built-in `crypto`, keyed by a new `SETTINGS_ENCRYPTION_KEY` env var.** Per your direction. The stored value packs IV + auth tag + ciphertext into one base64 string (`lib/crypto.ts` exports `encrypt`/`decrypt` operating on that packed format) so `TurnstileSettings.secretKeyEncrypted` is a single opaque column. The admin PATCH handler only calls `encrypt()` and overwrites the column when the submitted `secretKey` is non-blank; a blank/omitted field leaves the column untouched. No route or DTO ever calls `decrypt()` except the one internal code path that needs the raw secret to call Cloudflare's Siteverify endpoint (`lib/turnstile.ts`) — the value never crosses back out to any HTTP response.
+
+**`lib/turnstile.ts` is a plain module, not a Fastify plugin**, matching the `lib/errors.ts` precedent (no existing precedent uses a plugin for a stateless outbound-call wrapper). `verify(token, remoteIp?)` and `testConfiguration()` both use the global `fetch` (no new HTTP-client dependency — confirmed available and unused elsewhere in this codebase, so introducing it here doesn't compete with an existing convention).
+
+**Test Configuration sends a deliberately-invalid dummy token**, not a real challenge (Cloudflare's protocol has no "validate configuration only" endpoint). Cloudflare's Siteverify response includes an `error-codes` array; `invalid-input-secret` means the Secret Key itself is malformed/wrong, while `invalid-input-response` (or similar) means the Secret Key was accepted but the (deliberately fake) token wasn't — the latter is the expected, "your secret key looks fine" outcome. This is a real, honest check of the Secret Key's validity, clearly short of full end-to-end verification, exactly as the spec requires ("do not fabricate a successful verification").
+
+**`plainText()` gains a leading `.trim()`.** Small, backward-compatible, and fixes a real correctness gap (a whitespace-only string currently passes `.min(1)`) for every current caller (Headword, Series title/description) as well as the new Reason for Joining field — not just a workaround scoped to one field.
+
+**Reason for Joining's max length: 2,000 (the spec's own explicit fallback), not Series.description's 5,000.** They're not the same kind of field — one is a dictionary's description, the other a short personal explanation — so I don't think Series.description is the right "established similar field" to inherit from here.
+
+**`@marsidev/react-turnstile` for the widget**, rather than hand-rolling Cloudflare's script-loading/cleanup — same reasoning as reusing `sanitize-html` instead of a hand-rolled sanitizer earlier in this project: a security-adjacent third-party integration is exactly the kind of thing not worth re-implementing from scratch.
+
+**Pending users are excluded from the existing all-users table on `/admin`**, appearing only in the new Pending Registrations section. They're not fully onboarded yet, and the only actions available for them (Approve/Deny) are different in kind from the existing table's role/active-status toggles — mixing the two would mean building conditional per-row action sets into one table rather than two purpose-built ones.
+
+## Risks / Trade-offs
+
+- [Renaming `displayName` → `username` touches many files across the whole stack] → Mechanical, mostly find-and-replace-shaped changes plus one column rename; typecheck will catch any missed reference immediately (as it did for the Prisma-client-typed call sites in the previous two changes this session).
+- [A new required env var (`SETTINGS_ENCRYPTION_KEY`) is a deployment step that's easy to forget] → `.env.example` documents it with the same "long random string, keep secret in production" wording as `SESSION_SECRET`; the app should fail fast (not silently run with an absent/weak key) if it's missing when a Turnstile secret write is attempted.
+- [CSP loosening for Turnstile widens the allowed script/frame/connect surface] → Scoped to exactly one origin (`https://challenges.cloudflare.com`), not a wildcard, and only for that origin's specific role (script, iframe, XHR) — the smallest change that makes the widget work.
+- [Excluding Pending users from the main `/admin` table could make an admin wonder "where did this user go" if they don't know about the new Pending Registrations section] → Mitigated by the admin/user-management delta explicitly documenting the Pending Registrations section as part of the same page, and by it defaulting to a visible position (above the existing table) rather than a separate hidden tab.
+- [Migration lowercases every existing email in one pass] → Guarded by a pre-check for case-insensitive collisions among existing rows; the migration fails loudly (not silently) if any are found, so a genuine data conflict gets a human's attention rather than a guessed resolution.
+
+## Migration Plan
+
+One Prisma migration: rename `displayName`→`username`, add `usernameNormalized` (backfilled, unique), lowercase existing `email` values (collision-checked first), add `reasonForJoining` (nullable, no backfill), add `UserApprovalStatus` enum + `approvalStatus` column (default `PENDING`, then bulk-set to `APPROVED` for all pre-existing rows), add `TurnstileSettings` (empty singleton row, `enabled: false` by default so a fresh deploy never locks out registration before an admin configures real credentials). `apps/api/prisma/seed.ts` updated to set the seeded admin's `approvalStatus: APPROVED` explicitly (it doesn't go through the public register endpoint, so it wouldn't otherwise get the new default treatment it needs — though the bulk backfill covers it too on re-runs against existing data; the seed script itself should still be explicit for a truly fresh database). No rollback complexity beyond reverting the migration and the change; the encryption key and Turnstile credentials are deployment configuration, not data, so they're unaffected by any rollback.

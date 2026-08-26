@@ -1,11 +1,13 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { loginSchema, registerSchema } from "@planetos/shared";
-import { useQueryClient } from "@tanstack/react-query";
-import { apiLogin, apiRegister, ApiError } from "@/lib/api";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { toast } from "sonner";
+import { Turnstile } from "@marsidev/react-turnstile";
+import { apiGetTurnstileConfig, apiLogin, apiRegister, ApiError } from "@/lib/api";
 import { useMe, ME_QUERY_KEY } from "@/lib/useMe";
 import {
   Card,
@@ -17,6 +19,7 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import {
   Form,
   FormControl,
@@ -97,7 +100,7 @@ function SignInForm() {
 
   const form = useForm<LoginFormValues>({
     resolver: zodResolver(loginSchema),
-    defaultValues: { email: "", password: "" },
+    defaultValues: { identifier: "", password: "" },
   });
 
   const onSubmit = async (values: LoginFormValues) => {
@@ -108,7 +111,7 @@ function SignInForm() {
     } catch (err) {
       const message =
         err instanceof ApiError && err.status === 401
-          ? "Invalid email or password"
+          ? "Invalid username/email or password"
           : "Something went wrong. Please try again.";
       form.setError("root", { message });
     }
@@ -118,19 +121,19 @@ function SignInForm() {
     <Card>
       <CardHeader>
         <CardTitle>Sign In</CardTitle>
-        <CardDescription>Enter your email and password to sign in.</CardDescription>
+        <CardDescription>Enter your username or email and password to sign in.</CardDescription>
       </CardHeader>
       <CardContent>
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="grid gap-4">
             <FormField
               control={form.control}
-              name="email"
+              name="identifier"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Email</FormLabel>
+                  <FormLabel>Username or Email</FormLabel>
                   <FormControl>
-                    <Input type="email" autoComplete="email" placeholder="you@example.com" {...field} />
+                    <Input autoComplete="username" placeholder="you@example.com" {...field} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -165,28 +168,44 @@ function SignInForm() {
 function RegisterForm() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
+  const [turnstileToken, setTurnstileToken] = useState<string | undefined>(undefined);
+
+  const { data: turnstileConfig } = useQuery({
+    queryKey: ["turnstile-config"],
+    queryFn: apiGetTurnstileConfig,
+  });
 
   const form = useForm<RegisterFormValues>({
     resolver: zodResolver(registerFormSchema),
-    defaultValues: { email: "", displayName: "", password: "", confirmPassword: "" },
+    defaultValues: { email: "", username: "", reasonForJoining: "", password: "", confirmPassword: "" },
   });
 
+  const turnstileRequired = turnstileConfig?.enabled === true;
+
   const onSubmit = async (values: RegisterFormValues) => {
+    if (turnstileRequired && !turnstileToken) {
+      form.setError("root", { message: "Please complete the verification challenge." });
+      return;
+    }
+
     try {
       const { confirmPassword: _, ...registerData } = values;
-      const user = await apiRegister(registerData);
+      const user = await apiRegister({ ...registerData, turnstileToken });
       queryClient.setQueryData(ME_QUERY_KEY, user);
+      toast.success("Your registration request has been submitted and is awaiting administrator approval.");
       void navigate({ to: "/" });
     } catch (err) {
       if (err instanceof ApiError && err.status === 409) {
         const detail = err.detail ?? err.message;
         if (/email/i.test(detail)) {
           form.setError("email", { message: "This email address is already registered." });
-        } else if (/display.*name|username/i.test(detail)) {
-          form.setError("displayName", { message: "This display name is already taken." });
+        } else if (/username/i.test(detail)) {
+          form.setError("username", { message: "This username is already taken." });
         } else {
           form.setError("root", { message: detail });
         }
+      } else if (err instanceof ApiError && err.status === 400 && /verif/i.test(err.detail ?? err.message)) {
+        form.setError("root", { message: "Verification failed. Please try again." });
       } else {
         form.setError("root", { message: "Something went wrong. Please try again." });
       }
@@ -217,12 +236,29 @@ function RegisterForm() {
             />
             <FormField
               control={form.control}
-              name="displayName"
+              name="username"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Display Name</FormLabel>
+                  <FormLabel>Username</FormLabel>
                   <FormControl>
                     <Input autoComplete="username" placeholder="YourName" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="reasonForJoining"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Why are you requesting to join?</FormLabel>
+                  <FormControl>
+                    <Textarea
+                      placeholder="Tell us a bit about why you'd like to join…"
+                      maxLength={2000}
+                      {...field}
+                    />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -254,6 +290,14 @@ function RegisterForm() {
                 </FormItem>
               )}
             />
+            {turnstileRequired && turnstileConfig?.siteKey && (
+              <Turnstile
+                siteKey={turnstileConfig.siteKey}
+                onSuccess={setTurnstileToken}
+                onExpire={() => setTurnstileToken(undefined)}
+                onError={() => setTurnstileToken(undefined)}
+              />
+            )}
             {form.formState.errors.root && (
               <p className="text-destructive text-sm">{form.formState.errors.root.message}</p>
             )}

@@ -1,8 +1,17 @@
 import { createFileRoute, redirect } from "@tanstack/react-router";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
-import type { AdminUserDto } from "@planetos/shared";
-import { apiMe, apiAdminGetUsers, apiAdminUpdateUser, ApiError } from "@/lib/api";
+import { toast } from "sonner";
+import type { AdminUserDto, PendingUserDto } from "@planetos/shared";
+import {
+  apiMe,
+  apiAdminGetUsers,
+  apiAdminUpdateUser,
+  apiGetPendingUsers,
+  apiApproveRegistration,
+  apiDenyRegistration,
+  ApiError,
+} from "@/lib/api";
 import {
   Table,
   TableBody,
@@ -13,6 +22,14 @@ import {
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 
 export const Route = createFileRoute("/admin")({
   beforeLoad: async ({ context }) => {
@@ -22,29 +39,179 @@ export const Route = createFileRoute("/admin")({
       staleTime: 30 * 1000,
     });
     if (!user) throw redirect({ to: "/login" });
-    if (user.role !== "ADMIN") return { forbidden: true as const };
-    return { forbidden: false as const };
+    if (user.role !== "ADMIN") throw redirect({ to: "/" });
   },
   component: AdminPage,
 });
 
 function AdminPage() {
-  const { forbidden } = Route.useRouteContext();
-  if (forbidden) {
-    return (
-      <div className="flex min-h-svh items-center justify-center p-4">
-        <div className="text-center space-y-2">
-          <h1 className="text-2xl font-bold">403 Forbidden</h1>
-          <p className="text-muted-foreground">You do not have permission to access this page.</p>
-        </div>
-      </div>
-    );
-  }
   return (
-    <div className="p-8 max-w-5xl mx-auto">
+    <div className="p-4 sm:p-8 max-w-5xl mx-auto">
       <h1 className="text-2xl font-bold mb-6">Admin Dashboard</h1>
+      <h2 className="text-lg font-semibold mb-3">Pending Registrations</h2>
+      <PendingRegistrationsTable />
+      <h2 className="text-lg font-semibold mt-8 mb-3">Users</h2>
       <UserManagementTable />
     </div>
+  );
+}
+
+function PendingRegistrationsTable() {
+  const queryClient = useQueryClient();
+  const [rowError, setRowError] = useState<Record<string, string>>({});
+  const [reasonTarget, setReasonTarget] = useState<PendingUserDto | null>(null);
+  const [denyTarget, setDenyTarget] = useState<PendingUserDto | null>(null);
+
+  const {
+    data: pendingUsers,
+    isLoading,
+    error,
+  } = useQuery({
+    queryKey: ["admin", "users", "pending"],
+    queryFn: () => apiGetPendingUsers(),
+  });
+
+  const approveMutation = useMutation({
+    mutationFn: (id: string) => apiApproveRegistration(id),
+    onSuccess: () => {
+      toast.success("Registration approved.");
+      void queryClient.invalidateQueries({ queryKey: ["admin", "users"] });
+    },
+    onError: (err, id) => {
+      const msg = err instanceof ApiError ? err.message : "An error occurred";
+      setRowError((prev) => ({ ...prev, [id]: msg }));
+    },
+  });
+
+  const denyMutation = useMutation({
+    mutationFn: (id: string) => apiDenyRegistration(id),
+    onSuccess: () => {
+      toast.success("Registration denied.");
+      void queryClient.invalidateQueries({ queryKey: ["admin", "users"] });
+      setDenyTarget(null);
+    },
+    onError: (err, id) => {
+      const msg = err instanceof ApiError ? err.message : "An error occurred";
+      setRowError((prev) => ({ ...prev, [id]: msg }));
+      setDenyTarget(null);
+    },
+  });
+
+  if (isLoading) return <p className="text-muted-foreground">Loading pending registrations…</p>;
+  if (error) return <p className="text-destructive">Failed to load pending registrations.</p>;
+  if (!pendingUsers) return null;
+
+  function approve(id: string) {
+    setRowError((prev) => {
+      const next = { ...prev };
+      delete next[id];
+      return next;
+    });
+    approveMutation.mutate(id);
+  }
+
+  return (
+    <>
+      {pendingUsers.length === 0 ? (
+        <p className="text-muted-foreground mb-4">No pending registrations.</p>
+      ) : (
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead>Username</TableHead>
+              <TableHead>Email</TableHead>
+              <TableHead>Reason for Joining</TableHead>
+              <TableHead>Approve/Deny</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {pendingUsers.map((user) => {
+              const approveBusy = approveMutation.isPending && approveMutation.variables === user.id;
+              const denyBusy = denyMutation.isPending && denyMutation.variables === user.id;
+              const busy = approveBusy || denyBusy;
+              return (
+                <TableRow key={user.id}>
+                  <TableCell className="font-medium">{user.username}</TableCell>
+                  <TableCell>{user.email}</TableCell>
+                  <TableCell className="max-w-xs">
+                    <button
+                      type="button"
+                      className="truncate block max-w-xs text-left underline underline-offset-2 hover:no-underline"
+                      onClick={() => setReasonTarget(user)}
+                    >
+                      {user.reasonForJoining ?? "—"}
+                    </button>
+                  </TableCell>
+                  <TableCell>
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <Button size="sm" variant="outline" disabled={busy} onClick={() => approve(user.id)}>
+                        {approveBusy ? "Approving..." : "Approve"}
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        disabled={busy}
+                        onClick={() => setDenyTarget(user)}
+                      >
+                        Deny
+                      </Button>
+                      {rowError[user.id] && (
+                        <span className="text-destructive text-xs">{rowError[user.id]}</span>
+                      )}
+                    </div>
+                  </TableCell>
+                </TableRow>
+              );
+            })}
+          </TableBody>
+        </Table>
+      )}
+
+      <Dialog
+        open={reasonTarget !== null}
+        onOpenChange={(open) => {
+          if (!open) setReasonTarget(null);
+        }}
+      >
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>{reasonTarget?.username}'s Reason for Joining</DialogTitle>
+          </DialogHeader>
+          <p className="text-sm whitespace-pre-wrap">{reasonTarget?.reasonForJoining}</p>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog
+        open={denyTarget !== null}
+        onOpenChange={(open) => {
+          if (!open) setDenyTarget(null);
+        }}
+      >
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Deny Registration</DialogTitle>
+            <DialogDescription>
+              Are you sure you want to deny this registration? The user account will be permanently
+              deleted.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setDenyTarget(null)}>
+              Cancel
+            </Button>
+            <Button
+              variant="destructive"
+              disabled={denyMutation.isPending}
+              onClick={() => {
+                if (denyTarget) denyMutation.mutate(denyTarget.id);
+              }}
+            >
+              {denyMutation.isPending ? "Denying..." : "Deny"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </>
   );
 }
 
@@ -91,7 +258,7 @@ function UserManagementTable() {
     <Table>
       <TableHeader>
         <TableRow>
-          <TableHead>Display Name</TableHead>
+          <TableHead>Username</TableHead>
           <TableHead>Email</TableHead>
           <TableHead>Role</TableHead>
           <TableHead>Status</TableHead>
@@ -104,7 +271,7 @@ function UserManagementTable() {
           const busy = mutation.isPending && mutation.variables?.id === user.id;
           return (
             <TableRow key={user.id}>
-              <TableCell className="font-medium">{user.displayName}</TableCell>
+              <TableCell className="font-medium">{user.username}</TableCell>
               <TableCell>{user.email}</TableCell>
               <TableCell>
                 <Badge variant={user.role === "ADMIN" ? "default" : "secondary"}>

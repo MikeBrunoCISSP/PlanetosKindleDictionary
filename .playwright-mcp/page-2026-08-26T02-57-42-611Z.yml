@@ -1,0 +1,9 @@
+- generic [ref=f10e2]:
+  - generic [ref=f10e3]:
+    - banner [ref=f10e4]:
+      - link "Planetos" [ref=f10e5] [cursor=pointer]:
+        - /url: /
+    - generic [ref=f10e8]:
+      - textbox "Search dictionary entries…" [active] [ref=f10e34]: nonexistentqueryxyz
+      - paragraph [ref=f10e70]: No results for "nonexistentqueryxyz".
+  - region "Notifications alt+T"

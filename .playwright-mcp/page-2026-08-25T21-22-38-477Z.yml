@@ -1,0 +1,14 @@
+- generic [ref=f7e2]:
+  - generic [ref=f7e3]:
+    - banner [ref=f7e4]:
+      - link "Planetos" [ref=f7e5] [cursor=pointer]:
+        - /url: /
+      - button "Open menu" [ref=f7e78]
+    - generic [ref=f7e81]:
+      - heading "Welcome to Planetos" [level=1] [ref=f7e82]
+      - paragraph [ref=f7e83]:
+        - text: Signed in as
+        - strong [ref=f7e84]: Administrator
+        - text: (admin@example.com)
+      - button "Log out" [ref=f7e85]
+  - region "Notifications alt+T"

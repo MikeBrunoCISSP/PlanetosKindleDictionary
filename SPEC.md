@@ -22,8 +22,26 @@ shows the community definition.
 |---|---|
 | Browse series, browse entries, search | No |
 | Download a generated dictionary | No |
-| Create a series, create/edit/delete entries | Yes |
+| Register an account (starts Pending; see below) | No |
+| Create a series | Yes (any account, Pending or Approved) |
+| Submit a new entry (Pending until reviewed) | Approved user, or admin |
+| Review the pending-entry queue, approve/reject entries | Admin only |
+| Review pending registrations, approve/deny new accounts | Admin only |
+| Configure Cloudflare Turnstile | Admin only |
 | Rollback revisions, delete a series, ban users | Admin only |
+
+Entry submission is **not** direct-write: a submitted entry starts in the
+`PENDING` approval state (see §4, §6) and is excluded from generated
+dictionary output until an admin approves it. Editing/deleting an existing
+entry is unaffected by this and remains a plain authenticated write (§6) -
+only *new* entries go through approval.
+
+**Registration is also gated.** A new account starts `approvalStatus=PENDING`
+and can browse/create series like any authenticated user, but cannot submit a
+new entry until an admin approves the account (see §4, §6). Denying a
+registration permanently deletes the account rather than storing a rejected
+state. Registration optionally requires passing a Cloudflare Turnstile
+challenge, configured by an admin (see §6, §10).
 
 **Freshness contract:** a background worker regenerates each dictionary **at most
 once per hour, and only if that dictionary changed** since its last successful
@@ -103,14 +121,31 @@ Prisma schema, abbreviated to the meaningful parts:
 
 ```prisma
 model User {
-  id           String   @id @default(cuid())
-  email        String   @unique
-  displayName  String   @unique
-  passwordHash String
-  role         Role     @default(MEMBER)   // MEMBER | ADMIN
-  emailVerified Boolean @default(false)
-  createdAt    DateTime @default(now())
-  revisions    Revision[]
+  id                 String   @id @default(cuid())
+  email              String   @unique          // stored lowercased; matching is case-insensitive
+  username           String   @unique          // display casing preserved
+  usernameNormalized String   @unique          // lowercased+trimmed, for case-insensitive uniqueness/login
+  reasonForJoining   String?                    // required at registration, nullable for pre-existing accounts
+  passwordHash       String
+  role               Role     @default(MEMBER)   // MEMBER | ADMIN
+  emailVerified      Boolean  @default(false)
+  approvalStatus     UserApprovalStatus @default(PENDING) // PENDING | APPROVED — no REJECTED; a denied registration is deleted, not stored
+  createdAt          DateTime @default(now())
+  revisions          Revision[]
+}
+
+// Cloudflare Turnstile configuration - a single-purpose singleton row, not a
+// general settings table. secretKeyEncrypted is AES-256-GCM at rest
+// (apps/api/src/lib/crypto.ts, keyed by SETTINGS_ENCRYPTION_KEY) and is never
+// returned by any API response - only a derived secretConfigured: boolean is.
+model TurnstileSettings {
+  id                 String   @id @default("singleton")
+  enabled            Boolean  @default(false)
+  siteKey            String?
+  secretKeyEncrypted String?
+  updatedAt          DateTime @updatedAt
+  updatedById        String?
+  updatedBy          User?    @relation(fields: [updatedById], references: [id], onDelete: SetNull)
 }
 
 model Series {
@@ -155,6 +190,18 @@ model Entry {
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
 
+  // Submission/approval workflow - orthogonal to `status` above, which is
+  // just the soft-delete/publish lifecycle. A PENDING entry is a normal,
+  // non-deleted row; it is simply excluded from generated dictionary output
+  // (see §7) until an admin approves it.
+  approvalStatus EntryApprovalStatus @default(PENDING) // PENDING | APPROVED | REJECTED
+  submittedById  String?
+  submittedBy    User?    @relation("EntrySubmittedBy", fields: [submittedById], references: [id], onDelete: SetNull)
+  reviewedById   String?
+  reviewedBy     User?    @relation("EntryReviewedBy", fields: [reviewedById], references: [id], onDelete: SetNull)
+  reviewedAt     DateTime?
+  rejectionNote  String?
+
   @@unique([seriesId, headword])
   @@index([seriesId, sortKey])
 }
@@ -168,6 +215,23 @@ model Inflection {
   name     String?                           // → name (inflection category)
   exact    Boolean @default(false)           // → exact="yes"
   @@unique([entryId, value])
+}
+
+// Registry of every word (Headword or Inflection) in a dictionary, used to
+// enforce word uniqueness across both models with a single, race-safe
+// database constraint - Postgres unique constraints can't span two separate
+// tables otherwise. One row per headword and per inflection; cascade-deleted
+// from its owning Entry.
+model SeriesWord {
+  id             String  @id @default(cuid())
+  seriesId       String
+  series         Series  @relation(fields: [seriesId], references: [id], onDelete: Cascade)
+  normalizedWord String                       // lowercased, trimmed
+  entryId        String
+  entry          Entry   @relation(fields: [entryId], references: [id], onDelete: Cascade)
+  inflectionId   String? @unique
+  inflection     Inflection? @relation(fields: [inflectionId], references: [id], onDelete: Cascade)
+  @@unique([seriesId, normalizedWord])
 }
 
 model Revision {
@@ -363,8 +427,10 @@ schemas exported from `packages/shared`.
 ### Auth
 
 ```
-POST   /api/auth/register        { email, displayName, password }
-POST   /api/auth/login           { email, password }
+POST   /api/auth/register        { email, username, reasonForJoining, password, turnstileToken? }
+                                  starts approvalStatus=PENDING; email/username matched case-insensitively;
+                                  turnstileToken required+verified only when Turnstile is enabled (see below)
+POST   /api/auth/login           { identifier, password }  identifier = username or email, case-insensitive
 POST   /api/auth/logout
 GET    /api/auth/me
 POST   /api/auth/verify-email    { token }
@@ -383,6 +449,11 @@ GET    /api/series/:slug/entries/:id/revisions
 GET    /api/series/:slug/builds          latest N builds, newest first
 GET    /api/series/:slug/download        302 → presigned URL for latest SUCCESS build
 GET    /api/series/:slug/download/source 302 → presigned URL for sources.zip
+GET    /api/search                       ?q=&page= — cross-dictionary search (the homepage);
+                                          case-insensitive substring match against every entry's
+                                          headword and inflections; multi-word queries OR-match,
+                                          favoring earlier words in ranking; 50 results/page;
+                                          PUBLISHED + APPROVED entries only
 ```
 
 ### Authenticated writes
@@ -390,11 +461,44 @@ GET    /api/series/:slug/download/source 302 → presigned URL for sources.zip
 ```
 POST   /api/series                       create series (+ books)
 PATCH  /api/series/:slug
-POST   /api/series/:slug/entries
+POST   /api/series/:slug/entries         submit a new entry; starts approvalStatus=PENDING
+GET    /api/series/:slug/entries/words   existing headwords + inflections in the dictionary, for client-side duplicate-word checks
 PATCH  /api/series/:slug/entries/:id
 DELETE /api/series/:slug/entries/:id      soft delete → status=DELETED + Revision
 POST   /api/series/:slug/rebuild          admin only; enqueue immediate build
 POST   /api/series/:slug/entries/:id/rollback  { revisionId } — admin only
+```
+
+### Admin: entry approval queue
+
+```
+GET    /api/admin/entries/pending             entries with approvalStatus=PENDING, oldest first
+GET    /api/admin/entries/:id                 full entry detail (for the review dialog)
+POST   /api/admin/entries/:id/approve         approvalStatus → APPROVED
+POST   /api/admin/entries/:id/reject          { note? } — approvalStatus → REJECTED
+```
+
+### Admin: registration approval
+
+```
+GET    /api/admin/users/pending               users with approvalStatus=PENDING, oldest first
+POST   /api/admin/users/:id/approve           approvalStatus → APPROVED
+POST   /api/admin/users/:id/deny              permanently deletes the account (no REJECTED state)
+```
+
+`GET /api/admin/users` (existing users list) excludes Pending accounts — they
+appear only in the pending-registrations list above until reviewed.
+
+### Turnstile
+
+```
+GET    /api/turnstile/config                  public; { enabled, siteKey }; siteKey is null when disabled
+GET    /api/admin/turnstile                   admin only; { enabled, siteKey, secretConfigured, updatedAt }
+PATCH  /api/admin/turnstile                   admin only; { enabled, siteKey, secretKey? }
+                                               secretKey re-encrypts and overwrites the stored secret only
+                                               when non-blank; omitted/blank leaves it unchanged
+POST   /api/admin/turnstile/test              admin only; { success } — checks the stored secret is
+                                               recognized by Cloudflare without fabricating a full verification
 ```
 
 ### Conventions
@@ -404,8 +508,10 @@ POST   /api/series/:slug/entries/:id/rollback  { revisionId } — admin only
   entry's `updatedAt`; mismatch → `409` with the current server state so the UI
   can show a diff.
 - Rate limits: 5 registrations/hour/IP, 10 logins/15min/IP, 60 writes/hour/user,
-  300 reads/min/IP. Downloads are uncapped but served via presigned URLs so
-  bandwidth leaves the app server.
+  300 reads/min/IP, 60 searches/min/IP (`GET /api/search` — a public,
+  arbitrary-input, cross-table search gets its own tighter tier rather than
+  the general read limit). Downloads are uncapped but served via presigned
+  URLs so bandwidth leaves the app server.
 - Pagination is cursor-based on `(sortKey, id)`; `limit` caps at 200.
 
 ---
@@ -450,7 +556,9 @@ pointless rebuild, and formatting-only changes to unrelated columns would too.
 ### The build job
 
 1. Mark `Build` `RUNNING`.
-2. Load all published entries + inflections for the series, ordered by `sortKey`.
+2. Load all published entries + inflections for the series (`status=PUBLISHED`
+   **and** `approvalStatus=APPROVED` - a Pending or Rejected entry is never
+   included, even if otherwise published), ordered by `sortKey`.
 3. Call `packages/kindle` → in-memory file list.
 4. Zip into `dictionary.epub` (mimetype entry first, **stored uncompressed**, per
    EPUB OCF) and `sources.zip`.
@@ -471,14 +579,21 @@ objects in the `maintenance` queue. Never delete the newest.
 ### Routes
 
 ```
-/                                   Series index, search + cards
+/                                   Homepage: Google-style search over every dictionary's entries
+                                    (`?q=&page=`), public/no-auth; centered search box when no
+                                    query, a Dictionary/Word results grid (bolded matched
+                                    headword/inflections, definition excerpt, pagination) once
+                                    a query is present
 /series/:slug                       Entry browser, download panel, build status
 /series/:slug/entries/:id           Entry detail + revision history
-/series/:slug/entries/new           Editor          (auth)
-/series/:slug/entries/:id/edit      Editor          (auth)
+/series/:slug/entries/:id/edit      Editor for an existing entry (auth)
+/entries/new                        Add Entry - dictionary picker + Headword/Definition/Inflections (auth); saves as Pending
+/entries/delete                     Placeholder only, no workflow yet (admin)
 /series/new                         Series creation (auth)
 /login  /register  /reset-password
-/admin                              Builds, users, job dashboard link (admin)
+/admin                              Builds, users, pending registrations, job dashboard link (admin)
+/admin/approval-queue               Pending entries, oldest first; approve/reject (admin)
+/admin/turnstile                    Cloudflare Turnstile configuration (admin)
 ```
 
 ### Notes
@@ -547,6 +662,7 @@ pnpm dev                                            # api :3000, worker, web :51
 DATABASE_URL=postgresql://…
 REDIS_URL=redis://localhost:6379
 SESSION_SECRET=…
+SETTINGS_ENCRYPTION_KEY=…        # AES-256-GCM key for encrypted-at-rest admin settings (Turnstile Secret Key)
 S3_ENDPOINT=http://localhost:9000
 S3_BUCKET=dictionaries
 S3_ACCESS_KEY_ID=…

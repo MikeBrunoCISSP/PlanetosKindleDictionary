@@ -18,29 +18,16 @@ export const Route = createFileRoute("/series/$slug/edit")({
       staleTime: 30 * 1000,
     });
     if (!user) throw redirect({ to: "/login" });
-    if (user.role !== "ADMIN") return { forbidden: true as const };
-    return { forbidden: false as const };
+    if (user.role !== "ADMIN") throw redirect({ to: "/" });
   },
   component: SeriesEditPage,
 });
 
 function SeriesEditPage() {
-  const { forbidden } = Route.useRouteContext();
   const { slug } = Route.useParams();
 
-  if (forbidden) {
-    return (
-      <div className="flex min-h-svh items-center justify-center p-4">
-        <div className="text-center space-y-2">
-          <h1 className="text-2xl font-bold">403 Forbidden</h1>
-          <p className="text-muted-foreground">You do not have permission to access this page.</p>
-        </div>
-      </div>
-    );
-  }
-
   return (
-    <div className="p-8 max-w-lg mx-auto">
+    <div className="p-4 sm:p-8 max-w-2xl mx-auto">
       <h1 className="text-2xl font-bold mb-6">Edit Dictionary</h1>
       <EditSeriesForm slug={slug} />
     </div>

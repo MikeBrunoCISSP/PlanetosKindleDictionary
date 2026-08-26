@@ -1,24 +1,42 @@
 import type { FastifyPluginAsync } from "fastify";
 import { PrismaClient } from "@prisma/client";
 import { z } from "zod";
-import { updateUserSchema, type AdminUserDto } from "@planetos/shared";
+import { updateUserSchema, type AdminUserDto, type PendingUserDto } from "@planetos/shared";
 import { makeRequireAdmin } from "../plugins/requireAdmin.js";
 import { Errors } from "../lib/errors.js";
 
 function toAdminUserDto(user: {
   id: string;
   email: string;
-  displayName: string;
+  username: string;
   role: "MEMBER" | "ADMIN";
   isActive: boolean;
+  approvalStatus: "PENDING" | "APPROVED";
   createdAt: Date;
 }): AdminUserDto {
   return {
     id: user.id,
     email: user.email,
-    displayName: user.displayName,
+    username: user.username,
     role: user.role,
     isActive: user.isActive,
+    approvalStatus: user.approvalStatus,
+    createdAt: user.createdAt.toISOString(),
+  };
+}
+
+function toPendingUserDto(user: {
+  id: string;
+  username: string;
+  email: string;
+  reasonForJoining: string | null;
+  createdAt: Date;
+}): PendingUserDto {
+  return {
+    id: user.id,
+    username: user.username,
+    email: user.email,
+    reasonForJoining: user.reasonForJoining,
     createdAt: user.createdAt.toISOString(),
   };
 }
@@ -40,13 +58,80 @@ const adminRoutes: FastifyPluginAsync<{ prisma: PrismaClient }> = async (fastify
       const skip = (query.page - 1) * query.limit;
 
       const users = await prisma.user.findMany({
-        select: { id: true, email: true, displayName: true, role: true, isActive: true, createdAt: true },
+        where: { approvalStatus: { not: "PENDING" } },
+        select: {
+          id: true,
+          email: true,
+          username: true,
+          role: true,
+          isActive: true,
+          approvalStatus: true,
+          createdAt: true,
+        },
         orderBy: { createdAt: "asc" },
         skip,
         take: query.limit,
       });
 
       return reply.status(200).send(users.map(toAdminUserDto));
+    }
+  );
+
+  fastify.get(
+    "/api/admin/users/pending",
+    { preHandler: requireAdmin },
+    async (request, reply) => {
+      const users = await prisma.user.findMany({
+        where: { approvalStatus: "PENDING" },
+        select: { id: true, username: true, email: true, reasonForJoining: true, createdAt: true },
+        orderBy: { createdAt: "asc" },
+      });
+
+      return reply.status(200).send(users.map(toPendingUserDto));
+    }
+  );
+
+  fastify.post(
+    "/api/admin/users/:id/approve",
+    { preHandler: requireAdmin },
+    async (request, reply) => {
+      const { id } = request.params as { id: string };
+
+      const target = await prisma.user.findUnique({ where: { id }, select: { approvalStatus: true } });
+      if (!target) throw Errors.NOT_FOUND();
+      if (target.approvalStatus !== "PENDING") throw Errors.ALREADY_REVIEWED();
+
+      const updated = await prisma.user.update({
+        where: { id },
+        data: { approvalStatus: "APPROVED" },
+        select: {
+          id: true,
+          email: true,
+          username: true,
+          role: true,
+          isActive: true,
+          approvalStatus: true,
+          createdAt: true,
+        },
+      });
+
+      return reply.status(200).send(toAdminUserDto(updated));
+    }
+  );
+
+  fastify.post(
+    "/api/admin/users/:id/deny",
+    { preHandler: requireAdmin },
+    async (request, reply) => {
+      const { id } = request.params as { id: string };
+
+      const target = await prisma.user.findUnique({ where: { id }, select: { approvalStatus: true } });
+      if (!target) throw Errors.NOT_FOUND();
+      if (target.approvalStatus !== "PENDING") throw Errors.ALREADY_REVIEWED();
+
+      await prisma.user.delete({ where: { id } });
+
+      return reply.status(204).send();
     }
   );
 
@@ -83,7 +168,15 @@ const adminRoutes: FastifyPluginAsync<{ prisma: PrismaClient }> = async (fastify
         return tx.user.update({
           where: { id },
           data,
-          select: { id: true, email: true, displayName: true, role: true, isActive: true, createdAt: true },
+          select: {
+            id: true,
+            email: true,
+            username: true,
+            role: true,
+            isActive: true,
+            approvalStatus: true,
+            createdAt: true,
+          },
         });
       }, { isolationLevel: "Serializable" });
 

@@ -3,7 +3,7 @@ import { join, dirname } from "path";
 import { fileURLToPath } from "url";
 import { PrismaClient } from "@prisma/client";
 import { hash } from "@node-rs/argon2";
-import { passwordSchema } from "@planetos/shared";
+import { passwordSchema, normalizeWord } from "@planetos/shared";
 
 // Load .env from repo root when running directly (apps/api is 2 levels down)
 const __dirname = dirname(fileURLToPath(import.meta.url));
@@ -30,24 +30,29 @@ async function main() {
   }
 
   const passwordHash = await hash(password);
+  const normalizedEmail = normalizeWord(email);
+  const username = "Administrator";
 
   await prisma.user.upsert({
-    where: { email },
+    where: { email: normalizedEmail },
     create: {
-      email,
-      displayName: "Administrator",
+      email: normalizedEmail,
+      username,
+      usernameNormalized: normalizeWord(username),
       passwordHash,
       role: "ADMIN",
       isActive: true,
+      approvalStatus: "APPROVED",
     },
     update: {
       passwordHash,
       role: "ADMIN",
       isActive: true,
+      approvalStatus: "APPROVED",
     },
   });
 
-  console.log(`Admin account upserted: ${email}`);
+  console.log(`Admin account upserted: ${normalizedEmail}`);
 }
 
 main()

@@ -5,6 +5,9 @@ import errorHandlerPlugin from "../src/plugins/errorHandler.js";
 import authRoutes from "../src/routes/auth.js";
 import adminRoutes from "../src/routes/admin.js";
 import seriesRoutes from "../src/routes/series.js";
+import entriesRoutes from "../src/routes/entries.js";
+import turnstileRoutes from "../src/routes/turnstile.js";
+import searchRoutes from "../src/routes/search.js";
 
 export async function buildApp() {
   const prisma = new PrismaClient();
@@ -15,6 +18,9 @@ export async function buildApp() {
   await app.register(authRoutes, { prisma });
   await app.register(adminRoutes, { prisma });
   await app.register(seriesRoutes, { prisma });
+  await app.register(entriesRoutes, { prisma });
+  await app.register(turnstileRoutes, { prisma });
+  await app.register(searchRoutes, { prisma });
 
   return { app, prisma };
 }
@@ -25,4 +31,8 @@ export async function cleanUsers(prisma: PrismaClient, emails: string[]) {
 
 export async function cleanSeries(prisma: PrismaClient, slugPrefix: string) {
   await prisma.series.deleteMany({ where: { slug: { startsWith: slugPrefix } } });
+}
+
+export async function resetTurnstileSettings(prisma: PrismaClient) {
+  await prisma.turnstileSettings.deleteMany({});
 }

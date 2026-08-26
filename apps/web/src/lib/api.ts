@@ -1,11 +1,20 @@
 import type {
   AdminUserDto,
+  CreateEntryDto,
   CreateSeriesDto,
+  EntryDto,
+  EntrySummaryDto,
   LoginDto,
+  PendingUserDto,
   RegisterDto,
+  RejectEntryDto,
+  SearchResultsDto,
   SeriesDto,
   SeriesListItemDto,
+  TurnstileConfig,
+  TurnstileSettingsDto,
   UpdateSeriesDto,
+  UpdateTurnstileSettingsDto,
   UpdateUserDto,
   UserDto,
 } from "@planetos/shared";
@@ -95,6 +104,63 @@ export async function apiAdminUpdateUser(id: string, patch: UpdateUserDto): Prom
   return handleResponse<AdminUserDto>(res);
 }
 
+export async function apiGetPendingUsers(): Promise<PendingUserDto[]> {
+  const res = await fetch("/api/admin/users/pending", { credentials: "include" });
+  return handleResponse<PendingUserDto[]>(res);
+}
+
+export async function apiApproveRegistration(id: string): Promise<AdminUserDto> {
+  const res = await fetch(`/api/admin/users/${id}/approve`, {
+    method: "POST",
+    credentials: "include",
+  });
+  return handleResponse<AdminUserDto>(res);
+}
+
+export async function apiDenyRegistration(id: string): Promise<void> {
+  const res = await fetch(`/api/admin/users/${id}/deny`, {
+    method: "POST",
+    credentials: "include",
+  });
+  return handleResponse<void>(res);
+}
+
+export async function apiGetTurnstileConfig(): Promise<TurnstileConfig> {
+  const res = await fetch("/api/turnstile/config", { credentials: "include" });
+  return handleResponse<TurnstileConfig>(res);
+}
+
+export async function apiGetTurnstileSettings(): Promise<TurnstileSettingsDto> {
+  const res = await fetch("/api/admin/turnstile", { credentials: "include" });
+  return handleResponse<TurnstileSettingsDto>(res);
+}
+
+export async function apiUpdateTurnstileSettings(
+  data: UpdateTurnstileSettingsDto
+): Promise<TurnstileSettingsDto> {
+  const res = await fetch("/api/admin/turnstile", {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(data),
+    credentials: "include",
+  });
+  return handleResponse<TurnstileSettingsDto>(res);
+}
+
+export async function apiTestTurnstileConfig(): Promise<{ success: boolean }> {
+  const res = await fetch("/api/admin/turnstile/test", {
+    method: "POST",
+    credentials: "include",
+  });
+  return handleResponse<{ success: boolean }>(res);
+}
+
+export async function apiSearchEntries(q: string, page = 1): Promise<SearchResultsDto> {
+  const params = new URLSearchParams({ q, page: String(page) });
+  const res = await fetch(`/api/search?${params.toString()}`, { credentials: "include" });
+  return handleResponse<SearchResultsDto>(res);
+}
+
 export async function apiGetSeriesList(page = 1): Promise<SeriesListItemDto[]> {
   const res = await fetch(`/api/series?page=${page}`, { credentials: "include" });
   return handleResponse<SeriesListItemDto[]>(res);
@@ -123,4 +189,55 @@ export async function apiUpdateSeries(slug: string, patch: UpdateSeriesDto): Pro
     credentials: "include",
   });
   return handleResponse<SeriesDto>(res);
+}
+
+export async function apiDeleteSeries(slug: string): Promise<void> {
+  const res = await fetch(`/api/series/${slug}`, {
+    method: "DELETE",
+    credentials: "include",
+  });
+  return handleResponse<void>(res);
+}
+
+export async function apiGetSeriesWords(seriesSlug: string): Promise<string[]> {
+  const res = await fetch(`/api/series/${seriesSlug}/entries/words`, { credentials: "include" });
+  return handleResponse<string[]>(res);
+}
+
+export async function apiCreateEntry(seriesSlug: string, data: CreateEntryDto): Promise<EntryDto> {
+  const res = await fetch(`/api/series/${seriesSlug}/entries`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(data),
+    credentials: "include",
+  });
+  return handleResponse<EntryDto>(res);
+}
+
+export async function apiGetPendingEntries(): Promise<EntrySummaryDto[]> {
+  const res = await fetch("/api/admin/entries/pending", { credentials: "include" });
+  return handleResponse<EntrySummaryDto[]>(res);
+}
+
+export async function apiGetEntry(id: string): Promise<EntryDto> {
+  const res = await fetch(`/api/admin/entries/${id}`, { credentials: "include" });
+  return handleResponse<EntryDto>(res);
+}
+
+export async function apiApproveEntry(id: string): Promise<EntryDto> {
+  const res = await fetch(`/api/admin/entries/${id}/approve`, {
+    method: "POST",
+    credentials: "include",
+  });
+  return handleResponse<EntryDto>(res);
+}
+
+export async function apiRejectEntry(id: string, data: RejectEntryDto): Promise<EntryDto> {
+  const res = await fetch(`/api/admin/entries/${id}/reject`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(data),
+    credentials: "include",
+  });
+  return handleResponse<EntryDto>(res);
 }

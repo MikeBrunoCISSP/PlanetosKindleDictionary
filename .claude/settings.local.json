@@ -1,0 +1,26 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(openspec new *)",
+      "Bash(openspec status *)",
+      "Bash(openspec instructions *)",
+      "Bash(pnpm --filter @planetos/shared test)",
+      "Bash(pnpm --filter @planetos/shared build)",
+      "Bash(pnpm --filter api test -- series)",
+      "Bash(pnpm --filter api add @fastify/cors)",
+      "Bash(pnpm --filter api add @fastify/helmet)",
+      "Bash(pnpm --filter api typecheck)",
+      "Bash(npx tsx *)",
+      "Bash(pnpm --filter web build)",
+      "Bash(nohup npx vite preview --port 4173)",
+      "Read(//tmp/**)",
+      "Bash(curl -sf http://localhost:4173/ -o /dev/null -w \"HTTP %{http_code}\\\\n\")",
+      "mcp__plugin_playwright_playwright__browser_navigate",
+      "mcp__plugin_playwright_playwright__browser_console_messages",
+      "mcp__plugin_playwright_playwright__browser_close",
+      "PowerShell($conn = Get-NetTCPConnection -LocalPort 4173 -ErrorAction SilentlyContinue; if \\($conn\\) { $conn | ForEach-Object { Stop-Process -Id $_.OwningProcess -Force -ErrorAction SilentlyContinue }; \"killed\" } else { \"no process found on 4173\" })",
+      "Bash(openspec validate *)",
+      "Bash(node -e \"let d='';process.stdin.on\\('data',c=>d+=c\\);process.stdin.on\\('end',\\(\\)=>{const j=JSON.parse\\(d\\);console.log\\('rules:',JSON.stringify\\(j.rules\\)\\);console.log\\('instruction present:',!!j.instruction\\)}\\)\")"
+    ]
+  }
+}

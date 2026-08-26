@@ -1,0 +1,93 @@
+- generic [ref=f4e2]:
+  - generic [ref=f4e3]:
+    - banner [ref=f4e4]:
+      - link "Planetos" [ref=f4e225] [cursor=pointer]:
+        - /url: /
+      - button "Open menu" [ref=f4e226]
+    - generic [ref=f4e8]:
+      - heading "Admin Dashboard" [level=1] [ref=f4e227]
+      - heading "Pending Registrations" [level=2] [ref=f4e228]
+      - paragraph [ref=f4e229]: No pending registrations.
+      - heading "Users" [level=2] [ref=f4e230]
+      - table [ref=f4e31]:
+        - rowgroup [ref=f4e32]:
+          - row [ref=f4e231]:
+            - columnheader "Username" [ref=f4e232]
+            - columnheader "Email" [ref=f4e233]
+            - columnheader "Role" [ref=f4e234]
+            - columnheader "Status" [ref=f4e235]
+            - columnheader "Actions" [ref=f4e236]
+        - rowgroup [ref=f4e39]:
+          - row [ref=f4e237]:
+            - cell "SmokeUser" [ref=f4e238]
+            - cell "smoketest@example.com" [ref=f4e239]
+            - cell "MEMBER" [ref=f4e240]
+            - cell "Active" [ref=f4e241]
+            - cell [ref=f4e242]:
+              - generic [ref=f4e48]:
+                - button "Disable" [ref=f4e243]
+                - button "Promote" [ref=f4e244]
+          - row [ref=f4e245]:
+            - cell "SmokeUser1787326787" [ref=f4e246]
+            - cell "smoketest1787326787@example.com" [ref=f4e247]
+            - cell "MEMBER" [ref=f4e248]
+            - cell "Active" [ref=f4e249]
+            - cell [ref=f4e250]:
+              - generic [ref=f4e59]:
+                - button "Disable" [ref=f4e251]
+                - button "Promote" [ref=f4e252]
+          - row [ref=f4e253]:
+            - cell "Smoke1787326851" [ref=f4e254]
+            - cell "smoketest1787326851@example.com" [ref=f4e255]
+            - cell "MEMBER" [ref=f4e256]
+            - cell "Active" [ref=f4e257]
+            - cell [ref=f4e258]:
+              - generic [ref=f4e70]:
+                - button "Disable" [ref=f4e259]
+                - button "Promote" [ref=f4e260]
+          - row [ref=f4e261]:
+            - cell "Administrator" [ref=f4e262]
+            - cell "admin@example.com" [ref=f4e263]
+            - cell "ADMIN" [ref=f4e264]
+            - cell "Active" [ref=f4e265]
+            - cell [ref=f4e266]:
+              - generic [ref=f4e81]:
+                - button "Disable" [disabled]
+                - button "Demote" [disabled]
+          - row [ref=f4e267]:
+            - cell "SmokeUser1787330027725" [ref=f4e268]
+            - cell "smoketest1787330027725@example.com" [ref=f4e269]
+            - cell "MEMBER" [ref=f4e270]
+            - cell "Active" [ref=f4e271]
+            - cell [ref=f4e272]:
+              - generic [ref=f4e90]:
+                - button "Disable" [ref=f4e273]
+                - button "Promote" [ref=f4e274]
+          - row [ref=f4e275]:
+            - cell "SmokeUser1787330064800" [ref=f4e276]
+            - cell "smoketest1787330064800@example.com" [ref=f4e277]
+            - cell "MEMBER" [ref=f4e278]
+            - cell "Active" [ref=f4e279]
+            - cell [ref=f4e280]:
+              - generic [ref=f4e101]:
+                - button "Disable" [ref=f4e281]
+                - button "Promote" [ref=f4e282]
+          - row [ref=f4e283]:
+            - cell "SmokeUser1787330118614" [ref=f4e284]
+            - cell "smoketest1787330118614@example.com" [ref=f4e285]
+            - cell "MEMBER" [ref=f4e286]
+            - cell "Active" [ref=f4e287]
+            - cell [ref=f4e288]:
+              - generic [ref=f4e112]:
+                - button "Disable" [ref=f4e289]
+                - button "Promote" [ref=f4e290]
+          - row [ref=f4e291]:
+            - cell "WalkthroughUser" [ref=f4e292]
+            - cell "walkthrough1@example.com" [ref=f4e293]
+            - cell "MEMBER" [ref=f4e294]
+            - cell "Active" [ref=f4e295]
+            - cell [ref=f4e296]:
+              - generic [ref=f4e123]:
+                - button "Disable" [ref=f4e297]
+                - button "Promote" [ref=f4e298]
+  - region "Notifications alt+T"

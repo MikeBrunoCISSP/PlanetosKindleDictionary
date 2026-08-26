@@ -1,0 +1,17 @@
+- generic [ref=f7e2]:
+  - generic [ref=f7e3]:
+    - banner [ref=f7e4]:
+      - link "Planetos" [ref=f7e5] [cursor=pointer]:
+        - /url: /
+      - button "Open menu" [ref=f7e41]
+    - generic [ref=f7e44]:
+      - heading "Welcome to Planetos" [level=1] [ref=f7e45]
+      - paragraph [ref=f7e46]:
+        - text: Signed in as
+        - strong [ref=f7e47]: TurnstileTestUser
+        - text: (turnstiletest@example.com)
+      - button "Log out" [ref=f7e48]
+  - region "Notifications alt+T":
+    - list:
+      - listitem [ref=f7e49]:
+        - generic [ref=f7e53]: Your registration request has been submitted and is awaiting administrator approval.

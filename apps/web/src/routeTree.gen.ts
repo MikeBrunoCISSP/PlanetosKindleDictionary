@@ -12,6 +12,11 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as AdminRouteImport } from './routes/admin'
 import { Route as LoginRouteImport } from './routes/login'
+import { Route as PreferencesRouteImport } from './routes/preferences'
+import { Route as AdminApprovalQueueRouteImport } from './routes/admin_.approval-queue'
+import { Route as AdminTurnstileRouteImport } from './routes/admin_.turnstile'
+import { Route as EntriesDeleteRouteImport } from './routes/entries/delete'
+import { Route as EntriesNewRouteImport } from './routes/entries/new'
 import { Route as SeriesNewRouteImport } from './routes/series/new'
 import { Route as SeriesSlugEditRouteImport } from './routes/series/$slug/edit'
 
@@ -30,6 +35,31 @@ const LoginRoute = LoginRouteImport.update({
   path: '/login',
   getParentRoute: () => rootRouteImport,
 } as any)
+const PreferencesRoute = PreferencesRouteImport.update({
+  id: '/preferences',
+  path: '/preferences',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AdminApprovalQueueRoute = AdminApprovalQueueRouteImport.update({
+  id: '/admin_/approval-queue',
+  path: '/admin/approval-queue',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AdminTurnstileRoute = AdminTurnstileRouteImport.update({
+  id: '/admin_/turnstile',
+  path: '/admin/turnstile',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const EntriesDeleteRoute = EntriesDeleteRouteImport.update({
+  id: '/entries/delete',
+  path: '/entries/delete',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const EntriesNewRoute = EntriesNewRouteImport.update({
+  id: '/entries/new',
+  path: '/entries/new',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const SeriesNewRoute = SeriesNewRouteImport.update({
   id: '/series/new',
   path: '/series/new',
@@ -45,6 +75,11 @@ export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/admin': typeof AdminRoute
   '/login': typeof LoginRoute
+  '/preferences': typeof PreferencesRoute
+  '/admin/approval-queue': typeof AdminApprovalQueueRoute
+  '/admin/turnstile': typeof AdminTurnstileRoute
+  '/entries/delete': typeof EntriesDeleteRoute
+  '/entries/new': typeof EntriesNewRoute
   '/series/new': typeof SeriesNewRoute
   '/series/$slug/edit': typeof SeriesSlugEditRoute
 }
@@ -52,6 +87,11 @@ export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/admin': typeof AdminRoute
   '/login': typeof LoginRoute
+  '/preferences': typeof PreferencesRoute
+  '/admin/approval-queue': typeof AdminApprovalQueueRoute
+  '/admin/turnstile': typeof AdminTurnstileRoute
+  '/entries/delete': typeof EntriesDeleteRoute
+  '/entries/new': typeof EntriesNewRoute
   '/series/new': typeof SeriesNewRoute
   '/series/$slug/edit': typeof SeriesSlugEditRoute
 }
@@ -60,19 +100,49 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/admin': typeof AdminRoute
   '/login': typeof LoginRoute
+  '/preferences': typeof PreferencesRoute
+  '/admin_/approval-queue': typeof AdminApprovalQueueRoute
+  '/admin_/turnstile': typeof AdminTurnstileRoute
+  '/entries/delete': typeof EntriesDeleteRoute
+  '/entries/new': typeof EntriesNewRoute
   '/series/new': typeof SeriesNewRoute
   '/series/$slug/edit': typeof SeriesSlugEditRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/admin' | '/login' | '/series/new' | '/series/$slug/edit'
+  fullPaths:
+    | '/'
+    | '/admin'
+    | '/login'
+    | '/preferences'
+    | '/admin/approval-queue'
+    | '/admin/turnstile'
+    | '/entries/delete'
+    | '/entries/new'
+    | '/series/new'
+    | '/series/$slug/edit'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/admin' | '/login' | '/series/new' | '/series/$slug/edit'
+  to:
+    | '/'
+    | '/admin'
+    | '/login'
+    | '/preferences'
+    | '/admin/approval-queue'
+    | '/admin/turnstile'
+    | '/entries/delete'
+    | '/entries/new'
+    | '/series/new'
+    | '/series/$slug/edit'
   id:
     | '__root__'
     | '/'
     | '/admin'
     | '/login'
+    | '/preferences'
+    | '/admin_/approval-queue'
+    | '/admin_/turnstile'
+    | '/entries/delete'
+    | '/entries/new'
     | '/series/new'
     | '/series/$slug/edit'
   fileRoutesById: FileRoutesById
@@ -81,6 +151,11 @@ export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AdminRoute: typeof AdminRoute
   LoginRoute: typeof LoginRoute
+  PreferencesRoute: typeof PreferencesRoute
+  AdminApprovalQueueRoute: typeof AdminApprovalQueueRoute
+  AdminTurnstileRoute: typeof AdminTurnstileRoute
+  EntriesDeleteRoute: typeof EntriesDeleteRoute
+  EntriesNewRoute: typeof EntriesNewRoute
   SeriesNewRoute: typeof SeriesNewRoute
   SeriesSlugEditRoute: typeof SeriesSlugEditRoute
 }
@@ -108,6 +183,41 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof LoginRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/preferences': {
+      id: '/preferences'
+      path: '/preferences'
+      fullPath: '/preferences'
+      preLoaderRoute: typeof PreferencesRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/admin_/approval-queue': {
+      id: '/admin_/approval-queue'
+      path: '/admin/approval-queue'
+      fullPath: '/admin/approval-queue'
+      preLoaderRoute: typeof AdminApprovalQueueRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/admin_/turnstile': {
+      id: '/admin_/turnstile'
+      path: '/admin/turnstile'
+      fullPath: '/admin/turnstile'
+      preLoaderRoute: typeof AdminTurnstileRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/entries/delete': {
+      id: '/entries/delete'
+      path: '/entries/delete'
+      fullPath: '/entries/delete'
+      preLoaderRoute: typeof EntriesDeleteRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/entries/new': {
+      id: '/entries/new'
+      path: '/entries/new'
+      fullPath: '/entries/new'
+      preLoaderRoute: typeof EntriesNewRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/series/new': {
       id: '/series/new'
       path: '/series/new'
@@ -129,6 +239,11 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AdminRoute: AdminRoute,
   LoginRoute: LoginRoute,
+  PreferencesRoute: PreferencesRoute,
+  AdminApprovalQueueRoute: AdminApprovalQueueRoute,
+  AdminTurnstileRoute: AdminTurnstileRoute,
+  EntriesDeleteRoute: EntriesDeleteRoute,
+  EntriesNewRoute: EntriesNewRoute,
   SeriesNewRoute: SeriesNewRoute,
   SeriesSlugEditRoute: SeriesSlugEditRoute,
 }

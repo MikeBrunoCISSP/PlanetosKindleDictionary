@@ -1,0 +1,29 @@
+- generic [ref=f10e2]:
+  - generic [ref=f10e3]:
+    - banner [ref=f10e4]:
+      - link "Planetos" [ref=f10e5] [cursor=pointer]:
+        - /url: /
+    - generic [ref=f10e8]:
+      - textbox "Search dictionary entries…" [ref=f10e76]: dragon fire
+      - generic [ref=f10e77]:
+        - table [ref=f10e79]:
+          - rowgroup [ref=f10e80]:
+            - row [ref=f10e81]:
+              - columnheader "Dictionary" [ref=f10e82]
+              - columnheader "Word" [ref=f10e83]
+          - rowgroup [ref=f10e84]:
+            - row [ref=f10e85]:
+              - cell "Wheel of Time Search Test" [ref=f10e86]
+              - cell [ref=f10e87]:
+                - strong [ref=f10e88]: Dragonmount
+                - paragraph [ref=f10e89]: Test entry for Dragonmount.
+            - row [ref=f10e90]:
+              - cell "Wheel of Time Search Test" [ref=f10e91]
+              - cell [ref=f10e92]:
+                - strong [ref=f10e93]: Wildfire
+                - paragraph [ref=f10e94]: Test entry for Wildfire.
+        - generic [ref=f10e95]:
+          - button "Previous" [disabled]
+          - generic [ref=f10e96]: Page 1 of 1
+          - button "Next" [disabled]
+  - region "Notifications alt+T"

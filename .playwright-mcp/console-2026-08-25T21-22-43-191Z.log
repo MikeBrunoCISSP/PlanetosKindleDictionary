@@ -1,0 +1,257 @@
+[     113ms] [INFO] %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold @ http://localhost:5173/node_modules/.vite/deps/react-dom_client.js?v=4900a386:20102
+[     318ms] [VERBOSE] [DOM] Password field is not contained in a form: (More info: https://goo.gl/9p2vKq) %o @ http://localhost:5173/admin/turnstile:0
+[18938006ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:5173/api/auth/me:0
+[18938020ms] [ERROR] %o
+
+%s
+
+%s
+ ApiError: Internal Server Error
+    at handleResponse (http://localhost:5173/src/lib/api.ts:25:9)
+    at apiMe (http://localhost:5173/src/lib/api.ts:55:10) The above error occurred in the <MatchInnerImpl> component. React will try to recreate this component tree from scratch using the error boundary you provided, CatchBoundary. @ http://localhost:5173/node_modules/.vite/deps/react-dom_client.js?v=4900a386:7000
+[18938021ms] [WARNING] Warning: The following error wasn't caught by any route! At the very least, consider setting an 'errorComponent' in your RootRoute! @ http://localhost:5173/node_modules/.vite/deps/@tanstack_react-router.js?v=338061d9:7744
+[18938021ms] [WARNING] Warning: Internal Server Error @ http://localhost:5173/node_modules/.vite/deps/@tanstack_react-router.js?v=338061d9:7745
+[18938055ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:5173/api/auth/me:0
+[18938075ms] [ERROR] %o
+
+%s
+
+%s
+ ApiError: Internal Server Error
+    at handleResponse (http://localhost:5173/src/lib/api.ts:25:9)
+    at apiMe (http://localhost:5173/src/lib/api.ts:55:10) The above error occurred in the <MatchInnerImpl> component. React will try to recreate this component tree from scratch using the error boundary you provided, CatchBoundary. @ http://localhost:5173/node_modules/.vite/deps/react-dom_client.js?v=4900a386:7000
+[18938075ms] [WARNING] Warning: The following error wasn't caught by any route! At the very least, consider setting an 'errorComponent' in your RootRoute! @ http://localhost:5173/node_modules/.vite/deps/@tanstack_react-router.js?v=338061d9:7744
+[18938076ms] [WARNING] Warning: Internal Server Error @ http://localhost:5173/node_modules/.vite/deps/@tanstack_react-router.js?v=338061d9:7745
+[18938124ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:5173/api/auth/me:0
+[18938139ms] [ERROR] %o
+
+%s
+
+%s
+ ApiError: Internal Server Error
+    at handleResponse (http://localhost:5173/src/lib/api.ts:25:9)
+    at apiMe (http://localhost:5173/src/lib/api.ts:55:10) The above error occurred in the <MatchInnerImpl> component. React will try to recreate this component tree from scratch using the error boundary you provided, CatchBoundary. @ http://localhost:5173/node_modules/.vite/deps/react-dom_client.js?v=4900a386:7000
+[18938140ms] [WARNING] Warning: The following error wasn't caught by any route! At the very least, consider setting an 'errorComponent' in your RootRoute! @ http://localhost:5173/node_modules/.vite/deps/@tanstack_react-router.js?v=338061d9:7744
+[18938140ms] [WARNING] Warning: Internal Server Error @ http://localhost:5173/node_modules/.vite/deps/@tanstack_react-router.js?v=338061d9:7745
+[18938158ms] [ERROR] %o
+
+%s
+
+%s
+ ApiError: Internal Server Error
+    at handleResponse (http://localhost:5173/src/lib/api.ts:25:9)
+    at apiMe (http://localhost:5173/src/lib/api.ts:55:10) The above error occurred in the <MatchInnerImpl> component. React will try to recreate this component tree from scratch using the error boundary you provided, CatchBoundary. @ http://localhost:5173/node_modules/.vite/deps/react-dom_client.js?v=4900a386:7000
+[18938158ms] [WARNING] Warning: The following error wasn't caught by any route! At the very least, consider setting an 'errorComponent' in your RootRoute! @ http://localhost:5173/node_modules/.vite/deps/@tanstack_react-router.js?v=338061d9:7744
+[18938158ms] [WARNING] Warning: Internal Server Error @ http://localhost:5173/node_modules/.vite/deps/@tanstack_react-router.js?v=338061d9:7745
+[18938167ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:5173/api/auth/me:0
+[18938185ms] [ERROR] %o
+
+%s
+
+%s
+ ApiError: Internal Server Error
+    at handleResponse (http://localhost:5173/src/lib/api.ts:25:9)
+    at apiMe (http://localhost:5173/src/lib/api.ts:55:10) The above error occurred in the <MatchInnerImpl> component. React will try to recreate this component tree from scratch using the error boundary you provided, CatchBoundary. @ http://localhost:5173/node_modules/.vite/deps/react-dom_client.js?v=4900a386:7000
+[18938185ms] [WARNING] Warning: The following error wasn't caught by any route! At the very least, consider setting an 'errorComponent' in your RootRoute! @ http://localhost:5173/node_modules/.vite/deps/@tanstack_react-router.js?v=338061d9:7744
+[18938186ms] [WARNING] Warning: Internal Server Error @ http://localhost:5173/node_modules/.vite/deps/@tanstack_react-router.js?v=338061d9:7745
+[18938200ms] [ERROR] %o
+
+%s
+
+%s
+ ApiError: Internal Server Error
+    at handleResponse (http://localhost:5173/src/lib/api.ts:25:9)
+    at apiMe (http://localhost:5173/src/lib/api.ts:55:10) The above error occurred in the <MatchInnerImpl> component. React will try to recreate this component tree from scratch using the error boundary you provided, CatchBoundary. @ http://localhost:5173/node_modules/.vite/deps/react-dom_client.js?v=4900a386:7000
+[18938201ms] [WARNING] Warning: The following error wasn't caught by any route! At the very least, consider setting an 'errorComponent' in your RootRoute! @ http://localhost:5173/node_modules/.vite/deps/@tanstack_react-router.js?v=338061d9:7744
+[18938201ms] [WARNING] Warning: Internal Server Error @ http://localhost:5173/node_modules/.vite/deps/@tanstack_react-router.js?v=338061d9:7745
+[18981122ms] [ERROR] %o
+
+%s
+
+%s
+ ApiError: Internal Server Error
+    at handleResponse (http://localhost:5173/src/lib/api.ts:25:9)
+    at apiMe (http://localhost:5173/src/lib/api.ts:55:10) The above error occurred in the <MatchInnerImpl> component. React will try to recreate this component tree from scratch using the error boundary you provided, CatchBoundary. @ http://localhost:5173/node_modules/.vite/deps/react-dom_client.js?v=4900a386:7000
+[18981123ms] [WARNING] Warning: The following error wasn't caught by any route! At the very least, consider setting an 'errorComponent' in your RootRoute! @ http://localhost:5173/node_modules/.vite/deps/@tanstack_react-router.js?v=338061d9:7744
+[18981123ms] [WARNING] Warning: Internal Server Error @ http://localhost:5173/node_modules/.vite/deps/@tanstack_react-router.js?v=338061d9:7745
+[18981124ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:5173/api/auth/me:0
+[18981141ms] [ERROR] %o
+
+%s
+
+%s
+ ApiError: Internal Server Error
+    at handleResponse (http://localhost:5173/src/lib/api.ts:25:9)
+    at apiMe (http://localhost:5173/src/lib/api.ts:55:10) The above error occurred in the <MatchInnerImpl> component. React will try to recreate this component tree from scratch using the error boundary you provided, CatchBoundary. @ http://localhost:5173/node_modules/.vite/deps/react-dom_client.js?v=4900a386:7000
+[18981141ms] [WARNING] Warning: The following error wasn't caught by any route! At the very least, consider setting an 'errorComponent' in your RootRoute! @ http://localhost:5173/node_modules/.vite/deps/@tanstack_react-router.js?v=338061d9:7744
+[18981141ms] [WARNING] Warning: Internal Server Error @ http://localhost:5173/node_modules/.vite/deps/@tanstack_react-router.js?v=338061d9:7745
+[18981170ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:5173/api/auth/me:0
+[18981189ms] [ERROR] %o
+
+%s
+
+%s
+ ApiError: Internal Server Error
+    at handleResponse (http://localhost:5173/src/lib/api.ts:25:9)
+    at apiMe (http://localhost:5173/src/lib/api.ts:55:10) The above error occurred in the <MatchInnerImpl> component. React will try to recreate this component tree from scratch using the error boundary you provided, CatchBoundary. @ http://localhost:5173/node_modules/.vite/deps/react-dom_client.js?v=4900a386:7000
+[18981189ms] [WARNING] Warning: The following error wasn't caught by any route! At the very least, consider setting an 'errorComponent' in your RootRoute! @ http://localhost:5173/node_modules/.vite/deps/@tanstack_react-router.js?v=338061d9:7744
+[18981190ms] [WARNING] Warning: Internal Server Error @ http://localhost:5173/node_modules/.vite/deps/@tanstack_react-router.js?v=338061d9:7745
+[18981232ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:5173/api/auth/me:0
+[18981249ms] [ERROR] %o
+
+%s
+
+%s
+ ApiError: Internal Server Error
+    at handleResponse (http://localhost:5173/src/lib/api.ts:25:9)
+    at apiMe (http://localhost:5173/src/lib/api.ts:55:10) The above error occurred in the <MatchInnerImpl> component. React will try to recreate this component tree from scratch using the error boundary you provided, CatchBoundary. @ http://localhost:5173/node_modules/.vite/deps/react-dom_client.js?v=4900a386:7000
+[18981250ms] [WARNING] Warning: The following error wasn't caught by any route! At the very least, consider setting an 'errorComponent' in your RootRoute! @ http://localhost:5173/node_modules/.vite/deps/@tanstack_react-router.js?v=338061d9:7744
+[18981251ms] [WARNING] Warning: Internal Server Error @ http://localhost:5173/node_modules/.vite/deps/@tanstack_react-router.js?v=338061d9:7745
+[18981273ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:5173/api/auth/me:0
+[18981297ms] [ERROR] %o
+
+%s
+
+%s
+ ApiError: Internal Server Error
+    at handleResponse (http://localhost:5173/src/lib/api.ts:25:9)
+    at apiMe (http://localhost:5173/src/lib/api.ts:55:10) The above error occurred in the <MatchInnerImpl> component. React will try to recreate this component tree from scratch using the error boundary you provided, CatchBoundary. @ http://localhost:5173/node_modules/.vite/deps/react-dom_client.js?v=4900a386:7000
+[18981297ms] [WARNING] Warning: The following error wasn't caught by any route! At the very least, consider setting an 'errorComponent' in your RootRoute! @ http://localhost:5173/node_modules/.vite/deps/@tanstack_react-router.js?v=338061d9:7744
+[18981298ms] [WARNING] Warning: Internal Server Error @ http://localhost:5173/node_modules/.vite/deps/@tanstack_react-router.js?v=338061d9:7745
+[18981317ms] [ERROR] %o
+
+%s
+
+%s
+ ApiError: Internal Server Error
+    at handleResponse (http://localhost:5173/src/lib/api.ts:25:9)
+    at apiMe (http://localhost:5173/src/lib/api.ts:55:10) The above error occurred in the <MatchInnerImpl> component. React will try to recreate this component tree from scratch using the error boundary you provided, CatchBoundary. @ http://localhost:5173/node_modules/.vite/deps/react-dom_client.js?v=4900a386:7000
+[18981318ms] [WARNING] Warning: The following error wasn't caught by any route! At the very least, consider setting an 'errorComponent' in your RootRoute! @ http://localhost:5173/node_modules/.vite/deps/@tanstack_react-router.js?v=338061d9:7744
+[18981318ms] [WARNING] Warning: Internal Server Error @ http://localhost:5173/node_modules/.vite/deps/@tanstack_react-router.js?v=338061d9:7745
+[18981365ms] [ERROR] %o
+
+%s
+
+%s
+ ApiError: Internal Server Error
+    at handleResponse (http://localhost:5173/src/lib/api.ts:25:9)
+    at apiMe (http://localhost:5173/src/lib/api.ts:55:10) The above error occurred in the <MatchInnerImpl> component. React will try to recreate this component tree from scratch using the error boundary you provided, CatchBoundary. @ http://localhost:5173/node_modules/.vite/deps/react-dom_client.js?v=4900a386:7000
+[18981366ms] [WARNING] Warning: The following error wasn't caught by any route! At the very least, consider setting an 'errorComponent' in your RootRoute! @ http://localhost:5173/node_modules/.vite/deps/@tanstack_react-router.js?v=338061d9:7744
+[18981366ms] [WARNING] Warning: Internal Server Error @ http://localhost:5173/node_modules/.vite/deps/@tanstack_react-router.js?v=338061d9:7745
+[18981367ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:5173/api/auth/me:0
+[18981386ms] [ERROR] %o
+
+%s
+
+%s
+ ApiError: Internal Server Error
+    at handleResponse (http://localhost:5173/src/lib/api.ts:25:9)
+    at apiMe (http://localhost:5173/src/lib/api.ts:55:10) The above error occurred in the <MatchInnerImpl> component. React will try to recreate this component tree from scratch using the error boundary you provided, CatchBoundary. @ http://localhost:5173/node_modules/.vite/deps/react-dom_client.js?v=4900a386:7000
+[18981386ms] [WARNING] Warning: The following error wasn't caught by any route! At the very least, consider setting an 'errorComponent' in your RootRoute! @ http://localhost:5173/node_modules/.vite/deps/@tanstack_react-router.js?v=338061d9:7744
+[18981386ms] [WARNING] Warning: Internal Server Error @ http://localhost:5173/node_modules/.vite/deps/@tanstack_react-router.js?v=338061d9:7745
+[18981424ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:5173/api/auth/me:0
+[18981437ms] [ERROR] %o
+
+%s
+
+%s
+ ApiError: Internal Server Error
+    at handleResponse (http://localhost:5173/src/lib/api.ts:25:9)
+    at apiMe (http://localhost:5173/src/lib/api.ts:55:10) The above error occurred in the <MatchInnerImpl> component. React will try to recreate this component tree from scratch using the error boundary you provided, CatchBoundary. @ http://localhost:5173/node_modules/.vite/deps/react-dom_client.js?v=4900a386:7000
+[18981438ms] [WARNING] Warning: The following error wasn't caught by any route! At the very least, consider setting an 'errorComponent' in your RootRoute! @ http://localhost:5173/node_modules/.vite/deps/@tanstack_react-router.js?v=338061d9:7744
+[18981438ms] [WARNING] Warning: Internal Server Error @ http://localhost:5173/node_modules/.vite/deps/@tanstack_react-router.js?v=338061d9:7745
+[19395186ms] [ERROR] %o
+
+%s
+
+%s
+ ApiError: Internal Server Error
+    at handleResponse (http://localhost:5173/src/lib/api.ts:25:9)
+    at apiMe (http://localhost:5173/src/lib/api.ts:55:10) The above error occurred in the <MatchInnerImpl> component. React will try to recreate this component tree from scratch using the error boundary you provided, CatchBoundary. @ http://localhost:5173/node_modules/.vite/deps/react-dom_client.js?v=4900a386:7000
+[19395186ms] [WARNING] Warning: The following error wasn't caught by any route! At the very least, consider setting an 'errorComponent' in your RootRoute! @ http://localhost:5173/node_modules/.vite/deps/@tanstack_react-router.js?v=338061d9:7744
+[19395186ms] [WARNING] Warning: Internal Server Error @ http://localhost:5173/node_modules/.vite/deps/@tanstack_react-router.js?v=338061d9:7745
+[19405313ms] [ERROR] %o
+
+%s
+
+%s
+ ApiError: Internal Server Error
+    at handleResponse (http://localhost:5173/src/lib/api.ts:25:9)
+    at apiMe (http://localhost:5173/src/lib/api.ts:55:10) The above error occurred in the <MatchInnerImpl> component. React will try to recreate this component tree from scratch using the error boundary you provided, CatchBoundary. @ http://localhost:5173/node_modules/.vite/deps/react-dom_client.js?v=4900a386:7000
+[19405313ms] [WARNING] Warning: The following error wasn't caught by any route! At the very least, consider setting an 'errorComponent' in your RootRoute! @ http://localhost:5173/node_modules/.vite/deps/@tanstack_react-router.js?v=338061d9:7744
+[19405314ms] [WARNING] Warning: Internal Server Error @ http://localhost:5173/node_modules/.vite/deps/@tanstack_react-router.js?v=338061d9:7745
+[19415543ms] [ERROR] %o
+
+%s
+
+%s
+ ApiError: Internal Server Error
+    at handleResponse (http://localhost:5173/src/lib/api.ts:25:9)
+    at apiMe (http://localhost:5173/src/lib/api.ts:55:10) The above error occurred in the <MatchInnerImpl> component. React will try to recreate this component tree from scratch using the error boundary you provided, CatchBoundary. @ http://localhost:5173/node_modules/.vite/deps/react-dom_client.js?v=4900a386:7000
+[19415544ms] [WARNING] Warning: The following error wasn't caught by any route! At the very least, consider setting an 'errorComponent' in your RootRoute! @ http://localhost:5173/node_modules/.vite/deps/@tanstack_react-router.js?v=338061d9:7744
+[19415544ms] [WARNING] Warning: Internal Server Error @ http://localhost:5173/node_modules/.vite/deps/@tanstack_react-router.js?v=338061d9:7745
+[19423112ms] [ERROR] %o
+
+%s
+
+%s
+ ApiError: Internal Server Error
+    at handleResponse (http://localhost:5173/src/lib/api.ts:25:9)
+    at apiMe (http://localhost:5173/src/lib/api.ts:55:10) The above error occurred in the <MatchInnerImpl> component. React will try to recreate this component tree from scratch using the error boundary you provided, CatchBoundary. @ http://localhost:5173/node_modules/.vite/deps/react-dom_client.js?v=4900a386:7000
+[19423113ms] [WARNING] Warning: The following error wasn't caught by any route! At the very least, consider setting an 'errorComponent' in your RootRoute! @ http://localhost:5173/node_modules/.vite/deps/@tanstack_react-router.js?v=338061d9:7744
+[19423113ms] [WARNING] Warning: Internal Server Error @ http://localhost:5173/node_modules/.vite/deps/@tanstack_react-router.js?v=338061d9:7745
+[19430595ms] [ERROR] %o
+
+%s
+
+%s
+ ApiError: Internal Server Error
+    at handleResponse (http://localhost:5173/src/lib/api.ts:25:9)
+    at apiMe (http://localhost:5173/src/lib/api.ts:55:10) The above error occurred in the <MatchInnerImpl> component. React will try to recreate this component tree from scratch using the error boundary you provided, CatchBoundary. @ http://localhost:5173/node_modules/.vite/deps/react-dom_client.js?v=4900a386:7000
+[19430596ms] [WARNING] Warning: The following error wasn't caught by any route! At the very least, consider setting an 'errorComponent' in your RootRoute! @ http://localhost:5173/node_modules/.vite/deps/@tanstack_react-router.js?v=338061d9:7744
+[19430596ms] [WARNING] Warning: Internal Server Error @ http://localhost:5173/node_modules/.vite/deps/@tanstack_react-router.js?v=338061d9:7745
+[19456306ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:5173/api/auth/me:0
+[19456312ms] [ERROR] %o
+
+%s
+
+%s
+ ApiError: Internal Server Error
+    at handleResponse (http://localhost:5173/src/lib/api.ts:25:9)
+    at apiMe (http://localhost:5173/src/lib/api.ts:55:10) The above error occurred in the <MatchInnerImpl> component. React will try to recreate this component tree from scratch using the error boundary you provided, CatchBoundary. @ http://localhost:5173/node_modules/.vite/deps/react-dom_client.js?v=4900a386:7000
+[19456312ms] [WARNING] Warning: The following error wasn't caught by any route! At the very least, consider setting an 'errorComponent' in your RootRoute! @ http://localhost:5173/node_modules/.vite/deps/@tanstack_react-router.js?v=338061d9:7744
+[19456312ms] [WARNING] Warning: Internal Server Error @ http://localhost:5173/node_modules/.vite/deps/@tanstack_react-router.js?v=338061d9:7745
+[19456371ms] [ERROR] %o
+
+%s
+
+%s
+ ApiError: Internal Server Error
+    at handleResponse (http://localhost:5173/src/lib/api.ts:25:9)
+    at apiMe (http://localhost:5173/src/lib/api.ts:55:10) The above error occurred in the <MatchInnerImpl> component. React will try to recreate this component tree from scratch using the error boundary you provided, CatchBoundary. @ http://localhost:5173/node_modules/.vite/deps/react-dom_client.js?v=4900a386:7000
+[19456372ms] [WARNING] Warning: The following error wasn't caught by any route! At the very least, consider setting an 'errorComponent' in your RootRoute! @ http://localhost:5173/node_modules/.vite/deps/@tanstack_react-router.js?v=338061d9:7744
+[19456372ms] [WARNING] Warning: Internal Server Error @ http://localhost:5173/node_modules/.vite/deps/@tanstack_react-router.js?v=338061d9:7745
+[19464116ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:5173/api/auth/me:0
+[19464137ms] [ERROR] %o
+
+%s
+
+%s
+ ApiError: Internal Server Error
+    at handleResponse (http://localhost:5173/src/lib/api.ts?t=1787712418377:25:9)
+    at apiMe (http://localhost:5173/src/lib/api.ts?t=1787712418377:55:10) The above error occurred in the <MatchInnerImpl> component. React will try to recreate this component tree from scratch using the error boundary you provided, CatchBoundary. @ http://localhost:5173/node_modules/.vite/deps/react-dom_client.js?v=4900a386:7000
+[19464138ms] [WARNING] Warning: The following error wasn't caught by any route! At the very least, consider setting an 'errorComponent' in your RootRoute! @ http://localhost:5173/node_modules/.vite/deps/@tanstack_react-router.js?v=338061d9:7744
+[19464138ms] [WARNING] Warning: Internal Server Error @ http://localhost:5173/node_modules/.vite/deps/@tanstack_react-router.js?v=338061d9:7745
+[19464189ms] [ERROR] %o
+
+%s
+
+%s
+ ApiError: Internal Server Error
+    at handleResponse (http://localhost:5173/src/lib/api.ts?t=1787712418377:25:9)
+    at apiMe (http://localhost:5173/src/lib/api.ts?t=1787712418377:55:10) The above error occurred in the <MatchInnerImpl> component. React will try to recreate this component tree from scratch using the error boundary you provided, CatchBoundary. @ http://localhost:5173/node_modules/.vite/deps/react-dom_client.js?v=4900a386:7000
+[19464190ms] [WARNING] Warning: The following error wasn't caught by any route! At the very least, consider setting an 'errorComponent' in your RootRoute! @ http://localhost:5173/node_modules/.vite/deps/@tanstack_react-router.js?v=338061d9:7744
+[19464190ms] [WARNING] Warning: Internal Server Error @ http://localhost:5173/node_modules/.vite/deps/@tanstack_react-router.js?v=338061d9:7745
+[19531004ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:5173/src/routes/index.tsx?t=1787712494011&tsr-split=component:0
+[19531005ms] [ERROR] [vite] Failed to reload /src/routes/index.tsx?tsr-split=component. This could be due to syntax errors or importing non-existent modules. (see errors above) @ http://localhost:5173/@vite/client:881
+[19531301ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:5173/api/auth/me:0

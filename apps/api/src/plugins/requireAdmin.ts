@@ -4,9 +4,10 @@ import type { PrismaClient } from "@prisma/client";
 type AdminUser = {
   id: string;
   email: string;
-  displayName: string;
+  username: string;
   role: "MEMBER" | "ADMIN";
   isActive: boolean;
+  approvalStatus: "PENDING" | "APPROVED";
   createdAt: Date;
 };
 
@@ -30,7 +31,15 @@ export function makeRequireAdmin(prisma: PrismaClient): preHandlerHookHandler {
 
     const user = await prisma.user.findUnique({
       where: { id: userId },
-      select: { id: true, email: true, displayName: true, role: true, isActive: true, createdAt: true },
+      select: {
+        id: true,
+        email: true,
+        username: true,
+        role: true,
+        isActive: true,
+        approvalStatus: true,
+        createdAt: true,
+      },
     });
 
     if (!user || !user.isActive || user.role !== "ADMIN") {

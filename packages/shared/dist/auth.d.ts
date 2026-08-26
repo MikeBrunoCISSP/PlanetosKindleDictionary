@@ -1,68 +1,101 @@
 import { z } from "zod";
 export declare const passwordSchema: z.ZodEffects<z.ZodString, string, string>;
+export declare const usernameSchema: z.ZodEffects<z.ZodString, string, string>;
+export declare const reasonForJoiningSchema: z.ZodEffects<z.ZodString, string, string>;
 export declare const registerSchema: z.ZodObject<{
     email: z.ZodString;
-    displayName: z.ZodString;
+    username: z.ZodEffects<z.ZodString, string, string>;
+    reasonForJoining: z.ZodEffects<z.ZodString, string, string>;
     password: z.ZodEffects<z.ZodString, string, string>;
+    turnstileToken: z.ZodOptional<z.ZodString>;
 }, "strip", z.ZodTypeAny, {
     email: string;
-    displayName: string;
+    username: string;
+    reasonForJoining: string;
     password: string;
+    turnstileToken?: string | undefined;
 }, {
     email: string;
-    displayName: string;
+    username: string;
+    reasonForJoining: string;
     password: string;
+    turnstileToken?: string | undefined;
 }>;
 export declare const loginSchema: z.ZodObject<{
-    email: z.ZodString;
+    identifier: z.ZodString;
     password: z.ZodString;
 }, "strip", z.ZodTypeAny, {
-    email: string;
     password: string;
+    identifier: string;
 }, {
-    email: string;
     password: string;
+    identifier: string;
 }>;
 export declare const userDtoSchema: z.ZodObject<{
     id: z.ZodString;
     email: z.ZodString;
-    displayName: z.ZodString;
+    username: z.ZodString;
     role: z.ZodEnum<["MEMBER", "ADMIN"]>;
+    approvalStatus: z.ZodEnum<["PENDING", "APPROVED"]>;
     createdAt: z.ZodString;
 }, "strip", z.ZodTypeAny, {
     email: string;
-    displayName: string;
+    username: string;
     id: string;
     role: "MEMBER" | "ADMIN";
+    approvalStatus: "PENDING" | "APPROVED";
     createdAt: string;
 }, {
     email: string;
-    displayName: string;
+    username: string;
     id: string;
     role: "MEMBER" | "ADMIN";
+    approvalStatus: "PENDING" | "APPROVED";
     createdAt: string;
 }>;
 export declare const adminUserSchema: z.ZodObject<{
     id: z.ZodString;
     email: z.ZodString;
-    displayName: z.ZodString;
+    username: z.ZodString;
     role: z.ZodEnum<["MEMBER", "ADMIN"]>;
     isActive: z.ZodBoolean;
+    approvalStatus: z.ZodEnum<["PENDING", "APPROVED"]>;
     createdAt: z.ZodString;
 }, "strip", z.ZodTypeAny, {
     email: string;
-    displayName: string;
+    username: string;
     id: string;
     role: "MEMBER" | "ADMIN";
+    approvalStatus: "PENDING" | "APPROVED";
     createdAt: string;
     isActive: boolean;
 }, {
     email: string;
-    displayName: string;
+    username: string;
     id: string;
     role: "MEMBER" | "ADMIN";
+    approvalStatus: "PENDING" | "APPROVED";
     createdAt: string;
     isActive: boolean;
+}>;
+export declare const pendingUserDtoSchema: z.ZodObject<{
+    id: z.ZodString;
+    username: z.ZodString;
+    email: z.ZodString;
+    reasonForJoining: z.ZodNullable<z.ZodString>;
+    createdAt: z.ZodString;
+}, "strip", z.ZodTypeAny, {
+    email: string;
+    username: string;
+    reasonForJoining: string | null;
+    id: string;
+    createdAt: string;
+}, {
+    email: string;
+    username: string;
+    reasonForJoining: string | null;
+    id: string;
+    createdAt: string;
 }>;
 export declare const updateUserSchema: z.ZodEffects<z.ZodObject<{
     isActive: z.ZodOptional<z.ZodBoolean>;
@@ -84,5 +117,6 @@ export type RegisterDto = z.infer<typeof registerSchema>;
 export type LoginDto = z.infer<typeof loginSchema>;
 export type UserDto = z.infer<typeof userDtoSchema>;
 export type AdminUserDto = z.infer<typeof adminUserSchema>;
+export type PendingUserDto = z.infer<typeof pendingUserDtoSchema>;
 export type UpdateUserDto = z.infer<typeof updateUserSchema>;
 //# sourceMappingURL=auth.d.ts.map

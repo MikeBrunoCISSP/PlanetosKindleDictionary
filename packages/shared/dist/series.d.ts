@@ -1,7 +1,7 @@
 import { z } from "zod";
 export declare const createSeriesSchema: z.ZodObject<{
-    title: z.ZodString;
-    description: z.ZodString;
+    title: z.ZodEffects<z.ZodString, string, string>;
+    description: z.ZodEffects<z.ZodString, string, string>;
 }, "strip", z.ZodTypeAny, {
     title: string;
     description: string;
@@ -10,8 +10,8 @@ export declare const createSeriesSchema: z.ZodObject<{
     description: string;
 }>;
 export declare const updateSeriesSchema: z.ZodEffects<z.ZodObject<{
-    title: z.ZodOptional<z.ZodString>;
-    description: z.ZodOptional<z.ZodString>;
+    title: z.ZodOptional<z.ZodEffects<z.ZodString, string, string>>;
+    description: z.ZodOptional<z.ZodEffects<z.ZodString, string, string>>;
 }, "strip", z.ZodTypeAny, {
     title?: string | undefined;
     description?: string | undefined;

@@ -140,6 +140,17 @@ const seriesRoutes: FastifyPluginAsync<{ prisma: PrismaClient }> = async (fastif
     }
   });
 
+  fastify.delete("/api/series/:slug", { preHandler: requireAdmin }, async (request, reply) => {
+    const { slug } = request.params as { slug: string };
+    try {
+      await prisma.series.delete({ where: { slug } });
+      return reply.status(204).send();
+    } catch (err: unknown) {
+      if (isPrismaError(err, "P2025")) throw Errors.NOT_FOUND();
+      throw err;
+    }
+  });
+
   fastify.patch("/api/series/:slug", { preHandler: requireAdmin }, async (request, reply) => {
     const { slug } = request.params as { slug: string };
     const body = updateSeriesSchema.parse(request.body);

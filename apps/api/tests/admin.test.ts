@@ -6,10 +6,11 @@ import { buildApp, cleanUsers } from "./helpers.js";
 const ADMIN_EMAIL = "admintest@example.com";
 const MEMBER_EMAIL = "membertest@example.com";
 const MEMBER_EMAIL_2 = "membertest2@example.com";
-const ADMIN_DISPLAY = "AdminTestUser";
-const MEMBER_DISPLAY = "MemberTestUser";
-const MEMBER_DISPLAY_2 = "MemberTestUser2";
+const ADMIN_USERNAME = "AdminTestUser";
+const MEMBER_USERNAME = "MemberTestUser";
+const MEMBER_USERNAME_2 = "MemberTestUser2";
 const PASSWORD = "SecureP4ss!";
+const REASON = "Testing admin routes.";
 
 let app: FastifyInstance;
 let prisma: PrismaClient;
@@ -17,13 +18,13 @@ let preExistingAdminIds: string[] = [];
 
 async function registerAndGetCookie(
   email: string,
-  displayName: string,
+  username: string,
   password = PASSWORD
 ): Promise<string> {
   const res = await app.inject({
     method: "POST",
     url: "/api/auth/register",
-    payload: { email, displayName, password },
+    payload: { email, username, reasonForJoining: REASON, password },
   });
   const cookie = res.headers["set-cookie"] as string | string[];
   return ((Array.isArray(cookie) ? cookie[0] : cookie) ?? "").split(";")[0] ?? "";
@@ -63,14 +64,14 @@ describe("POST /api/auth/login — disabled account", () => {
     await app.inject({
       method: "POST",
       url: "/api/auth/register",
-      payload: { email: MEMBER_EMAIL, displayName: MEMBER_DISPLAY, password: PASSWORD },
+      payload: { email: MEMBER_EMAIL, username: MEMBER_USERNAME, reasonForJoining: REASON, password: PASSWORD },
     });
     await prisma.user.update({ where: { email: MEMBER_EMAIL }, data: { isActive: false } });
 
     const res = await app.inject({
       method: "POST",
       url: "/api/auth/login",
-      payload: { email: MEMBER_EMAIL, password: PASSWORD },
+      payload: { identifier: MEMBER_EMAIL, password: PASSWORD },
     });
     expect(res.statusCode).toBe(403);
     expect(res.headers["content-type"]).toMatch(/problem\+json/);
@@ -80,7 +81,7 @@ describe("POST /api/auth/login — disabled account", () => {
 
 describe("GET /api/auth/me — disabled mid-session", () => {
   it("returns 403 when account is disabled after login", async () => {
-    const cookie = await registerAndGetCookie(MEMBER_EMAIL, MEMBER_DISPLAY);
+    const cookie = await registerAndGetCookie(MEMBER_EMAIL, MEMBER_USERNAME);
     await prisma.user.update({ where: { email: MEMBER_EMAIL }, data: { isActive: false } });
 
     const res = await app.inject({
@@ -102,7 +103,7 @@ describe("GET /api/admin/users", () => {
   });
 
   it("returns 403 for authenticated non-admin", async () => {
-    const cookie = await registerAndGetCookie(MEMBER_EMAIL, MEMBER_DISPLAY);
+    const cookie = await registerAndGetCookie(MEMBER_EMAIL, MEMBER_USERNAME);
     const res = await app.inject({
       method: "GET",
       url: "/api/admin/users",
@@ -111,9 +112,13 @@ describe("GET /api/admin/users", () => {
     expect(res.statusCode).toBe(403);
   });
 
-  it("returns 200 with user list for admin", async () => {
-    const cookie = await registerAndGetCookie(MEMBER_EMAIL, MEMBER_DISPLAY);
-    await prisma.user.update({ where: { email: MEMBER_EMAIL }, data: { role: "ADMIN" } });
+  it("returns 200 with user list for admin, excluding Pending registrations", async () => {
+    const cookie = await registerAndGetCookie(MEMBER_EMAIL, MEMBER_USERNAME);
+    await prisma.user.update({
+      where: { email: MEMBER_EMAIL },
+      data: { role: "ADMIN", approvalStatus: "APPROVED" },
+    });
+    await registerAndGetCookie(MEMBER_EMAIL_2, MEMBER_USERNAME_2);
 
     const res = await app.inject({
       method: "GET",
@@ -127,22 +132,23 @@ describe("GET /api/admin/users", () => {
     expect(found).toBeDefined();
     expect(found?.isActive).toBe(true);
     expect(found?.role).toBe("ADMIN");
+    expect(body.find((u) => u.email === MEMBER_EMAIL_2)).toBeUndefined();
   });
 });
 
 describe("PATCH /api/admin/users/:id", () => {
   async function setupAdminAndMember() {
-    const adminCookie = await registerAndGetCookie(ADMIN_EMAIL, ADMIN_DISPLAY);
+    const adminCookie = await registerAndGetCookie(ADMIN_EMAIL, ADMIN_USERNAME);
     await prisma.user.update({ where: { email: ADMIN_EMAIL }, data: { role: "ADMIN" } });
     const member = await prisma.user.findUniqueOrThrow({ where: { email: MEMBER_EMAIL } }).catch(async () => {
-      await registerAndGetCookie(MEMBER_EMAIL, MEMBER_DISPLAY);
+      await registerAndGetCookie(MEMBER_EMAIL, MEMBER_USERNAME);
       return prisma.user.findUniqueOrThrow({ where: { email: MEMBER_EMAIL } });
     });
     return { adminCookie, memberId: member.id };
   }
 
   it("returns 403 for non-admin", async () => {
-    const memberCookie = await registerAndGetCookie(MEMBER_EMAIL, MEMBER_DISPLAY);
+    const memberCookie = await registerAndGetCookie(MEMBER_EMAIL, MEMBER_USERNAME);
     const target = await prisma.user.findUniqueOrThrow({ where: { email: MEMBER_EMAIL } });
     const res = await app.inject({
       method: "PATCH",
@@ -154,7 +160,7 @@ describe("PATCH /api/admin/users/:id", () => {
   });
 
   it("returns 404 for unknown user", async () => {
-    const adminCookie = await registerAndGetCookie(ADMIN_EMAIL, ADMIN_DISPLAY);
+    const adminCookie = await registerAndGetCookie(ADMIN_EMAIL, ADMIN_USERNAME);
     await prisma.user.update({ where: { email: ADMIN_EMAIL }, data: { role: "ADMIN" } });
     const res = await app.inject({
       method: "PATCH",
@@ -166,9 +172,9 @@ describe("PATCH /api/admin/users/:id", () => {
   });
 
   it("disables a non-last-admin user (200)", async () => {
-    const adminCookie = await registerAndGetCookie(ADMIN_EMAIL, ADMIN_DISPLAY);
+    const adminCookie = await registerAndGetCookie(ADMIN_EMAIL, ADMIN_USERNAME);
     await prisma.user.update({ where: { email: ADMIN_EMAIL }, data: { role: "ADMIN" } });
-    await registerAndGetCookie(MEMBER_EMAIL, MEMBER_DISPLAY);
+    await registerAndGetCookie(MEMBER_EMAIL, MEMBER_USERNAME);
     const member = await prisma.user.findUniqueOrThrow({ where: { email: MEMBER_EMAIL } });
 
     const res = await app.inject({
@@ -182,9 +188,9 @@ describe("PATCH /api/admin/users/:id", () => {
   });
 
   it("enables a disabled user (200)", async () => {
-    const adminCookie = await registerAndGetCookie(ADMIN_EMAIL, ADMIN_DISPLAY);
+    const adminCookie = await registerAndGetCookie(ADMIN_EMAIL, ADMIN_USERNAME);
     await prisma.user.update({ where: { email: ADMIN_EMAIL }, data: { role: "ADMIN" } });
-    await registerAndGetCookie(MEMBER_EMAIL, MEMBER_DISPLAY);
+    await registerAndGetCookie(MEMBER_EMAIL, MEMBER_USERNAME);
     await prisma.user.update({ where: { email: MEMBER_EMAIL }, data: { isActive: false } });
     const member = await prisma.user.findUniqueOrThrow({ where: { email: MEMBER_EMAIL } });
 
@@ -199,9 +205,9 @@ describe("PATCH /api/admin/users/:id", () => {
   });
 
   it("promotes a member to ADMIN (200)", async () => {
-    const adminCookie = await registerAndGetCookie(ADMIN_EMAIL, ADMIN_DISPLAY);
+    const adminCookie = await registerAndGetCookie(ADMIN_EMAIL, ADMIN_USERNAME);
     await prisma.user.update({ where: { email: ADMIN_EMAIL }, data: { role: "ADMIN" } });
-    await registerAndGetCookie(MEMBER_EMAIL, MEMBER_DISPLAY);
+    await registerAndGetCookie(MEMBER_EMAIL, MEMBER_USERNAME);
     const member = await prisma.user.findUniqueOrThrow({ where: { email: MEMBER_EMAIL } });
 
     const res = await app.inject({
@@ -215,9 +221,9 @@ describe("PATCH /api/admin/users/:id", () => {
   });
 
   it("demotes an admin to MEMBER when another admin exists (200)", async () => {
-    const adminCookie = await registerAndGetCookie(ADMIN_EMAIL, ADMIN_DISPLAY);
+    const adminCookie = await registerAndGetCookie(ADMIN_EMAIL, ADMIN_USERNAME);
     await prisma.user.update({ where: { email: ADMIN_EMAIL }, data: { role: "ADMIN" } });
-    await registerAndGetCookie(MEMBER_EMAIL, MEMBER_DISPLAY);
+    await registerAndGetCookie(MEMBER_EMAIL, MEMBER_USERNAME);
     await prisma.user.update({ where: { email: MEMBER_EMAIL }, data: { role: "ADMIN" } });
     const secondAdmin = await prisma.user.findUniqueOrThrow({ where: { email: MEMBER_EMAIL } });
 
@@ -232,7 +238,7 @@ describe("PATCH /api/admin/users/:id", () => {
   });
 
   it("blocks disabling the last active admin (409)", async () => {
-    const adminCookie = await registerAndGetCookie(ADMIN_EMAIL, ADMIN_DISPLAY);
+    const adminCookie = await registerAndGetCookie(ADMIN_EMAIL, ADMIN_USERNAME);
     const admin = await prisma.user.update({
       where: { email: ADMIN_EMAIL },
       data: { role: "ADMIN" },
@@ -249,7 +255,7 @@ describe("PATCH /api/admin/users/:id", () => {
   });
 
   it("blocks demoting the last active admin (409)", async () => {
-    const adminCookie = await registerAndGetCookie(ADMIN_EMAIL, ADMIN_DISPLAY);
+    const adminCookie = await registerAndGetCookie(ADMIN_EMAIL, ADMIN_USERNAME);
     const admin = await prisma.user.update({
       where: { email: ADMIN_EMAIL },
       data: { role: "ADMIN" },

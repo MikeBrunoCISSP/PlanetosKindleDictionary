@@ -32,4 +32,8 @@ export const LOGIN_RATE_LIMIT = {
   rateLimit: { max: 10, timeWindow: "15 minutes" },
 } as const;
 
+export const SEARCH_RATE_LIMIT = {
+  rateLimit: { max: 60, timeWindow: "1 minute" },
+} as const;
+
 export default fp(rateLimitPlugin, { name: "rateLimit" });

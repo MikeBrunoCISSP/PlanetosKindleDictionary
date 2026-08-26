@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { plainText } from "./validation.js";
 export const passwordSchema = z
     .string()
     .min(8, "Password must be at least 8 characters")
@@ -22,31 +23,44 @@ export const passwordSchema = z
         });
     }
 });
+export const usernameSchema = plainText({ max: 50, minMessage: "Username is required" });
+export const reasonForJoiningSchema = plainText({
+    max: 2000,
+    minMessage: "Please tell us why you'd like to join",
+});
 export const registerSchema = z.object({
     email: z.string().email("Must be a valid email address"),
-    displayName: z
-        .string()
-        .min(1, "Display name is required")
-        .max(50, "Display name must be 50 characters or fewer"),
+    username: usernameSchema,
+    reasonForJoining: reasonForJoiningSchema,
     password: passwordSchema,
+    turnstileToken: z.string().optional(),
 });
 export const loginSchema = z.object({
-    email: z.string().email("Must be a valid email address"),
+    identifier: z.string().min(1, "Username or email is required"),
     password: z.string().min(1, "Password is required"),
 });
 export const userDtoSchema = z.object({
     id: z.string(),
     email: z.string().email(),
-    displayName: z.string(),
+    username: z.string(),
     role: z.enum(["MEMBER", "ADMIN"]),
+    approvalStatus: z.enum(["PENDING", "APPROVED"]),
     createdAt: z.string().datetime(),
 });
 export const adminUserSchema = z.object({
     id: z.string(),
     email: z.string().email(),
-    displayName: z.string(),
+    username: z.string(),
     role: z.enum(["MEMBER", "ADMIN"]),
     isActive: z.boolean(),
+    approvalStatus: z.enum(["PENDING", "APPROVED"]),
+    createdAt: z.string().datetime(),
+});
+export const pendingUserDtoSchema = z.object({
+    id: z.string(),
+    username: z.string(),
+    email: z.string().email(),
+    reasonForJoining: z.string().nullable(),
     createdAt: z.string().datetime(),
 });
 export const updateUserSchema = z

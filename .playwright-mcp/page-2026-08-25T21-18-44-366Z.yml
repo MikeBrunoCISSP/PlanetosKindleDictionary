@@ -1,0 +1,22 @@
+- generic [ref=f3e2]:
+  - generic [ref=f3e3]:
+    - banner [ref=f3e4]:
+      - link "Planetos" [ref=f3e5] [cursor=pointer]:
+        - /url: /
+      - button "Open menu" [expanded] [ref=f3e37]
+      - menu "Open menu" [active] [ref=f3e49]:
+        - menuitem "Dictionaries" [ref=f3e50]
+        - separator [ref=f3e51]
+        - menuitem "Entries" [ref=f3e52]
+        - separator [ref=f3e53]
+        - menuitem "Administration" [ref=f3e54]
+        - separator [ref=f3e55]
+        - menuitem "Settings" [ref=f3e56]
+    - generic [ref=f3e40]:
+      - heading "Welcome to Planetos" [level=1] [ref=f3e41]
+      - paragraph [ref=f3e42]:
+        - text: Signed in as
+        - strong [ref=f3e43]: Administrator
+        - text: (admin@example.com)
+      - button "Log out" [ref=f3e44]
+  - region "Notifications alt+T"

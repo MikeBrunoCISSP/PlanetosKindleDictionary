@@ -24,6 +24,12 @@ enum EntryStatus {
   DELETED
 }
 
+enum EntryApprovalStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
 enum BuildStatus {
   QUEUED
   RUNNING
@@ -31,35 +37,62 @@ enum BuildStatus {
   FAILED
 }
 
+enum UserApprovalStatus {
+  PENDING
+  APPROVED
+}
+
 model User {
-  id            String     @id @default(cuid())
-  email         String     @unique
-  displayName   String     @unique
-  passwordHash  String
-  role          Role       @default(MEMBER)
-  isActive      Boolean    @default(true)
-  emailVerified Boolean    @default(false)
-  createdAt     DateTime   @default(now())
-  revisions     Revision[]
-  createdSeries Series[]
+  id                       String              @id @default(cuid())
+  email                    String              @unique
+  username                 String              @unique
+  usernameNormalized       String              @unique
+  reasonForJoining         String?
+  passwordHash             String
+  role                     Role                @default(MEMBER)
+  isActive                 Boolean             @default(true)
+  emailVerified            Boolean             @default(false)
+  approvalStatus           UserApprovalStatus  @default(PENDING)
+  createdAt                DateTime            @default(now())
+  revisions                Revision[]
+  createdSeries            Series[]
+  submittedEntries         Entry[]             @relation("EntrySubmittedBy")
+  reviewedEntries          Entry[]             @relation("EntryReviewedBy")
+  updatedTurnstileSettings TurnstileSettings[]
+}
+
+// Application-local Cloudflare Turnstile configuration. Single row
+// (id is a fixed literal) - not a general settings framework, just this
+// one feature's config. secretKeyEncrypted is AES-256-GCM ciphertext
+// (see apps/api/src/lib/crypto.ts); the raw secret is never returned to
+// any client.
+model TurnstileSettings {
+  id                 String   @id @default("singleton")
+  enabled            Boolean  @default(false)
+  siteKey            String?
+  secretKeyEncrypted String?
+  updatedAt          DateTime @updatedAt
+  updatedById        String?
+  updatedBy          User?    @relation(fields: [updatedById], references: [id], onDelete: SetNull)
 }
 
 model Series {
-  id          String   @id @default(cuid())
-  slug        String   @unique
+  id          String       @id @default(cuid())
+  slug        String       @unique
   title       String
   author      String?
   description String?
-  inLanguage  String   @default("en")
-  outLanguage String   @default("en")
+  inLanguage  String       @default("en")
+  outLanguage String       @default("en")
   books       Book[]
   entries     Entry[]
   builds      Build[]
+  words       SeriesWord[]
   contentHash String?
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
   createdById String?
-  createdBy   User?    @relation(fields: [createdById], references: [id], onDelete: SetNull)
+  createdBy   User?        @relation(fields: [createdById], references: [id], onDelete: SetNull)
 }
 
 model Book {
@@ -73,9 +106,9 @@ model Book {
 }
 
 model Entry {
-  id               String      @id @default(cuid())
+  id               String       @id @default(cuid())
   seriesId         String
-  series           Series      @relation(fields: [seriesId], references: [id], onDelete: Cascade)
+  series           Series       @relation(fields: [seriesId], references: [id], onDelete: Cascade)
   headword         String
   lookupValue      String?
   sortKey          String
@@ -84,25 +117,53 @@ model Entry {
   pronunciation    String?
   inflections      Inflection[]
   spoilerAfterBook Int?
-  status           EntryStatus @default(PUBLISHED)
+  status           EntryStatus  @default(PUBLISHED)
   revisions        Revision[]
-  createdAt        DateTime    @default(now())
-  updatedAt        DateTime    @updatedAt
+  createdAt        DateTime     @default(now())
+  updatedAt        DateTime     @updatedAt
+
+  approvalStatus EntryApprovalStatus @default(PENDING)
+  submittedById  String?
+  submittedBy    User?               @relation("EntrySubmittedBy", fields: [submittedById], references: [id], onDelete: SetNull)
+  reviewedById   String?
+  reviewedBy     User?               @relation("EntryReviewedBy", fields: [reviewedById], references: [id], onDelete: SetNull)
+  reviewedAt     DateTime?
+  rejectionNote  String?
+  words          SeriesWord[]
 
   @@unique([seriesId, headword])
   @@index([seriesId, sortKey])
 }
 
 model Inflection {
-  id      String  @id @default(cuid())
+  id      String      @id @default(cuid())
   entryId String
-  entry   Entry   @relation(fields: [entryId], references: [id], onDelete: Cascade)
+  entry   Entry       @relation(fields: [entryId], references: [id], onDelete: Cascade)
   value   String
   group   String?
   name    String?
-  exact   Boolean @default(false)
+  exact   Boolean     @default(false)
+  word    SeriesWord?
 
   @@unique([entryId, value])
+}
+
+// Registry of every word (Headword or Inflection) in a dictionary, used
+// purely to enforce word uniqueness across both models with a single,
+// race-safe database constraint - Postgres unique constraints can't span
+// two separate tables otherwise. Cascade-deleted from its owning Entry.
+model SeriesWord {
+  id             String      @id @default(cuid())
+  seriesId       String
+  series         Series      @relation(fields: [seriesId], references: [id], onDelete: Cascade)
+  normalizedWord String
+  entryId        String
+  entry          Entry       @relation(fields: [entryId], references: [id], onDelete: Cascade)
+  inflectionId   String?     @unique
+  inflection     Inflection? @relation(fields: [inflectionId], references: [id], onDelete: Cascade)
+
+  @@unique([seriesId, normalizedWord])
+  @@index([normalizedWord(ops: raw("gin_trgm_ops"))], type: Gin)
 }
 
 model Revision {
