@@ -1,26 +1,24 @@
 import { z } from "zod";
 import { plainText } from "./validation.js";
-export const passwordSchema = z
-    .string()
-    .min(8, "Password must be at least 8 characters")
-    .superRefine((val, ctx) => {
-    if (!/[A-Z]/.test(val)) {
-        ctx.addIssue({
-            code: z.ZodIssueCode.custom,
-            message: "Password must contain at least one uppercase letter (A–Z)",
-        });
-    }
-    if (!/[a-z]/.test(val)) {
-        ctx.addIssue({
-            code: z.ZodIssueCode.custom,
-            message: "Password must contain at least one lowercase letter (a–z)",
-        });
-    }
-    if (!/[0-9]/.test(val)) {
-        ctx.addIssue({
-            code: z.ZodIssueCode.custom,
-            message: "Password must contain at least one digit (0–9)",
-        });
+export const passwordRequirements = [
+    { id: "minLength", label: "Password must be at least 8 characters", test: (v) => v.length >= 8 },
+    {
+        id: "uppercase",
+        label: "Password must contain at least one uppercase letter (A–Z)",
+        test: (v) => /[A-Z]/.test(v),
+    },
+    {
+        id: "lowercase",
+        label: "Password must contain at least one lowercase letter (a–z)",
+        test: (v) => /[a-z]/.test(v),
+    },
+    { id: "digit", label: "Password must contain at least one digit (0–9)", test: (v) => /[0-9]/.test(v) },
+];
+export const passwordSchema = z.string().superRefine((val, ctx) => {
+    for (const requirement of passwordRequirements) {
+        if (!requirement.test(val)) {
+            ctx.addIssue({ code: z.ZodIssueCode.custom, message: requirement.label });
+        }
     }
 });
 export const usernameSchema = plainText({ max: 50, minMessage: "Username is required" });
@@ -38,6 +36,13 @@ export const registerSchema = z.object({
 export const loginSchema = z.object({
     identifier: z.string().min(1, "Username or email is required"),
     password: z.string().min(1, "Password is required"),
+});
+export const forgotPasswordSchema = z.object({
+    identifier: z.string().min(1, "Username or email is required"),
+});
+export const resetPasswordSchema = z.object({
+    token: z.string().min(1, "Reset token is required"),
+    password: passwordSchema,
 });
 export const userDtoSchema = z.object({
     id: z.string(),

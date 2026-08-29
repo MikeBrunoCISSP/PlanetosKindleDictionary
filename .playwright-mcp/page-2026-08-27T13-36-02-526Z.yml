@@ -1,0 +1,31 @@
+- generic [ref=f59e2]:
+  - generic [ref=f59e3]:
+    - banner [ref=f59e4]:
+      - link "Planetos" [ref=f59e5] [cursor=pointer]:
+        - /url: /
+      - generic [ref=f59e6]:
+        - button "Account menu" [ref=f59e33]:
+          - generic [ref=f59e37]: Administrator
+        - button "Open menu" [expanded] [ref=f59e8]
+        - menu "Open menu" [ref=f59e49]:
+          - generic [ref=f59e50]:
+            - paragraph [ref=f59e51]: Administrator
+            - paragraph [ref=f59e52]: admin@example.com
+          - separator [ref=f59e53]
+          - menuitem "Dictionaries" [active] [ref=f59e54]
+          - menuitem "Create" [ref=f59e61]
+          - menuitem "Update" [ref=f59e62]
+          - menuitem "Delete" [ref=f59e63]
+          - menuitem "Download" [ref=f59e64]
+          - separator [ref=f59e55]
+          - menuitem "Entries" [ref=f59e56]
+          - separator [ref=f59e57]
+          - menuitem "Administration" [ref=f59e58]
+    - generic [ref=f59e39]:
+      - heading "Planetos" [level=1] [ref=f59e40]
+      - generic [ref=f59e41]:
+        - textbox "Search dictionary entries…" [ref=f59e42]
+        - button "Search" [ref=f59e43]
+      - link "Download the latest dictionaries" [ref=f59e44] [cursor=pointer]:
+        - /url: /downloads
+  - region "Notifications alt+T"

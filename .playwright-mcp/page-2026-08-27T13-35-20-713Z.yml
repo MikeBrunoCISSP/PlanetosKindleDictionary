@@ -1,0 +1,20 @@
+- generic [ref=f58e2]:
+  - generic [ref=f58e3]:
+    - banner [ref=f58e4]:
+      - link "Planetos" [ref=f58e5] [cursor=pointer]:
+        - /url: /
+      - generic [ref=f58e6]:
+        - link "Log In" [ref=f58e7] [cursor=pointer]:
+          - /url: /login
+        - button "Open menu" [expanded] [ref=f58e8]
+        - menu "Open menu" [ref=f58e21]:
+          - menuitem "Dictionaries" [active] [ref=f58e22]
+          - menuitem "Download" [ref=f58e25]
+    - generic [ref=f58e11]:
+      - heading "Planetos" [level=1] [ref=f58e12]
+      - generic [ref=f58e13]:
+        - textbox "Search dictionary entries…" [ref=f58e14]
+        - button "Search" [ref=f58e15]
+      - link "Download the latest dictionaries" [ref=f58e16] [cursor=pointer]:
+        - /url: /downloads
+  - region "Notifications alt+T"

@@ -32,6 +32,14 @@ export const LOGIN_RATE_LIMIT = {
   rateLimit: { max: 10, timeWindow: "15 minutes" },
 } as const;
 
+export const FORGOT_PASSWORD_RATE_LIMIT = {
+  rateLimit: { max: 5, timeWindow: "1 hour" },
+} as const;
+
+export const RESET_PASSWORD_RATE_LIMIT = {
+  rateLimit: { max: 10, timeWindow: "15 minutes" },
+} as const;
+
 export const SEARCH_RATE_LIMIT = {
   rateLimit: { max: 60, timeWindow: "1 minute" },
 } as const;

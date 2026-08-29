@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { passwordSchema, registerSchema, loginSchema } from "../auth.js";
+import { passwordSchema, registerSchema, loginSchema, forgotPasswordSchema, resetPasswordSchema } from "../auth.js";
 
 describe("passwordSchema", () => {
   it("accepts a valid password", () => {
@@ -123,5 +123,44 @@ describe("loginSchema", () => {
       password: "anypassword",
     });
     expect(result.success).toBe(false);
+  });
+});
+
+describe("forgotPasswordSchema", () => {
+  it("accepts an email as the identifier", () => {
+    const result = forgotPasswordSchema.safeParse({ identifier: "test@example.com" });
+    expect(result.success).toBe(true);
+  });
+
+  it("accepts a username as the identifier", () => {
+    const result = forgotPasswordSchema.safeParse({ identifier: "TestUser" });
+    expect(result.success).toBe(true);
+  });
+
+  it("rejects an empty identifier", () => {
+    const result = forgotPasswordSchema.safeParse({ identifier: "" });
+    expect(result.success).toBe(false);
+  });
+});
+
+describe("resetPasswordSchema", () => {
+  const valid = { token: "some-random-token", password: "SecureP4ss" };
+
+  it("accepts a valid token and password", () => {
+    const result = resetPasswordSchema.safeParse(valid);
+    expect(result.success).toBe(true);
+  });
+
+  it("rejects an empty token", () => {
+    const result = resetPasswordSchema.safeParse({ ...valid, token: "" });
+    expect(result.success).toBe(false);
+  });
+
+  it("rejects a password that violates complexity rules", () => {
+    const result = resetPasswordSchema.safeParse({ ...valid, password: "alllower" });
+    expect(result.success).toBe(false);
+    const messages = result.error?.issues.map((i) => i.message) ?? [];
+    expect(messages.some((m) => /uppercase/i.test(m))).toBe(true);
+    expect(messages.some((m) => /digit/i.test(m))).toBe(true);
   });
 });

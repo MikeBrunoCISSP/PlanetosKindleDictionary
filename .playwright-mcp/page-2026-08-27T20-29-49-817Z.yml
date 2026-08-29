@@ -1,0 +1,284 @@
+- generic [ref=f4e2]:
+  - generic [ref=f4e412]:
+    - link [ref=f4e414] [cursor=pointer]:
+      - /url: /
+      - img "Mailpit" [ref=f4e415]
+      - text: Mailpit
+    - generic [ref=f4e416]:
+      - text: 
+      - button " Mark unread" [ref=f4e417] [cursor=pointer]:
+        - generic [ref=f4e418]: 
+        - generic [ref=f4e419]: Mark unread
+      - button " Delete" [ref=f4e420] [cursor=pointer]:
+        - generic [ref=f4e421]: 
+        - text: Delete
+    - generic [ref=f4e422]:
+      - button "Download" [ref=f4e424] [cursor=pointer]:
+        - generic [ref=f4e425]: 
+        - text: Download
+      - link "":
+        - /url: /view/false
+      - link "" [ref=f4e426] [cursor=pointer]:
+        - /url: /view/3uI6ekvxEkoWt6vyvJC6gx
+  - generic [ref=f4e428]:
+    - generic [ref=f4e429]:
+      - button " Return to inbox 5" [ref=f4e431] [cursor=pointer]:
+        - generic [ref=f4e432]: 
+        - generic [ref=f4e433]: Return to inbox
+        - generic "Unread messages" [ref=f4e434]: "5"
+      - generic [ref=f4e436]:
+        - 'link "Planetos a few seconds ago To: e2e-reset-test@example.com Reset your Planetos password" [ref=f4e437] [cursor=pointer]':
+          - /url: /view/7HuERkoF6hwh34JAlAyRTe
+          - generic [ref=f4e438]: Planetos
+          - generic [ref=f4e440]: a few seconds ago
+          - generic [ref=f4e441]: "To: e2e-reset-test@example.com"
+          - generic [ref=f4e443]: Reset your Planetos password
+        - 'link "Planetos 2 minutes ago To: mailer-test-1787862492352@example.com Reset your Planetos password" [ref=f4e445] [cursor=pointer]':
+          - /url: /view/3uI6ekvxEkoWt6vyvJC6gx
+          - generic [ref=f4e446]: Planetos
+          - generic [ref=f4e448]: 2 minutes ago
+          - generic [ref=f4e449]: "To: mailer-test-1787862492352@example.com"
+          - generic [ref=f4e451]: Reset your Planetos password
+        - 'link "Planetos 2 minutes ago To: resettest-1787862477301-9@example.com Reset your Planetos password" [ref=f4e453] [cursor=pointer]':
+          - /url: /view/4rOI56Za4v6pLyMV8b0PoP
+          - generic [ref=f4e454]: Planetos
+          - generic [ref=f4e456]: 2 minutes ago
+          - generic [ref=f4e457]: "To: resettest-1787862477301-9@example.com"
+          - generic [ref=f4e459]: Reset your Planetos password
+        - 'link "Planetos 2 minutes ago To: resettest-1787862477151-7@example.com Reset your Planetos password" [ref=f4e461] [cursor=pointer]':
+          - /url: /view/1qF7QdnVgj3MhQX4Vh0Luf
+          - generic [ref=f4e462]: Planetos
+          - generic [ref=f4e464]: 2 minutes ago
+          - generic [ref=f4e465]: "To: resettest-1787862477151-7@example.com"
+          - generic [ref=f4e467]: Reset your Planetos password
+        - 'link "Planetos 2 minutes ago To: resettest-1787862477049-6@example.com Reset your Planetos password" [ref=f4e469] [cursor=pointer]':
+          - /url: /view/6rFdBucfQtEdpqih9FPEKK
+          - generic [ref=f4e470]: Planetos
+          - generic [ref=f4e472]: 2 minutes ago
+          - generic [ref=f4e473]: "To: resettest-1787862477049-6@example.com"
+          - generic [ref=f4e475]: Reset your Planetos password
+        - 'link "Planetos 2 minutes ago To: resettest-1787862476944-5@example.com Reset your Planetos password" [ref=f4e477] [cursor=pointer]':
+          - /url: /view/6NdLxg6xWHovQjJ5RJqRAt
+          - generic [ref=f4e478]: Planetos
+          - generic [ref=f4e480]: 2 minutes ago
+          - generic [ref=f4e481]: "To: resettest-1787862476944-5@example.com"
+          - generic [ref=f4e483]: Reset your Planetos password
+        - 'link "Planetos 2 minutes ago To: resettest-1787862476944-5@example.com Reset your Planetos password" [ref=f4e485] [cursor=pointer]':
+          - /url: /view/1v0I91G4UjEx260RqXwJBm
+          - generic [ref=f4e486]: Planetos
+          - generic [ref=f4e488]: 2 minutes ago
+          - generic [ref=f4e489]: "To: resettest-1787862476944-5@example.com"
+          - generic [ref=f4e491]: Reset your Planetos password
+        - 'link "Planetos 2 minutes ago To: resettest-1787862476858-2@example.com Reset your Planetos password" [ref=f4e493] [cursor=pointer]':
+          - /url: /view/7h34L8eaFGUH9ExtXeLxbb
+          - generic [ref=f4e494]: Planetos
+          - generic [ref=f4e496]: 2 minutes ago
+          - generic [ref=f4e497]: "To: resettest-1787862476858-2@example.com"
+          - generic [ref=f4e499]: Reset your Planetos password
+        - 'link "Planetos 2 minutes ago To: resettest-1787862476692-1@example.com Reset your Planetos password" [ref=f4e501] [cursor=pointer]':
+          - /url: /view/2Cygo2g6lpGzXUF1x4dcm9
+          - generic [ref=f4e502]: Planetos
+          - generic [ref=f4e504]: 2 minutes ago
+          - generic [ref=f4e505]: "To: resettest-1787862476692-1@example.com"
+          - generic [ref=f4e507]: Reset your Planetos password
+        - 'link "Planetos 5 minutes ago To: admin@example.com Reset your Planetos password" [ref=f4e509] [cursor=pointer]':
+          - /url: /view/2QZn1EhZJW0mFjrHcNvm86
+          - generic [ref=f4e510]: Planetos
+          - generic [ref=f4e512]: 5 minutes ago
+          - generic [ref=f4e513]: "To: admin@example.com"
+          - generic [ref=f4e515]: Reset your Planetos password
+        - 'link "Planetos 8 minutes ago To: mailer-test-1787862132528@example.com Reset your Planetos password" [ref=f4e517] [cursor=pointer]':
+          - /url: /view/0Dz7BH8UEx8GJ3XX0weTBu
+          - generic [ref=f4e518]: Planetos
+          - generic [ref=f4e520]: 8 minutes ago
+          - generic [ref=f4e521]: "To: mailer-test-1787862132528@example.com"
+          - generic [ref=f4e523]: Reset your Planetos password
+        - 'link "Planetos 8 minutes ago To: resettest-1787862115415-9@example.com Reset your Planetos password" [ref=f4e525] [cursor=pointer]':
+          - /url: /view/3KBlqLpffK5RRFb134jSqU
+          - generic [ref=f4e526]: Planetos
+          - generic [ref=f4e528]: 8 minutes ago
+          - generic [ref=f4e529]: "To: resettest-1787862115415-9@example.com"
+          - generic [ref=f4e531]: Reset your Planetos password
+        - 'link "Planetos 8 minutes ago To: resettest-1787862115310-7@example.com Reset your Planetos password" [ref=f4e533] [cursor=pointer]':
+          - /url: /view/46nVbzAHhCKxOfbv989fwN
+          - generic [ref=f4e534]: Planetos
+          - generic [ref=f4e536]: 8 minutes ago
+          - generic [ref=f4e537]: "To: resettest-1787862115310-7@example.com"
+          - generic [ref=f4e539]: Reset your Planetos password
+        - 'link "Planetos 8 minutes ago To: resettest-1787862115203-6@example.com Reset your Planetos password" [ref=f4e541] [cursor=pointer]':
+          - /url: /view/6T2OQKedlB6okthMmYh59e
+          - generic [ref=f4e542]: Planetos
+          - generic [ref=f4e544]: 8 minutes ago
+          - generic [ref=f4e545]: "To: resettest-1787862115203-6@example.com"
+          - generic [ref=f4e547]: Reset your Planetos password
+        - 'link "Planetos 8 minutes ago To: resettest-1787862115093-5@example.com Reset your Planetos password" [ref=f4e549] [cursor=pointer]':
+          - /url: /view/3iAPUhaePRwtOLVmbA6avY
+          - generic [ref=f4e550]: Planetos
+          - generic [ref=f4e552]: 8 minutes ago
+          - generic [ref=f4e553]: "To: resettest-1787862115093-5@example.com"
+          - generic [ref=f4e555]: Reset your Planetos password
+        - 'link "Planetos 8 minutes ago To: resettest-1787862115093-5@example.com Reset your Planetos password" [ref=f4e557] [cursor=pointer]':
+          - /url: /view/3bWLPxBSOr9eXy0YVcJnZL
+          - generic [ref=f4e558]: Planetos
+          - generic [ref=f4e560]: 8 minutes ago
+          - generic [ref=f4e561]: "To: resettest-1787862115093-5@example.com"
+          - generic [ref=f4e563]: Reset your Planetos password
+        - 'link "Planetos 8 minutes ago To: resettest-1787862114964-2@example.com Reset your Planetos password" [ref=f4e565] [cursor=pointer]':
+          - /url: /view/67o7mBCeoTLEUPBPPdn1tc
+          - generic [ref=f4e566]: Planetos
+          - generic [ref=f4e568]: 8 minutes ago
+          - generic [ref=f4e569]: "To: resettest-1787862114964-2@example.com"
+          - generic [ref=f4e571]: Reset your Planetos password
+        - 'link "Planetos 8 minutes ago To: resettest-1787862114769-1@example.com Reset your Planetos password" [ref=f4e573] [cursor=pointer]':
+          - /url: /view/2UMsG22NbWmPjOkJVjWcC9
+          - generic [ref=f4e574]: Planetos
+          - generic [ref=f4e576]: 8 minutes ago
+          - generic [ref=f4e577]: "To: resettest-1787862114769-1@example.com"
+          - generic [ref=f4e579]: Reset your Planetos password
+        - 'link "Planetos 8 minutes ago To: resettest-1787862101148-9@example.com Reset your Planetos password" [ref=f4e581] [cursor=pointer]':
+          - /url: /view/1pWpOloTP0sZLV4UPFIQaP
+          - generic [ref=f4e582]: Planetos
+          - generic [ref=f4e584]: 8 minutes ago
+          - generic [ref=f4e585]: "To: resettest-1787862101148-9@example.com"
+          - generic [ref=f4e587]: Reset your Planetos password
+        - 'link "Planetos 8 minutes ago To: resettest-1787862100994-7@example.com Reset your Planetos password" [ref=f4e589] [cursor=pointer]':
+          - /url: /view/5ccDzg4i80igmUbirrE1Kh
+          - generic [ref=f4e590]: Planetos
+          - generic [ref=f4e592]: 8 minutes ago
+          - generic [ref=f4e593]: "To: resettest-1787862100994-7@example.com"
+          - generic [ref=f4e595]: Reset your Planetos password
+        - 'link "Planetos 8 minutes ago To: resettest-1787862100890-6@example.com Reset your Planetos password" [ref=f4e597] [cursor=pointer]':
+          - /url: /view/1S1oUfV8JbCupJklghYQqJ
+          - generic [ref=f4e598]: Planetos
+          - generic [ref=f4e600]: 8 minutes ago
+          - generic [ref=f4e601]: "To: resettest-1787862100890-6@example.com"
+          - generic [ref=f4e603]: Reset your Planetos password
+        - 'link "Planetos 8 minutes ago To: resettest-1787862100732-5@example.com Reset your Planetos password" [ref=f4e605] [cursor=pointer]':
+          - /url: /view/52XWSY4Vk966yBkTMTK9xH
+          - generic [ref=f4e606]: Planetos
+          - generic [ref=f4e608]: 8 minutes ago
+          - generic [ref=f4e609]: "To: resettest-1787862100732-5@example.com"
+          - generic [ref=f4e611]: Reset your Planetos password
+        - 'link "Planetos 8 minutes ago To: resettest-1787862100732-5@example.com Reset your Planetos password" [ref=f4e613] [cursor=pointer]':
+          - /url: /view/52eGXFxzbD8NiKWelgj4QA
+          - generic [ref=f4e614]: Planetos
+          - generic [ref=f4e616]: 8 minutes ago
+          - generic [ref=f4e617]: "To: resettest-1787862100732-5@example.com"
+          - generic [ref=f4e619]: Reset your Planetos password
+        - 'link "Planetos 8 minutes ago To: resettest-1787862100644-2@example.com Reset your Planetos password" [ref=f4e621] [cursor=pointer]':
+          - /url: /view/77xx9wqXTNYUbrGCSkwJft
+          - generic [ref=f4e622]: Planetos
+          - generic [ref=f4e624]: 8 minutes ago
+          - generic [ref=f4e625]: "To: resettest-1787862100644-2@example.com"
+          - generic [ref=f4e627]: Reset your Planetos password
+        - 'link "Planetos 8 minutes ago To: resettest-1787862100497-1@example.com Reset your Planetos password" [ref=f4e629] [cursor=pointer]':
+          - /url: /view/5gWYj2pr7eiXQ5GsCGr4Im
+          - generic [ref=f4e630]: Planetos
+          - generic [ref=f4e632]: 8 minutes ago
+          - generic [ref=f4e633]: "To: resettest-1787862100497-1@example.com"
+          - generic [ref=f4e635]: Reset your Planetos password
+        - 'link "Planetos 9 minutes ago To: resettest-1787862020823-9@example.com Reset your Planetos password" [ref=f4e637] [cursor=pointer]':
+          - /url: /view/7dRG5HvYyQSioA4D5F8MoM
+          - generic [ref=f4e638]: Planetos
+          - generic [ref=f4e640]: 9 minutes ago
+          - generic [ref=f4e641]: "To: resettest-1787862020823-9@example.com"
+          - generic [ref=f4e643]: Reset your Planetos password
+        - 'link "Planetos 9 minutes ago To: resettest-1787862020715-7@example.com Reset your Planetos password" [ref=f4e645] [cursor=pointer]':
+          - /url: /view/3N3sO3e0Gh7j9fc5MxVapT
+          - generic [ref=f4e646]: Planetos
+          - generic [ref=f4e648]: 9 minutes ago
+          - generic [ref=f4e649]: "To: resettest-1787862020715-7@example.com"
+          - generic [ref=f4e651]: Reset your Planetos password
+        - 'link "Planetos 9 minutes ago To: resettest-1787862020597-6@example.com Reset your Planetos password" [ref=f4e653] [cursor=pointer]':
+          - /url: /view/64pyjWqKX8qNKkjihVgPzt
+          - generic [ref=f4e654]: Planetos
+          - generic [ref=f4e656]: 9 minutes ago
+          - generic [ref=f4e657]: "To: resettest-1787862020597-6@example.com"
+          - generic [ref=f4e659]: Reset your Planetos password
+        - 'link "Planetos 9 minutes ago To: resettest-1787862020519-5@example.com Reset your Planetos password" [ref=f4e661] [cursor=pointer]':
+          - /url: /view/592gaOPc27cSiKOaBhVRYC
+          - generic [ref=f4e662]: Planetos
+          - generic [ref=f4e664]: 9 minutes ago
+          - generic [ref=f4e665]: "To: resettest-1787862020519-5@example.com"
+          - generic [ref=f4e667]: Reset your Planetos password
+        - 'link "Planetos 9 minutes ago To: resettest-1787862020519-5@example.com Reset your Planetos password" [ref=f4e669] [cursor=pointer]':
+          - /url: /view/3ytPtBNKcjndYIztR8Xvlv
+          - generic [ref=f4e670]: Planetos
+          - generic [ref=f4e672]: 9 minutes ago
+          - generic [ref=f4e673]: "To: resettest-1787862020519-5@example.com"
+          - generic [ref=f4e675]: Reset your Planetos password
+        - 'link "Planetos 9 minutes ago To: resettest-1787862020380-2@example.com Reset your Planetos password" [ref=f4e677] [cursor=pointer]':
+          - /url: /view/25eOLkQOYGy2u4dl32aOWU
+          - generic [ref=f4e678]: Planetos
+          - generic [ref=f4e680]: 9 minutes ago
+          - generic [ref=f4e681]: "To: resettest-1787862020380-2@example.com"
+          - generic [ref=f4e683]: Reset your Planetos password
+        - 'link "Planetos 9 minutes ago To: resettest-1787862020203-1@example.com Reset your Planetos password" [ref=f4e685] [cursor=pointer]':
+          - /url: /view/66D0JvK8EMR3uYHrgK7nBs
+          - generic [ref=f4e686]: Planetos
+          - generic [ref=f4e688]: 9 minutes ago
+          - generic [ref=f4e689]: "To: resettest-1787862020203-1@example.com"
+          - generic [ref=f4e691]: Reset your Planetos password
+        - 'link "Planetos 14 minutes ago To: mailer-test-1787861767966@example.com Reset your Planetos password" [ref=f4e693] [cursor=pointer]':
+          - /url: /view/0W3kBZl1KiqxG2PGdfCZyC
+          - generic [ref=f4e694]: Planetos
+          - generic [ref=f4e696]: 14 minutes ago
+          - generic [ref=f4e697]: "To: mailer-test-1787861767966@example.com"
+          - generic [ref=f4e699]: Reset your Planetos password
+        - 'link "Planetos 17 minutes ago To: mailer-test-1787861583912@example.com Reset your Planetos password" [ref=f4e701] [cursor=pointer]':
+          - /url: /view/3TyvuyhIiYjICq4RDi6dbY
+          - generic [ref=f4e702]: Planetos
+          - generic [ref=f4e704]: 17 minutes ago
+          - generic [ref=f4e705]: "To: mailer-test-1787861583912@example.com"
+          - generic [ref=f4e707]: Reset your Planetos password
+      - generic [ref=f4e709]:
+        - button " About" [ref=f4e710] [cursor=pointer]:
+          - generic [ref=f4e711]: 
+          - text: About
+        - button "" [ref=f4e712] [cursor=pointer]
+        - button "" [ref=f4e714] [cursor=pointer]
+    - generic [ref=f4e718]:
+      - table [ref=f4e721]:
+        - rowgroup [ref=f4e722]:
+          - row [ref=f4e723]:
+            - rowheader "From" [ref=f4e724]
+            - cell [ref=f4e725]:
+              - generic [ref=f4e726]:
+                - text: Planetos
+                - generic [ref=f4e727]:
+                  - text: <
+                  - link "no-reply@planetos.local" [ref=f4e728] [cursor=pointer]:
+                    - /url: /search?q=no-reply%40planetos.local
+                  - text: ">"
+          - row [ref=f4e729]:
+            - rowheader "To" [ref=f4e730]
+            - cell [ref=f4e731]:
+              - generic [ref=f4e733]:
+                - text: <
+                - link "e2e-reset-test@example.com" [ref=f4e734] [cursor=pointer]:
+                  - /url: /search?q=e2e-reset-test%40example.com
+                - text: ">"
+          - row [ref=f4e735]:
+            - rowheader "Subject" [ref=f4e736]
+            - cell [ref=f4e737]:
+              - strong [ref=f4e738]: Reset your Planetos password
+          - row [ref=f4e739]:
+            - rowheader "Date" [ref=f4e740]
+            - cell "Thu, 27 Aug 2026, 4:29 pm (921 B)" [ref=f4e741]
+          - row [ref=f4e742]:
+            - rowheader "Tags" [ref=f4e743]
+            - cell [ref=f4e744]:
+              - combobox "Type a value" [ref=f4e747]
+      - tablist [ref=f4e748]:
+        - tab "Text" [selected] [ref=f4e749] [cursor=pointer]
+        - tab "Headers" [ref=f4e750] [cursor=pointer]
+        - tab "Raw" [ref=f4e751] [cursor=pointer]
+        - tab "Link Check" [ref=f4e752] [cursor=pointer]
+      - generic [ref=f4e753]:
+        - tabpanel "Text" [ref=f4e754]:
+          - generic [ref=f4e755]:
+            - text: "We received a request to reset your Planetos password. If you made this request, follow this link within the next hour to choose a new password:"
+            - link "http://localhost:5173/reset-password?token=15753bbb8411e9de0d2c5cec136eef19c60534cb72fa69ba7ca8a6a69ecf31c6" [ref=f4e756] [cursor=pointer]:
+              - /url: http://localhost:5173/reset-password?token=15753bbb8411e9de0d2c5cec136eef19c60534cb72fa69ba7ca8a6a69ecf31c6
+            - text: If you didn't request this, you can safely ignore this email — your password will not be changed.
+        - text:   

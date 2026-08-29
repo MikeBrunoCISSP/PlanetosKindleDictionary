@@ -20,7 +20,8 @@
       "mcp__plugin_playwright_playwright__browser_close",
       "PowerShell($conn = Get-NetTCPConnection -LocalPort 4173 -ErrorAction SilentlyContinue; if \\($conn\\) { $conn | ForEach-Object { Stop-Process -Id $_.OwningProcess -Force -ErrorAction SilentlyContinue }; \"killed\" } else { \"no process found on 4173\" })",
       "Bash(openspec validate *)",
-      "Bash(node -e \"let d='';process.stdin.on\\('data',c=>d+=c\\);process.stdin.on\\('end',\\(\\)=>{const j=JSON.parse\\(d\\);console.log\\('rules:',JSON.stringify\\(j.rules\\)\\);console.log\\('instruction present:',!!j.instruction\\)}\\)\")"
+      "Bash(node -e \"let d='';process.stdin.on\\('data',c=>d+=c\\);process.stdin.on\\('end',\\(\\)=>{const j=JSON.parse\\(d\\);console.log\\('rules:',JSON.stringify\\(j.rules\\)\\);console.log\\('instruction present:',!!j.instruction\\)}\\)\")",
+      "Bash(python3 -c \"import json,sys; d=json.load\\(sys.stdin\\); print\\('context' in d, 'operationGuidance' in d, d.get\\('state'\\), d.get\\('instruction'\\)\\)\")"
     ]
   }
 }

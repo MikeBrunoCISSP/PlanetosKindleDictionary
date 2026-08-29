@@ -1,11 +1,31 @@
 import type { FastifyPluginAsync } from "fastify";
+import { randomBytes, createHash } from "node:crypto";
 import { hash, verify } from "@node-rs/argon2";
 import { PrismaClient } from "@prisma/client";
-import { registerSchema, loginSchema, normalizeWord, type UserDto } from "@planetos/shared";
+import {
+  registerSchema,
+  loginSchema,
+  forgotPasswordSchema,
+  resetPasswordSchema,
+  normalizeWord,
+  type UserDto,
+} from "@planetos/shared";
 import { Errors, isPrismaError } from "../lib/errors.js";
-import { REGISTRATION_RATE_LIMIT, LOGIN_RATE_LIMIT } from "../plugins/rateLimit.js";
+import {
+  REGISTRATION_RATE_LIMIT,
+  LOGIN_RATE_LIMIT,
+  FORGOT_PASSWORD_RATE_LIMIT,
+  RESET_PASSWORD_RATE_LIMIT,
+} from "../plugins/rateLimit.js";
 import { decrypt } from "../lib/crypto.js";
 import { verify as verifyTurnstile } from "../lib/turnstile.js";
+import { sendPasswordResetEmail } from "../lib/mailer.js";
+
+const RESET_TOKEN_TTL_MS = 60 * 60 * 1000;
+
+function hashToken(token: string): string {
+  return createHash("sha256").update(token).digest("hex");
+}
 
 const TURNSTILE_SETTINGS_ID = "singleton";
 
@@ -157,6 +177,79 @@ const authRoutes: FastifyPluginAsync<{ prisma: PrismaClient }> = async (fastify,
     await request.session.destroy();
     return reply.status(204).send();
   });
+
+  // Always responds with the same generic message regardless of whether the
+  // identifier matched an account, to avoid leaking account existence. The
+  // match/no-match branch only decides whether an email is sent as a side
+  // effect - it never changes the response shape.
+  fastify.post(
+    "/api/auth/forgot-password",
+    { config: FORGOT_PASSWORD_RATE_LIMIT },
+    async (request, reply) => {
+      const body = forgotPasswordSchema.parse(request.body);
+      const identifier = normalizeWord(body.identifier);
+
+      const user = await prisma.user.findFirst({
+        where: {
+          OR: [{ usernameNormalized: identifier }, { email: identifier }],
+        },
+        select: { id: true, email: true, isActive: true },
+      });
+
+      if (user?.isActive) {
+        await prisma.passwordResetToken.updateMany({
+          where: { userId: user.id, usedAt: null },
+          data: { usedAt: new Date() },
+        });
+
+        const rawToken = randomBytes(32).toString("hex");
+        await prisma.passwordResetToken.create({
+          data: {
+            userId: user.id,
+            tokenHash: hashToken(rawToken),
+            expiresAt: new Date(Date.now() + RESET_TOKEN_TTL_MS),
+          },
+        });
+
+        const baseUrl = process.env["PUBLIC_BASE_URL"] ?? "http://localhost:5173";
+        const resetUrl = `${baseUrl}/reset-password?token=${rawToken}`;
+        await sendPasswordResetEmail(user.email, resetUrl);
+      }
+
+      return reply.status(200).send({
+        message:
+          "If an account registered with that username or email address was found, an email with instructions to reset your password has been sent.",
+      });
+    }
+  );
+
+  fastify.post(
+    "/api/auth/reset-password",
+    { config: RESET_PASSWORD_RATE_LIMIT },
+    async (request, reply) => {
+      const body = resetPasswordSchema.parse(request.body);
+      const tokenHash = hashToken(body.token);
+
+      const resetToken = await prisma.passwordResetToken.findFirst({
+        where: { tokenHash, usedAt: null, expiresAt: { gt: new Date() } },
+        select: { id: true, userId: true },
+      });
+
+      if (!resetToken) throw Errors.INVALID_RESET_TOKEN();
+
+      const passwordHash = await hash(body.password);
+
+      await prisma.$transaction([
+        prisma.user.update({ where: { id: resetToken.userId }, data: { passwordHash } }),
+        prisma.passwordResetToken.update({
+          where: { id: resetToken.id },
+          data: { usedAt: new Date() },
+        }),
+      ]);
+
+      return reply.status(200).send({ message: "Your password has been reset." });
+    }
+  );
 
   fastify.get("/api/auth/me", async (request, reply) => {
     const userId = request.session.userId;

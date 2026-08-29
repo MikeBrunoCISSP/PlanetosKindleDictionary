@@ -1,13 +1,15 @@
-import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, useNavigate, Link } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
-import { useForm } from "react-hook-form";
+import { useForm, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { loginSchema, registerSchema } from "@planetos/shared";
+import { loginSchema, registerSchema, forgotPasswordSchema, passwordRequirements } from "@planetos/shared";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
+import { CheckIcon, CircleIcon } from "lucide-react";
 import { Turnstile } from "@marsidev/react-turnstile";
-import { apiGetTurnstileConfig, apiLogin, apiRegister, ApiError } from "@/lib/api";
+import { cn } from "@/lib/utils";
+import { apiGetTurnstileConfig, apiLogin, apiRegister, apiForgotPassword, ApiError } from "@/lib/api";
 import { useMe, ME_QUERY_KEY } from "@/lib/useMe";
 import {
   Card,
@@ -43,11 +45,12 @@ const registerFormSchema = registerSchema
 
 type RegisterFormValues = z.infer<typeof registerFormSchema>;
 type LoginFormValues = z.infer<typeof loginSchema>;
+type ForgotPasswordFormValues = z.infer<typeof forgotPasswordSchema>;
 
-type Mode = "login" | "register";
+type Mode = "login" | "register" | "forgot-password";
 
 const loginSearchSchema = z.object({
-  mode: z.enum(["login", "register"]).optional().default("login"),
+  mode: z.enum(["login", "register", "forgot-password"]).optional().default("login"),
 });
 
 export const Route = createFileRoute("/login")({
@@ -74,21 +77,24 @@ function LoginPage() {
     <div className="flex min-h-svh items-center justify-center p-4">
       <div className="w-full max-w-md">
         <div className="mb-6 text-center">
-          <h1 className="text-2xl font-bold">Planetos</h1>
-          <p className="text-muted-foreground text-sm">Kindle Series Dictionaries</p>
+          <h1 className="text-2xl font-bold">eReader Dictionaries</h1>
         </div>
-        <Tabs value={mode} onValueChange={handleTabChange}>
-          <TabsList className="grid w-full grid-cols-2">
-            <TabsTrigger value="login">Sign In</TabsTrigger>
-            <TabsTrigger value="register">Register</TabsTrigger>
-          </TabsList>
-          <TabsContent value="login">
-            <SignInForm />
-          </TabsContent>
-          <TabsContent value="register">
-            <RegisterForm />
-          </TabsContent>
-        </Tabs>
+        {mode === "forgot-password" ? (
+          <ForgotPasswordForm />
+        ) : (
+          <Tabs value={mode} onValueChange={handleTabChange}>
+            <TabsList className="grid w-full grid-cols-2">
+              <TabsTrigger value="login">Sign In</TabsTrigger>
+              <TabsTrigger value="register">Register</TabsTrigger>
+            </TabsList>
+            <TabsContent value="login">
+              <SignInForm />
+            </TabsContent>
+            <TabsContent value="register">
+              <RegisterForm />
+            </TabsContent>
+          </Tabs>
+        )}
       </div>
     </div>
   );
@@ -152,12 +158,92 @@ function SignInForm() {
                 </FormItem>
               )}
             />
+            <Link
+              to="/login"
+              search={{ mode: "forgot-password" }}
+              className="text-muted-foreground -mt-2 text-sm underline underline-offset-2 hover:no-underline"
+            >
+              Forgot Password?
+            </Link>
             {form.formState.errors.root && (
               <p className="text-destructive text-sm">{form.formState.errors.root.message}</p>
             )}
             <Button type="submit" className="w-full" disabled={form.formState.isSubmitting}>
               {form.formState.isSubmitting ? "Signing in…" : "Sign In"}
             </Button>
+          </form>
+        </Form>
+      </CardContent>
+    </Card>
+  );
+}
+
+function ForgotPasswordForm() {
+  const [submitted, setSubmitted] = useState(false);
+
+  const form = useForm<ForgotPasswordFormValues>({
+    resolver: zodResolver(forgotPasswordSchema),
+    defaultValues: { identifier: "" },
+  });
+
+  const onSubmit = async (values: ForgotPasswordFormValues) => {
+    try {
+      await apiForgotPassword(values);
+    } catch {
+      // Deliberately ignored: the confirmation message must appear
+      // identically regardless of whether the request succeeded, matching
+      // the backend's own no-enumeration contract.
+    }
+    setSubmitted(true);
+  };
+
+  if (submitted) {
+    return (
+      <Card>
+        <CardHeader>
+          <CardTitle>Check your email</CardTitle>
+        </CardHeader>
+        <CardContent className="grid gap-4">
+          <p className="text-sm">
+            If an account registered with that username or email address was found, an email with
+            instructions to reset your password has been sent.
+          </p>
+          <Link to="/login" search={{ mode: "login" }} className="text-sm underline underline-offset-2 hover:no-underline">
+            Back to Sign In
+          </Link>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle>Forgot Password</CardTitle>
+        <CardDescription>Enter your username or email and we'll send you a reset link.</CardDescription>
+      </CardHeader>
+      <CardContent>
+        <Form {...form}>
+          <form onSubmit={form.handleSubmit(onSubmit)} className="grid gap-4">
+            <FormField
+              control={form.control}
+              name="identifier"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Username or Email</FormLabel>
+                  <FormControl>
+                    <Input autoComplete="username" placeholder="you@example.com" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <Button type="submit" className="w-full" disabled={form.formState.isSubmitting}>
+              {form.formState.isSubmitting ? "Sending…" : "Send Reset Link"}
+            </Button>
+            <Link to="/login" search={{ mode: "login" }} className="text-center text-sm underline underline-offset-2 hover:no-underline">
+              Back to Sign In
+            </Link>
           </form>
         </Form>
       </CardContent>
@@ -179,6 +265,10 @@ function RegisterForm() {
     resolver: zodResolver(registerFormSchema),
     defaultValues: { email: "", username: "", reasonForJoining: "", password: "", confirmPassword: "" },
   });
+
+  const password = useWatch({ control: form.control, name: "password" });
+  const confirmPassword = useWatch({ control: form.control, name: "confirmPassword" });
+  const passwordMismatch = confirmPassword.length > 0 && confirmPassword !== password;
 
   const turnstileRequired = turnstileConfig?.enabled === true;
 
@@ -241,7 +331,7 @@ function RegisterForm() {
                 <FormItem>
                   <FormLabel>Username</FormLabel>
                   <FormControl>
-                    <Input autoComplete="username" placeholder="YourName" {...field} />
+                    <Input autoComplete="username" placeholder="Make it unique & creative!" {...field} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -273,7 +363,27 @@ function RegisterForm() {
                   <FormControl>
                     <Input type="password" autoComplete="new-password" {...field} />
                   </FormControl>
-                  <FormMessage />
+                  <ul className="grid gap-1">
+                    {passwordRequirements.map((requirement) => {
+                      const satisfied = requirement.test(password);
+                      return (
+                        <li
+                          key={requirement.id}
+                          className={cn(
+                            "flex items-center gap-1.5 text-sm",
+                            satisfied ? "text-green-600" : "text-muted-foreground"
+                          )}
+                        >
+                          {satisfied ? (
+                            <CheckIcon className="size-3.5 shrink-0" />
+                          ) : (
+                            <CircleIcon className="size-3.5 shrink-0" />
+                          )}
+                          {requirement.label}
+                        </li>
+                      );
+                    })}
+                  </ul>
                 </FormItem>
               )}
             />
@@ -286,7 +396,7 @@ function RegisterForm() {
                   <FormControl>
                     <Input type="password" autoComplete="new-password" {...field} />
                   </FormControl>
-                  <FormMessage />
+                  {passwordMismatch && <p className="text-destructive text-sm">Passwords do not match</p>}
                 </FormItem>
               )}
             />

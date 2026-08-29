@@ -467,8 +467,11 @@ POST   /api/auth/login           { identifier, password }  identifier = username
 POST   /api/auth/logout
 GET    /api/auth/me
 POST   /api/auth/verify-email    { token }
-POST   /api/auth/forgot-password { email }
-POST   /api/auth/reset-password  { token, password }
+POST   /api/auth/forgot-password { identifier }  identifier = username or email, same convention
+                                  as login; always responds with the same generic message
+                                  regardless of match, to avoid account enumeration
+POST   /api/auth/reset-password  { token, password }  single-use, time-limited token; does not
+                                  establish a session on success
 ```
 
 ### Public reads
@@ -483,8 +486,11 @@ GET    /api/entries/:id                  public entry detail (by id, not scoped 
                                           PENDING entries are visible with a "pending review" banner,
                                           REJECTED/DELETED entries 404
 GET    /api/series/:slug/builds          latest N builds, newest first
-GET    /api/series/:slug/download        302 → presigned URL for latest SUCCESS build
+GET    /api/series/:slug/download        302 → presigned URL for latest SUCCESS build; filename
+                                          <Title>_<ddMMMyyyyhhmm>.epub (build completion time, 24h)
 GET    /api/series/:slug/download/source 302 → presigned URL for sources.zip
+GET    /api/downloads                    { slug, title }[] for every series with a SUCCESS build,
+                                          ordered by title — backs the all-dictionaries download page
 GET    /api/search                       ?q=&page= — cross-dictionary search (the homepage);
                                           case-insensitive substring match against every entry's
                                           headword and inflections; multi-word queries OR-match,
@@ -608,7 +614,8 @@ A repeatable job `sweep-changed-series` runs at `0 * * * *`:
 2. Compare with the `contentHash` of the most recent `SUCCESS` build.
 3. **Equal → skip.** No job enqueued, nothing written. This is the "only if there
    were any changes" requirement, and it is the common case.
-4. Different → enqueue `dictionary-build` with `jobId = ${seriesId}:${hash}`.
+4. Different → enqueue `dictionary-build` with `jobId = ${seriesId}-${hash}`.
+   (BullMQ rejects `:` in custom job ids, so the delimiter is `-`, not `:`.)
    The deterministic `jobId` makes enqueueing idempotent: a series edited twelve
    times in an hour still builds once.
 
@@ -646,8 +653,14 @@ objects in the `maintenance` queue. Never delete the newest.
                                     (`?q=&page=`), public/no-auth; centered search box when no
                                     query, a Dictionary/Word results grid (bolded matched
                                     headword/inflections, definition excerpt, pagination) once
-                                    a query is present
-/series/:slug                       Entry browser, download panel, build status
+                                    a query is present; a "Download the latest dictionaries" link
+                                    beneath the search box (landing view only) leads to /downloads
+/downloads                          All-dictionaries download page: every series with a SUCCESS
+                                    build, each with a direct .epub download link; public/no-auth
+/series/:slug                       Title/description, download links (.epub + sources.zip), and
+                                    "Make a .mobi" instructions; public/no-auth. Minimal for now —
+                                    no entry browser or live build-status badge yet (§7's build
+                                    pipeline exists; the UI for it is future work)
 /series/:slug/entries/:id           Entry detail + revision history
 /series/:slug/entries/:id/edit      Editor for an existing entry (auth)
 /entries/$id                        Public entry detail (view/edit toggle) - reachable from search
@@ -658,7 +671,11 @@ objects in the `maintenance` queue. Never delete the newest.
 /entries/new                        Add Entry - dictionary picker + Headword/Definition/Inflections (auth); saves as Pending
 /entries/delete                     Placeholder only, no workflow yet (admin)
 /series/new                         Series creation (auth)
-/login  /register  /reset-password
+/login                               Sign In / Register tabs, plus a `?mode=forgot-password` mode
+                                    reached via a "Forgot Password?" link on the Sign In form
+/reset-password                     Reached via the emailed reset link (`?token=...`); sets a new
+                                    password, then redirects to `/login`; invalid/expired token
+                                    shows a clear message instead of a broken form
 /admin                              Builds, users, pending registrations, job dashboard link (admin)
 /admin/approval-queue               Merged queue of pending new-entry submissions and pending edit
                                     proposals, oldest first, with a Type badge; approve/reject each
@@ -695,16 +712,19 @@ objects in the `maintenance` queue. Never delete the newest.
 - **Unit** (Vitest) — `packages/kindle` generator, the sanitizer, `sortKey`
   normalization (diacritics, apostrophes, leading articles), `contentHash`
   determinism.
-- **Golden files** — a fixture series with ~30 entries covering accents,
+- **Golden files** — a fixture series with a handful of entries covering accents,
   apostrophes, superscripts, multi-word headwords, inflection groups, and a
   cross-reference. Snapshot the full generated EPUB tree. Any diff must be
   reviewed by a human — this is the main defense against silently breaking the
   Kindle format.
 - **XML validity** — every generated XHTML/OPF parsed with a strict XML parser in
   CI. `idx:` and `mbp:` namespaces must be declared; malformed output fails the build.
-- **Integration** (Vitest + Testcontainers) — API routes against real Postgres and
-  Redis. Cover: anonymous download works; anonymous write returns 401; every
-  entry mutation writes exactly one Revision; `If-Match` conflict returns 409.
+- **Integration** (Vitest) — API routes exercised via `app.inject()` against the
+  real dev-stack Postgres, Redis, and MinIO (no mocking, no Testcontainers — this
+  project runs its test suite against the same docker-compose services used for
+  local development). Cover: anonymous download works; anonymous write returns
+  401; every entry mutation writes exactly one Revision; `If-Match` conflict
+  returns 409.
 - **Sweep logic** — unchanged series enqueues nothing; changed series enqueues
   once; twelve rapid edits collapse to one job via the deterministic `jobId`.
 - **E2E** (Playwright) — register → create series → add entry → force rebuild →
@@ -720,7 +740,7 @@ objects in the `maintenance` queue. Never delete the newest.
 
 ```bash
 pnpm install
-docker compose -f infra/docker-compose.yml up -d   # postgres, redis, minio
+docker compose -f infra/docker-compose.yml up -d   # postgres, redis, minio, mailpit
 pnpm --filter api prisma migrate dev
 pnpm --filter api seed                              # 2 series, ~50 entries
 pnpm dev                                            # api :3000, worker, web :5173

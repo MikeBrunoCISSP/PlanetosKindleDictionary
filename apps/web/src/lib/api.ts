@@ -5,12 +5,14 @@ import type {
   EntryDto,
   EntryEditProposalDto,
   EntrySummaryDto,
+  ForgotPasswordDto,
   LoginDto,
   PendingQueueItemDto,
   PendingUserDto,
   PublicEntryDto,
   RegisterDto,
   RejectEntryDto,
+  ResetPasswordDto,
   SearchResultsDto,
   SeriesDto,
   SeriesListItemDto,
@@ -82,6 +84,26 @@ export async function apiLogin(data: LoginDto): Promise<UserDto> {
 export async function apiLogout(): Promise<void> {
   const res = await fetch("/api/auth/logout", {
     method: "POST",
+    credentials: "include",
+  });
+  return handleResponse<void>(res);
+}
+
+export async function apiForgotPassword(data: ForgotPasswordDto): Promise<void> {
+  const res = await fetch("/api/auth/forgot-password", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(data),
+    credentials: "include",
+  });
+  return handleResponse<void>(res);
+}
+
+export async function apiResetPassword(data: ResetPasswordDto): Promise<void> {
+  const res = await fetch("/api/auth/reset-password", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(data),
     credentials: "include",
   });
   return handleResponse<void>(res);
@@ -168,6 +190,11 @@ export async function apiSearchEntries(q: string, page = 1): Promise<SearchResul
 export async function apiGetSeriesList(page = 1): Promise<SeriesListItemDto[]> {
   const res = await fetch(`/api/series?page=${page}`, { credentials: "include" });
   return handleResponse<SeriesListItemDto[]>(res);
+}
+
+export async function apiGetDownloads(): Promise<{ slug: string; title: string }[]> {
+  const res = await fetch("/api/downloads", { credentials: "include" });
+  return handleResponse<{ slug: string; title: string }[]>(res);
 }
 
 export async function apiGetSeries(slug: string): Promise<SeriesDto> {

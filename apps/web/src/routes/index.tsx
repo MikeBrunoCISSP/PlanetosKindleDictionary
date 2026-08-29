@@ -1,4 +1,4 @@
-import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, useNavigate, Link } from "@tanstack/react-router";
 import { useEffect, useState, type FormEvent } from "react";
 import { z } from "zod";
 import { ArrowRightIcon } from "lucide-react";
@@ -39,7 +39,7 @@ function IndexPage() {
     return (
       <div className="flex min-h-svh items-center justify-center p-4">
         <div className="w-full max-w-xl text-center space-y-6">
-          <h1 className="text-4xl font-bold">Planetos</h1>
+          <h1 className="text-4xl font-bold">eReader Dictionaries</h1>
           <form onSubmit={handleSubmit} className="flex gap-2">
             <Input
               autoFocus
@@ -52,6 +52,9 @@ function IndexPage() {
               <ArrowRightIcon className="size-5" />
             </Button>
           </form>
+          <Link to="/downloads" className="text-sm underline underline-offset-2 hover:no-underline">
+            Download the latest dictionaries
+          </Link>
         </div>
       </div>
     );

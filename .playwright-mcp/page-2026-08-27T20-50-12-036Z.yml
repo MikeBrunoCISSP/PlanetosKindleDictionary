@@ -1,0 +1,48 @@
+- generic [ref=f9e2]:
+  - generic [ref=f9e3]:
+    - banner [ref=f9e4]:
+      - link "Planetos" [ref=f9e5] [cursor=pointer]:
+        - /url: /
+      - generic [ref=f9e6]:
+        - link "Log In" [ref=f9e7] [cursor=pointer]:
+          - /url: /login
+        - button "Open menu" [ref=f9e8]
+    - generic [ref=f9e11]:
+      - generic [ref=f9e12]:
+        - heading "Planetos" [level=1] [ref=f9e13]
+        - paragraph [ref=f9e14]: Kindle Series Dictionaries
+      - generic [ref=f9e15]:
+        - tablist [ref=f9e16]:
+          - tab "Sign In" [ref=f9e17]
+          - tab "Register" [selected] [ref=f9e18]
+        - tabpanel "Register" [ref=f9e19]:
+          - generic [ref=f9e20]:
+            - generic [ref=f9e21]:
+              - generic [ref=f9e22]: Create Account
+              - generic [ref=f9e23]: Fill in your details to register.
+            - generic [ref=f9e25]:
+              - generic [ref=f9e26]:
+                - generic [ref=f9e27]: Email
+                - textbox "Email" [ref=f9e28]:
+                  - /placeholder: you@example.com
+              - generic [ref=f9e29]:
+                - generic [ref=f9e30]: Username
+                - textbox "Username" [ref=f9e31]:
+                  - /placeholder: YourName
+              - generic [ref=f9e32]:
+                - generic [ref=f9e33]: Why are you requesting to join?
+                - textbox "Why are you requesting to join?" [ref=f9e34]:
+                  - /placeholder: Tell us a bit about why you'd like to join…
+              - generic [ref=f9e35]:
+                - generic [ref=f9e36]: Password
+                - textbox "Password" [active] [ref=f9e37]: abc
+                - list [ref=f9e38]:
+                  - listitem [ref=f9e39]: Password must be at least 8 characters
+                  - listitem [ref=f9e42]: Password must contain at least one uppercase letter (A–Z)
+                  - listitem [ref=f9e45]: Password must contain at least one lowercase letter (a–z)
+                  - listitem [ref=f9e48]: Password must contain at least one digit (0–9)
+              - generic [ref=f9e51]:
+                - generic [ref=f9e52]: Confirm Password
+                - textbox "Confirm Password" [ref=f9e53]
+              - button "Create Account" [ref=f9e54]
+  - region "Notifications alt+T"

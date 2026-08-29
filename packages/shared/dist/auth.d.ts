@@ -1,4 +1,10 @@
 import { z } from "zod";
+export interface PasswordRequirement {
+    id: "minLength" | "uppercase" | "lowercase" | "digit";
+    label: string;
+    test: (value: string) => boolean;
+}
+export declare const passwordRequirements: PasswordRequirement[];
 export declare const passwordSchema: z.ZodEffects<z.ZodString, string, string>;
 export declare const usernameSchema: z.ZodEffects<z.ZodString, string, string>;
 export declare const reasonForJoiningSchema: z.ZodEffects<z.ZodString, string, string>;
@@ -30,6 +36,23 @@ export declare const loginSchema: z.ZodObject<{
 }, {
     password: string;
     identifier: string;
+}>;
+export declare const forgotPasswordSchema: z.ZodObject<{
+    identifier: z.ZodString;
+}, "strip", z.ZodTypeAny, {
+    identifier: string;
+}, {
+    identifier: string;
+}>;
+export declare const resetPasswordSchema: z.ZodObject<{
+    token: z.ZodString;
+    password: z.ZodEffects<z.ZodString, string, string>;
+}, "strip", z.ZodTypeAny, {
+    password: string;
+    token: string;
+}, {
+    password: string;
+    token: string;
 }>;
 export declare const userDtoSchema: z.ZodObject<{
     id: z.ZodString;
@@ -115,6 +138,8 @@ export declare const updateUserSchema: z.ZodEffects<z.ZodObject<{
 }>;
 export type RegisterDto = z.infer<typeof registerSchema>;
 export type LoginDto = z.infer<typeof loginSchema>;
+export type ForgotPasswordDto = z.infer<typeof forgotPasswordSchema>;
+export type ResetPasswordDto = z.infer<typeof resetPasswordSchema>;
 export type UserDto = z.infer<typeof userDtoSchema>;
 export type AdminUserDto = z.infer<typeof adminUserSchema>;
 export type PendingUserDto = z.infer<typeof pendingUserDtoSchema>;

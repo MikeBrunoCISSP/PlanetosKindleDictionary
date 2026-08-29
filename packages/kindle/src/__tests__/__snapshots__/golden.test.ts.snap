@@ -1,0 +1,188 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`golden fixture: full dictionary generation > matches the reviewed snapshot 1`] = `
+"=== mimetype ===
+application/epub+zip
+
+=== META-INF/container.xml ===
+<?xml version="1.0" encoding="UTF-8"?>
+<container version="1.0" xmlns="urn:oasis:names:tc:opendocument:xmlns:container">
+  <rootfiles>
+    <rootfile full-path="OEBPS/content.opf" media-type="application/oebps-package+xml"/>
+  </rootfiles>
+</container>
+
+
+=== OEBPS/content.opf ===
+<?xml version="1.0" encoding="utf-8"?>
+<package version="2.0" xmlns="http://www.idpf.org/2007/opf" unique-identifier="uid">
+  <metadata xmlns:dc="http://purl.org/dc/elements/1.1/"
+            xmlns:opf="http://www.idpf.org/2007/opf">
+    <dc:title>Golden Fixture Dictionary — Series Dictionary</dc:title>
+    <dc:creator opf:role="aut">Kindle Series Dictionaries contributors</dc:creator>
+    <dc:language>en</dc:language>
+    <dc:identifier id="uid">urn:uuid:1e27cdeb-1fb1-55c8-8faa-b1c54741c38e</dc:identifier>
+    <dc:date>2026-08-21</dc:date>
+    <x-metadata>
+      <DictionaryInLanguage>en</DictionaryInLanguage>
+      <DictionaryOutLanguage>en</DictionaryOutLanguage>
+      <DefaultLookupIndex>series</DefaultLookupIndex>
+    </x-metadata>
+  </metadata>
+  <manifest>
+    <item id="about" href="about.xhtml" media-type="application/xhtml+xml"/>
+    <item id="content-a" href="content-a.xhtml" media-type="application/xhtml+xml"/>
+    <item id="content-c" href="content-c.xhtml" media-type="application/xhtml+xml"/>
+    <item id="content-f" href="content-f.xhtml" media-type="application/xhtml+xml"/>
+    <item id="content-h" href="content-h.xhtml" media-type="application/xhtml+xml"/>
+    <item id="content-r" href="content-r.xhtml" media-type="application/xhtml+xml"/>
+    <item id="content-w" href="content-w.xhtml" media-type="application/xhtml+xml"/>
+  </manifest>
+  <spine>
+    <itemref idref="about"/>
+    <itemref idref="content-a"/>
+    <itemref idref="content-c"/>
+    <itemref idref="content-f"/>
+    <itemref idref="content-h"/>
+    <itemref idref="content-r"/>
+    <itemref idref="content-w"/>
+  </spine>
+</package>
+
+
+=== OEBPS/about.xhtml ===
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head><meta http-equiv="Content-Type" content="text/html; charset=utf-8"/></head>
+  <body>
+    <h1>Golden Fixture Dictionary</h1>
+    <p>A small fixture series exercising every Kindle-format edge case.</p>
+  
+  </body>
+</html>
+
+
+=== OEBPS/content-a.xhtml ===
+<html xmlns="http://www.w3.org/1999/xhtml"
+      xmlns:idx="https://kindlegen.s3.amazonaws.com/AmazonKindlePublishingGuidelines.pdf"
+      xmlns:mbp="https://kindlegen.s3.amazonaws.com/AmazonKindlePublishingGuidelines.pdf">
+  <head><meta http-equiv="Content-Type" content="text/html; charset=utf-8"/></head>
+  <body>
+    <mbp:frameset>
+<idx:entry name="series" scriptable="yes" spell="yes" id="e0001">
+  <idx:orth value="Aes Sedai">
+    <b>Aes Sedai's</b>
+  </idx:orth>
+  <p><i>n.</i></p>
+  <p>Possessive form, apostrophe case. See <a href="content-w.xhtml#e0006">Winterfell</a>.</p>
+</idx:entry>
+<hr/>
+    </mbp:frameset>
+  </body>
+</html>
+
+
+=== OEBPS/content-c.xhtml ===
+<html xmlns="http://www.w3.org/1999/xhtml"
+      xmlns:idx="https://kindlegen.s3.amazonaws.com/AmazonKindlePublishingGuidelines.pdf"
+      xmlns:mbp="https://kindlegen.s3.amazonaws.com/AmazonKindlePublishingGuidelines.pdf">
+  <head><meta http-equiv="Content-Type" content="text/html; charset=utf-8"/></head>
+  <body>
+    <mbp:frameset>
+<idx:entry name="series" scriptable="yes" spell="yes" id="e0002">
+  <idx:orth value="Café">
+    <b>Café</b>
+  </idx:orth>
+  <p><i>n.</i></p>
+  <p>A coffee house, accented headword case.</p>
+</idx:entry>
+<hr/>
+    </mbp:frameset>
+  </body>
+</html>
+
+
+=== OEBPS/content-f.xhtml ===
+<html xmlns="http://www.w3.org/1999/xhtml"
+      xmlns:idx="https://kindlegen.s3.amazonaws.com/AmazonKindlePublishingGuidelines.pdf"
+      xmlns:mbp="https://kindlegen.s3.amazonaws.com/AmazonKindlePublishingGuidelines.pdf">
+  <head><meta http-equiv="Content-Type" content="text/html; charset=utf-8"/></head>
+  <body>
+    <mbp:frameset>
+<idx:entry name="series" scriptable="yes" spell="yes" id="e0003">
+  <idx:orth>
+    <b>Footnoted Term</b>
+  </idx:orth>
+  <p>A term with a superscript reference<sup>3</sup> in its definition.</p>
+</idx:entry>
+<hr/>
+    </mbp:frameset>
+  </body>
+</html>
+
+
+=== OEBPS/content-h.xhtml ===
+<html xmlns="http://www.w3.org/1999/xhtml"
+      xmlns:idx="https://kindlegen.s3.amazonaws.com/AmazonKindlePublishingGuidelines.pdf"
+      xmlns:mbp="https://kindlegen.s3.amazonaws.com/AmazonKindlePublishingGuidelines.pdf">
+  <head><meta http-equiv="Content-Type" content="text/html; charset=utf-8"/></head>
+  <body>
+    <mbp:frameset>
+<idx:entry name="series" scriptable="yes" spell="yes" id="e0004">
+  <idx:orth>
+    <b>House Stark of Winterfell</b>
+  </idx:orth>
+  <p>A multi-word headword case.</p>
+</idx:entry>
+<hr/>
+    </mbp:frameset>
+  </body>
+</html>
+
+
+=== OEBPS/content-r.xhtml ===
+<html xmlns="http://www.w3.org/1999/xhtml"
+      xmlns:idx="https://kindlegen.s3.amazonaws.com/AmazonKindlePublishingGuidelines.pdf"
+      xmlns:mbp="https://kindlegen.s3.amazonaws.com/AmazonKindlePublishingGuidelines.pdf">
+  <head><meta http-equiv="Content-Type" content="text/html; charset=utf-8"/></head>
+  <body>
+    <mbp:frameset>
+<idx:entry name="series" scriptable="yes" spell="yes" id="e0005">
+  <idx:orth>
+    <b>Run</b>
+    <idx:infl inflgrp="verb">
+      <idx:iform value="Ran" name="past tense" />
+      <idx:iform value="Running" name="present participle" />
+    </idx:infl>
+    <idx:infl inflgrp="noun">
+      <idx:iform value="Runs" name="plural" />
+    </idx:infl>
+  </idx:orth>
+  <p><i>v., n.</i> /rʌn/</p>
+  <p>To move quickly. Inflections span both verb and noun groups.</p>
+</idx:entry>
+<hr/>
+    </mbp:frameset>
+  </body>
+</html>
+
+
+=== OEBPS/content-w.xhtml ===
+<html xmlns="http://www.w3.org/1999/xhtml"
+      xmlns:idx="https://kindlegen.s3.amazonaws.com/AmazonKindlePublishingGuidelines.pdf"
+      xmlns:mbp="https://kindlegen.s3.amazonaws.com/AmazonKindlePublishingGuidelines.pdf">
+  <head><meta http-equiv="Content-Type" content="text/html; charset=utf-8"/></head>
+  <body>
+    <mbp:frameset>
+<idx:entry name="series" scriptable="yes" spell="yes" id="e0006">
+  <idx:orth>
+    <b>Winterfell</b>
+  </idx:orth>
+  <p><i>n.</i></p>
+  <p>Seat of House Stark. See also <a href="content-a.xhtml#e0001">Aes Sedai's</a>.</p>
+</idx:entry>
+<hr/>
+    </mbp:frameset>
+  </body>
+</html>
+"
+`;

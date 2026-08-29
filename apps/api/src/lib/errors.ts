@@ -63,4 +63,12 @@ export const Errors = {
       "This entry has changed since this edit was submitted. Please review the current entry before approving.",
       409
     ),
+  NO_BUILD_AVAILABLE: () =>
+    new DomainError("NO_BUILD_AVAILABLE", "No dictionary build is available for this series yet.", 404),
+  INVALID_RESET_TOKEN: () =>
+    new DomainError(
+      "INVALID_RESET_TOKEN",
+      "This password reset link is invalid or has expired.",
+      400
+    ),
 } as const;

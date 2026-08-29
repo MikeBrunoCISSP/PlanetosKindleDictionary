@@ -65,7 +65,15 @@ export function SearchResults({ query, page }: { query: string; page: number }) 
 function SearchResultRow({ item }: { item: SearchResultItemDto }) {
   return (
     <TableRow>
-      <TableCell className="align-top whitespace-normal">{item.seriesTitle}</TableCell>
+      <TableCell className="align-top whitespace-normal">
+        <Link
+          to="/series/$slug"
+          params={{ slug: item.seriesSlug }}
+          className="underline underline-offset-2 hover:no-underline"
+        >
+          {item.seriesTitle}
+        </Link>
+      </TableCell>
       <TableCell className="max-w-xl align-top whitespace-normal">
         <Link to="/entries/$id" params={{ id: item.entryId }} className="underline underline-offset-2 hover:no-underline">
           {item.headwordMatched ? <strong>{item.headword}</strong> : item.headword}

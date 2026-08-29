@@ -37,7 +37,7 @@ export function AppHeader() {
   return (
     <header className="flex items-center justify-between px-4 py-3 border-b bg-background">
       <Link to="/" className="font-semibold text-lg">
-        Planetos
+        eReader Dictionaries
       </Link>
       <div className="flex items-center gap-1">
         {me ? (
@@ -47,7 +47,7 @@ export function AppHeader() {
             Log In
           </Link>
         )}
-        {me && <AppMenu me={me} />}
+        <AppMenu me={me ?? null} />
       </div>
     </header>
   );
@@ -85,8 +85,8 @@ function AccountMenu({ me }: { me: UserDto }) {
   );
 }
 
-function AppMenu({ me }: { me: UserDto }) {
-  const isAdmin = me.role === "ADMIN";
+function AppMenu({ me }: { me: UserDto | null }) {
+  const isAdmin = me?.role === "ADMIN";
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const [openSection, setOpenSection] = useState<"dictionary" | "entries" | "administration" | null>(null);
@@ -128,13 +128,17 @@ function AppMenu({ me }: { me: UserDto }) {
         </DropdownMenuTrigger>
 
         <DropdownMenuContent align="end" className="w-48">
-          <div className="px-2 py-1.5 text-sm">
-            <p className="font-medium truncate">{me.username}</p>
-            <p className="text-muted-foreground text-xs truncate">{me.email}</p>
-          </div>
-          <DropdownMenuSeparator />
+          {me && (
+            <>
+              <div className="px-2 py-1.5 text-sm">
+                <p className="font-medium truncate">{me.username}</p>
+                <p className="text-muted-foreground text-xs truncate">{me.email}</p>
+              </div>
+              <DropdownMenuSeparator />
+            </>
+          )}
 
-          {/* Dictionaries section */}
+          {/* Dictionaries section - visible to every visitor, authenticated or not */}
           <DropdownMenuItem
             closeOnClick={false}
             onClick={() => toggleSection("dictionary")}
@@ -147,61 +151,71 @@ function AppMenu({ me }: { me: UserDto }) {
           </DropdownMenuItem>
 
           {openSection === "dictionary" && (
-            isAdmin ? (
-              <>
-                <DropdownMenuItem
-                  className="pl-6"
-                  onClick={() => { void navigate({ to: "/series/new" }); }}
-                >
-                  Create
-                </DropdownMenuItem>
-                <DropdownMenuItem
-                  className="pl-6"
-                  onClick={() => setCommandOpen(true)}
-                >
-                  Update
-                </DropdownMenuItem>
-                <DropdownMenuItem
-                  className="pl-6"
-                  onClick={() => setDeleteCommandOpen(true)}
-                >
-                  Delete
-                </DropdownMenuItem>
-              </>
-            ) : (
-              <div className="pl-6 py-1 text-sm text-muted-foreground select-none" />
-            )
-          )}
-
-          <DropdownMenuSeparator />
-
-          {/* Entries section */}
-          <DropdownMenuItem
-            closeOnClick={false}
-            onClick={() => toggleSection("entries")}
-            className="flex items-center justify-between font-medium"
-          >
-            Entries
-            <ChevronDownIcon
-              className={cn("size-4 transition-transform", openSection === "entries" && "rotate-180")}
-            />
-          </DropdownMenuItem>
-
-          {openSection === "entries" && (
             <>
+              {isAdmin && (
+                <>
+                  <DropdownMenuItem
+                    className="pl-6"
+                    onClick={() => { void navigate({ to: "/series/new" }); }}
+                  >
+                    Create
+                  </DropdownMenuItem>
+                  <DropdownMenuItem
+                    className="pl-6"
+                    onClick={() => setCommandOpen(true)}
+                  >
+                    Update
+                  </DropdownMenuItem>
+                  <DropdownMenuItem
+                    className="pl-6"
+                    onClick={() => setDeleteCommandOpen(true)}
+                  >
+                    Delete
+                  </DropdownMenuItem>
+                </>
+              )}
               <DropdownMenuItem
                 className="pl-6"
-                onClick={() => { void navigate({ to: "/entries/new" }); }}
+                onClick={() => { void navigate({ to: "/downloads" }); }}
               >
-                Add
+                Download
               </DropdownMenuItem>
-              {isAdmin && (
-                <DropdownMenuItem
-                  className="pl-6"
-                  onClick={() => { void navigate({ to: "/entries/delete" }); }}
-                >
-                  Delete
-                </DropdownMenuItem>
+            </>
+          )}
+
+          {/* Entries section - hidden entirely for an anonymous visitor */}
+          {me && (
+            <>
+              <DropdownMenuSeparator />
+
+              <DropdownMenuItem
+                closeOnClick={false}
+                onClick={() => toggleSection("entries")}
+                className="flex items-center justify-between font-medium"
+              >
+                Entries
+                <ChevronDownIcon
+                  className={cn("size-4 transition-transform", openSection === "entries" && "rotate-180")}
+                />
+              </DropdownMenuItem>
+
+              {openSection === "entries" && (
+                <>
+                  <DropdownMenuItem
+                    className="pl-6"
+                    onClick={() => { void navigate({ to: "/entries/new" }); }}
+                  >
+                    Add
+                  </DropdownMenuItem>
+                  {isAdmin && (
+                    <DropdownMenuItem
+                      className="pl-6"
+                      onClick={() => { void navigate({ to: "/entries/delete" }); }}
+                    >
+                      Delete
+                    </DropdownMenuItem>
+                  )}
+                </>
               )}
             </>
           )}
