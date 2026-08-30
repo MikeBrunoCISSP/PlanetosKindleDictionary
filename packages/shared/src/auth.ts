@@ -59,6 +59,10 @@ export const resetPasswordSchema = z.object({
   password: passwordSchema,
 });
 
+export const resendVerificationSchema = z.object({
+  identifier: z.string().min(1, "Username or email is required"),
+});
+
 export const userDtoSchema = z.object({
   id: z.string(),
   email: z.string().email(),
@@ -100,6 +104,7 @@ export type RegisterDto = z.infer<typeof registerSchema>;
 export type LoginDto = z.infer<typeof loginSchema>;
 export type ForgotPasswordDto = z.infer<typeof forgotPasswordSchema>;
 export type ResetPasswordDto = z.infer<typeof resetPasswordSchema>;
+export type ResendVerificationDto = z.infer<typeof resendVerificationSchema>;
 export type UserDto = z.infer<typeof userDtoSchema>;
 export type AdminUserDto = z.infer<typeof adminUserSchema>;
 export type PendingUserDto = z.infer<typeof pendingUserDtoSchema>;

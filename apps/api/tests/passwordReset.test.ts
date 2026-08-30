@@ -26,13 +26,17 @@ function uniqueUser() {
 interface MailpitMessageSummary {
   ID: string;
   To: { Address: string }[];
+  Subject: string;
 }
 
+// Registration now also sends a verification email to the same address, so
+// searching by recipient alone isn't enough to isolate the reset email -
+// filter to the one whose subject is actually the reset email's.
 async function findResetEmail(to: string): Promise<{ id: string; text: string } | undefined> {
   const listRes = await fetch(`${MAILPIT_API}/search?query=to:${encodeURIComponent(to)}`);
   const { messages } = (await listRes.json()) as { messages: MailpitMessageSummary[] };
-  if (messages.length === 0) return undefined;
-  const summary = messages[0]!;
+  const summary = messages.find((m) => m.Subject.includes("Reset your"));
+  if (!summary) return undefined;
   const fullRes = await fetch(`${MAILPIT_API}/message/${summary.ID}`);
   const full = (await fullRes.json()) as { Text: string };
   return { id: summary.ID, text: full.Text };
@@ -50,6 +54,10 @@ function register(email: string, username: string) {
     url: "/api/auth/register",
     payload: { email, username, reasonForJoining: REASON, password: VALID_PASSWORD },
   });
+}
+
+async function markVerified(email: string) {
+  await prisma.user.update({ where: { email }, data: { emailVerified: true } });
 }
 
 function forgotPassword(identifier: string) {
@@ -163,6 +171,7 @@ describe("POST /api/auth/reset-password", () => {
   it("sets a new password with a valid token, which then works for login and the old password no longer does", async () => {
     const user = uniqueUser();
     await register(user.email, user.username);
+    await markVerified(user.email);
     await forgotPassword(user.email);
     const email = await findResetEmail(user.email);
     const token = extractToken(email!.text);
@@ -182,6 +191,7 @@ describe("POST /api/auth/reset-password", () => {
   it("rejects reusing an already-redeemed token", async () => {
     const user = uniqueUser();
     await register(user.email, user.username);
+    await markVerified(user.email);
     await forgotPassword(user.email);
     const email = await findResetEmail(user.email);
     const token = extractToken(email!.text);
@@ -226,6 +236,7 @@ describe("POST /api/auth/reset-password", () => {
   it("rejects a password that violates complexity rules, even with a valid token", async () => {
     const user = uniqueUser();
     await register(user.email, user.username);
+    await markVerified(user.email);
     await forgotPassword(user.email);
     const email = await findResetEmail(user.email);
     const token = extractToken(email!.text);

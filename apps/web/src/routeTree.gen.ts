@@ -15,6 +15,7 @@ import { Route as DownloadsRouteImport } from './routes/downloads'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as PreferencesRouteImport } from './routes/preferences'
 import { Route as ResetPasswordRouteImport } from './routes/reset-password'
+import { Route as VerifyEmailRouteImport } from './routes/verify-email'
 import { Route as AdminApprovalQueueRouteImport } from './routes/admin_.approval-queue'
 import { Route as AdminTurnstileRouteImport } from './routes/admin_.turnstile'
 import { Route as EntriesIdRouteImport } from './routes/entries/$id'
@@ -52,6 +53,11 @@ const PreferencesRoute = PreferencesRouteImport.update({
 const ResetPasswordRoute = ResetPasswordRouteImport.update({
   id: '/reset-password',
   path: '/reset-password',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const VerifyEmailRoute = VerifyEmailRouteImport.update({
+  id: '/verify-email',
+  path: '/verify-email',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AdminApprovalQueueRoute = AdminApprovalQueueRouteImport.update({
@@ -102,6 +108,7 @@ export interface FileRoutesByFullPath {
   '/login': typeof LoginRoute
   '/preferences': typeof PreferencesRoute
   '/reset-password': typeof ResetPasswordRoute
+  '/verify-email': typeof VerifyEmailRoute
   '/admin/approval-queue': typeof AdminApprovalQueueRoute
   '/admin/turnstile': typeof AdminTurnstileRoute
   '/entries/$id': typeof EntriesIdRoute
@@ -118,6 +125,7 @@ export interface FileRoutesByTo {
   '/login': typeof LoginRoute
   '/preferences': typeof PreferencesRoute
   '/reset-password': typeof ResetPasswordRoute
+  '/verify-email': typeof VerifyEmailRoute
   '/admin/approval-queue': typeof AdminApprovalQueueRoute
   '/admin/turnstile': typeof AdminTurnstileRoute
   '/entries/$id': typeof EntriesIdRoute
@@ -135,6 +143,7 @@ export interface FileRoutesById {
   '/login': typeof LoginRoute
   '/preferences': typeof PreferencesRoute
   '/reset-password': typeof ResetPasswordRoute
+  '/verify-email': typeof VerifyEmailRoute
   '/admin_/approval-queue': typeof AdminApprovalQueueRoute
   '/admin_/turnstile': typeof AdminTurnstileRoute
   '/entries/$id': typeof EntriesIdRoute
@@ -153,6 +162,7 @@ export interface FileRouteTypes {
     | '/login'
     | '/preferences'
     | '/reset-password'
+    | '/verify-email'
     | '/admin/approval-queue'
     | '/admin/turnstile'
     | '/entries/$id'
@@ -169,6 +179,7 @@ export interface FileRouteTypes {
     | '/login'
     | '/preferences'
     | '/reset-password'
+    | '/verify-email'
     | '/admin/approval-queue'
     | '/admin/turnstile'
     | '/entries/$id'
@@ -185,6 +196,7 @@ export interface FileRouteTypes {
     | '/login'
     | '/preferences'
     | '/reset-password'
+    | '/verify-email'
     | '/admin_/approval-queue'
     | '/admin_/turnstile'
     | '/entries/$id'
@@ -202,6 +214,7 @@ export interface RootRouteChildren {
   LoginRoute: typeof LoginRoute
   PreferencesRoute: typeof PreferencesRoute
   ResetPasswordRoute: typeof ResetPasswordRoute
+  VerifyEmailRoute: typeof VerifyEmailRoute
   AdminApprovalQueueRoute: typeof AdminApprovalQueueRoute
   AdminTurnstileRoute: typeof AdminTurnstileRoute
   EntriesIdRoute: typeof EntriesIdRoute
@@ -254,6 +267,13 @@ declare module '@tanstack/react-router' {
       path: '/reset-password'
       fullPath: '/reset-password'
       preLoaderRoute: typeof ResetPasswordRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/verify-email': {
+      id: '/verify-email'
+      path: '/verify-email'
+      fullPath: '/verify-email'
+      preLoaderRoute: typeof VerifyEmailRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/admin_/approval-queue': {
@@ -322,6 +342,7 @@ const rootRouteChildren: RootRouteChildren = {
   LoginRoute: LoginRoute,
   PreferencesRoute: PreferencesRoute,
   ResetPasswordRoute: ResetPasswordRoute,
+  VerifyEmailRoute: VerifyEmailRoute,
   AdminApprovalQueueRoute: AdminApprovalQueueRoute,
   AdminTurnstileRoute: AdminTurnstileRoute,
   EntriesIdRoute: EntriesIdRoute,

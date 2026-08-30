@@ -4,6 +4,7 @@ import { z } from "zod";
 import { updateUserSchema, type AdminUserDto, type PendingUserDto } from "@planetos/shared";
 import { makeRequireAdmin } from "../plugins/requireAdmin.js";
 import { Errors } from "../lib/errors.js";
+import { sendAccountApprovedEmail } from "../lib/mailer.js";
 
 function toAdminUserDto(user: {
   id: string;
@@ -114,6 +115,14 @@ const adminRoutes: FastifyPluginAsync<{ prisma: PrismaClient }> = async (fastify
           createdAt: true,
         },
       });
+
+      // Best-effort: the approval itself is the primary effect and must
+      // succeed regardless of whether the notification email can be sent.
+      try {
+        await sendAccountApprovedEmail(updated.email);
+      } catch (err) {
+        request.log.error(err, "Failed to send account-approved email");
+      }
 
       return reply.status(200).send(toAdminUserDto(updated));
     }

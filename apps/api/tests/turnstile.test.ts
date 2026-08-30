@@ -21,12 +21,21 @@ let app: FastifyInstance;
 let prisma: PrismaClient;
 
 async function registerAndGetCookie(email: string, username: string): Promise<string> {
-  const res = await app.inject({
+  await app.inject({
     method: "POST",
     url: "/api/auth/register",
     payload: { email, username, reasonForJoining: REASON, password: PASSWORD },
   });
-  const cookie = res.headers["set-cookie"] as string | string[];
+  // Registration no longer opens a session (email verification is required
+  // before login) - mark the test account verified directly, then log in
+  // for a real cookie.
+  await prisma.user.update({ where: { email }, data: { emailVerified: true } });
+  const loginRes = await app.inject({
+    method: "POST",
+    url: "/api/auth/login",
+    payload: { identifier: email, password: PASSWORD },
+  });
+  const cookie = loginRes.headers["set-cookie"] as string | string[];
   return ((Array.isArray(cookie) ? cookie[0] : cookie) ?? "").split(";")[0] ?? "";
 }
 

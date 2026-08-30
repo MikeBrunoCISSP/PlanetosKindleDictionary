@@ -1,0 +1,1 @@
+import{j as e}from"./index-BbmqDp8B.js";function s(){return e.jsxs("div",{className:"p-4 sm:p-8 max-w-2xl mx-auto",children:[e.jsx("h1",{className:"text-2xl font-bold mb-6",children:"Delete Entry"}),e.jsx("p",{className:"text-muted-foreground",children:"Coming soon."})]})}export{s as component};

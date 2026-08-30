@@ -43,12 +43,14 @@ async function main() {
       role: "ADMIN",
       isActive: true,
       approvalStatus: "APPROVED",
+      emailVerified: true,
     },
     update: {
       passwordHash,
       role: "ADMIN",
       isActive: true,
       approvalStatus: "APPROVED",
+      emailVerified: true,
     },
   });
 

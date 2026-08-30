@@ -462,11 +462,22 @@ schemas exported from `packages/shared`.
 ```
 POST   /api/auth/register        { email, username, reasonForJoining, password, turnstileToken? }
                                   starts approvalStatus=PENDING; email/username matched case-insensitively;
-                                  turnstileToken required+verified only when Turnstile is enabled (see below)
-POST   /api/auth/login           { identifier, password }  identifier = username or email, case-insensitive
+                                  turnstileToken required+verified only when Turnstile is enabled (see below);
+                                  does NOT open a session - sends a verification email instead (24h
+                                  token); the account cannot log in until it's verified
+POST   /api/auth/login           { identifier, password }  identifier = username or email, case-insensitive;
+                                  rejects with 403 EMAIL_NOT_VERIFIED if the account's email hasn't been
+                                  confirmed yet (accounts that existed before this requirement was added
+                                  were grandfathered in via a one-time migration backfill)
 POST   /api/auth/logout
 GET    /api/auth/me
-POST   /api/auth/verify-email    { token }
+POST   /api/auth/verify-email    { token }  single-use, time-limited (24h) token from the registration
+                                  email; marks the account verified; does not establish a session
+POST   /api/auth/resend-verification  { identifier }  identifier = username or email, same convention
+                                  as login; always responds with the same generic message regardless of
+                                  match/already-verified/disabled, to avoid account enumeration - only
+                                  a genuine unverified+active match actually gets a new email (which
+                                  invalidates any prior unused verification token for that account)
 POST   /api/auth/forgot-password { identifier }  identifier = username or email, same convention
                                   as login; always responds with the same generic message
                                   regardless of match, to avoid account enumeration
@@ -551,7 +562,9 @@ POST   /api/admin/entry-edit-proposals/:id/reject
 
 ```
 GET    /api/admin/users/pending               users with approvalStatus=PENDING, oldest first
-POST   /api/admin/users/:id/approve           approvalStatus → APPROVED
+POST   /api/admin/users/:id/approve           approvalStatus → APPROVED; sends the user a real
+                                               notification email that their account was approved
+                                               (a failure to send does not fail the approval itself)
 POST   /api/admin/users/:id/deny              permanently deletes the account (no REJECTED state)
 ```
 
@@ -672,7 +685,16 @@ objects in the `maintenance` queue. Never delete the newest.
 /entries/delete                     Placeholder only, no workflow yet (admin)
 /series/new                         Series creation (auth)
 /login                               Sign In / Register tabs, plus a `?mode=forgot-password` mode
-                                    reached via a "Forgot Password?" link on the Sign In form
+                                    reached via a "Forgot Password?" link on the Sign In form.
+                                    Sign In shows a distinct "please verify your email" message
+                                    (with a resend action) on a 403 EMAIL_NOT_VERIFIED login attempt;
+                                    Register no longer auto-signs-in on success - it shows a
+                                    "check your email" confirmation card (with its own resend action)
+                                    instead of navigating away
+/verify-email                       Reached via the emailed verification link (`?token=...`); calls
+                                    the verify-email endpoint once on mount and shows a success or an
+                                    invalid/expired state; no standalone resend UI here - the invalid
+                                    state links back to `/login`, where resend lives
 /reset-password                     Reached via the emailed reset link (`?token=...`); sets a new
                                     password, then redirects to `/login`; invalid/expired token
                                     shows a clear message instead of a broken form

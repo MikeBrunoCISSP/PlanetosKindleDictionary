@@ -1,5 +1,6 @@
 import type { FastifyPluginAsync } from "fastify";
 import { randomBytes, createHash } from "node:crypto";
+import { z } from "zod";
 import { hash, verify } from "@node-rs/argon2";
 import { PrismaClient } from "@prisma/client";
 import {
@@ -7,6 +8,7 @@ import {
   loginSchema,
   forgotPasswordSchema,
   resetPasswordSchema,
+  resendVerificationSchema,
   normalizeWord,
   type UserDto,
 } from "@planetos/shared";
@@ -16,12 +18,19 @@ import {
   LOGIN_RATE_LIMIT,
   FORGOT_PASSWORD_RATE_LIMIT,
   RESET_PASSWORD_RATE_LIMIT,
+  VERIFY_EMAIL_RATE_LIMIT,
+  RESEND_VERIFICATION_RATE_LIMIT,
 } from "../plugins/rateLimit.js";
 import { decrypt } from "../lib/crypto.js";
 import { verify as verifyTurnstile } from "../lib/turnstile.js";
-import { sendPasswordResetEmail } from "../lib/mailer.js";
+import { sendPasswordResetEmail, sendVerificationEmail } from "../lib/mailer.js";
 
 const RESET_TOKEN_TTL_MS = 60 * 60 * 1000;
+const VERIFICATION_TOKEN_TTL_MS = 24 * 60 * 60 * 1000;
+
+const verifyEmailSchema = z.object({
+  token: z.string().min(1, "Verification token is required"),
+});
 
 function hashToken(token: string): string {
   return createHash("sha256").update(token).digest("hex");
@@ -128,8 +137,18 @@ const authRoutes: FastifyPluginAsync<{ prisma: PrismaClient }> = async (fastify,
         throw err;
       }
 
-      request.session.userId = user.id;
-      await request.session.save();
+      const rawToken = randomBytes(32).toString("hex");
+      await prisma.emailVerificationToken.create({
+        data: {
+          userId: user.id,
+          tokenHash: hashToken(rawToken),
+          expiresAt: new Date(Date.now() + VERIFICATION_TOKEN_TTL_MS),
+        },
+      });
+
+      const baseUrl = process.env["PUBLIC_BASE_URL"] ?? "http://localhost:5173";
+      const verifyUrl = `${baseUrl}/verify-email?token=${rawToken}`;
+      await sendVerificationEmail(user.email, verifyUrl);
 
       return reply.status(201).send(toUserDto(user));
     }
@@ -153,6 +172,7 @@ const authRoutes: FastifyPluginAsync<{ prisma: PrismaClient }> = async (fastify,
           role: true,
           approvalStatus: true,
           isActive: true,
+          emailVerified: true,
           createdAt: true,
           passwordHash: true,
         },
@@ -161,6 +181,8 @@ const authRoutes: FastifyPluginAsync<{ prisma: PrismaClient }> = async (fastify,
       if (!user) throw Errors.INVALID_CREDENTIALS();
 
       if (!user.isActive) throw Errors.ACCOUNT_DISABLED();
+
+      if (!user.emailVerified) throw Errors.EMAIL_NOT_VERIFIED();
 
       const valid = await verify(user.passwordHash, body.password);
       if (!valid) throw Errors.INVALID_CREDENTIALS();
@@ -248,6 +270,80 @@ const authRoutes: FastifyPluginAsync<{ prisma: PrismaClient }> = async (fastify,
       ]);
 
       return reply.status(200).send({ message: "Your password has been reset." });
+    }
+  );
+
+  fastify.post(
+    "/api/auth/verify-email",
+    { config: VERIFY_EMAIL_RATE_LIMIT },
+    async (request, reply) => {
+      const body = verifyEmailSchema.parse(request.body);
+      const tokenHash = hashToken(body.token);
+
+      const verificationToken = await prisma.emailVerificationToken.findFirst({
+        where: { tokenHash, usedAt: null, expiresAt: { gt: new Date() } },
+        select: { id: true, userId: true },
+      });
+
+      if (!verificationToken) throw Errors.INVALID_VERIFICATION_TOKEN();
+
+      await prisma.$transaction([
+        prisma.user.update({
+          where: { id: verificationToken.userId },
+          data: { emailVerified: true },
+        }),
+        prisma.emailVerificationToken.update({
+          where: { id: verificationToken.id },
+          data: { usedAt: new Date() },
+        }),
+      ]);
+
+      return reply.status(200).send({ message: "Your email address has been verified." });
+    }
+  );
+
+  // Same no-enumeration shape as forgot-password: always the same generic
+  // response, regardless of whether the identifier matched an account or
+  // that account is already verified. Only sends an email as a side effect
+  // when there's actually something to verify.
+  fastify.post(
+    "/api/auth/resend-verification",
+    { config: RESEND_VERIFICATION_RATE_LIMIT },
+    async (request, reply) => {
+      const body = resendVerificationSchema.parse(request.body);
+      const identifier = normalizeWord(body.identifier);
+
+      const user = await prisma.user.findFirst({
+        where: {
+          OR: [{ usernameNormalized: identifier }, { email: identifier }],
+        },
+        select: { id: true, email: true, isActive: true, emailVerified: true },
+      });
+
+      if (user?.isActive && !user.emailVerified) {
+        await prisma.emailVerificationToken.updateMany({
+          where: { userId: user.id, usedAt: null },
+          data: { usedAt: new Date() },
+        });
+
+        const rawToken = randomBytes(32).toString("hex");
+        await prisma.emailVerificationToken.create({
+          data: {
+            userId: user.id,
+            tokenHash: hashToken(rawToken),
+            expiresAt: new Date(Date.now() + VERIFICATION_TOKEN_TTL_MS),
+          },
+        });
+
+        const baseUrl = process.env["PUBLIC_BASE_URL"] ?? "http://localhost:5173";
+        const verifyUrl = `${baseUrl}/verify-email?token=${rawToken}`;
+        await sendVerificationEmail(user.email, verifyUrl);
+      }
+
+      return reply.status(200).send({
+        message:
+          "If an account registered with that username or email address needs verification, a new verification email has been sent.",
+      });
     }
   );
 

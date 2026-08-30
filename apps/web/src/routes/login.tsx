@@ -5,11 +5,17 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { loginSchema, registerSchema, forgotPasswordSchema, passwordRequirements } from "@planetos/shared";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { toast } from "sonner";
 import { CheckIcon, CircleIcon } from "lucide-react";
 import { Turnstile } from "@marsidev/react-turnstile";
 import { cn } from "@/lib/utils";
-import { apiGetTurnstileConfig, apiLogin, apiRegister, apiForgotPassword, ApiError } from "@/lib/api";
+import {
+  apiGetTurnstileConfig,
+  apiLogin,
+  apiRegister,
+  apiForgotPassword,
+  apiResendVerification,
+  ApiError,
+} from "@/lib/api";
 import { useMe, ME_QUERY_KEY } from "@/lib/useMe";
 import {
   Card,
@@ -103,6 +109,8 @@ function LoginPage() {
 function SignInForm() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
+  const [emailNotVerified, setEmailNotVerified] = useState(false);
+  const [resendSent, setResendSent] = useState(false);
 
   const form = useForm<LoginFormValues>({
     resolver: zodResolver(loginSchema),
@@ -110,17 +118,32 @@ function SignInForm() {
   });
 
   const onSubmit = async (values: LoginFormValues) => {
+    setEmailNotVerified(false);
+    setResendSent(false);
     try {
       const user = await apiLogin(values);
       queryClient.setQueryData(ME_QUERY_KEY, user);
       void navigate({ to: "/" });
     } catch (err) {
+      if (err instanceof ApiError && err.type === "urn:planetos:error:email-not-verified") {
+        setEmailNotVerified(true);
+        return;
+      }
       const message =
         err instanceof ApiError && err.status === 401
           ? "Invalid username/email or password"
           : "Something went wrong. Please try again.";
       form.setError("root", { message });
     }
+  };
+
+  const handleResend = async () => {
+    try {
+      await apiResendVerification({ identifier: form.getValues("identifier") });
+    } catch {
+      // Deliberately ignored: same no-enumeration contract as forgot-password.
+    }
+    setResendSent(true);
   };
 
   return (
@@ -165,6 +188,24 @@ function SignInForm() {
             >
               Forgot Password?
             </Link>
+            {emailNotVerified && (
+              <div className="text-sm">
+                <p className="text-destructive">Please verify your email address before signing in.</p>
+                {resendSent ? (
+                  <p className="text-muted-foreground mt-1">
+                    If that account needs verification, a new email has been sent.
+                  </p>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={() => { void handleResend(); }}
+                    className="mt-1 underline underline-offset-2 hover:no-underline"
+                  >
+                    Resend verification email
+                  </button>
+                )}
+              </div>
+            )}
             {form.formState.errors.root && (
               <p className="text-destructive text-sm">{form.formState.errors.root.message}</p>
             )}
@@ -252,9 +293,9 @@ function ForgotPasswordForm() {
 }
 
 function RegisterForm() {
-  const navigate = useNavigate();
-  const queryClient = useQueryClient();
   const [turnstileToken, setTurnstileToken] = useState<string | undefined>(undefined);
+  const [registeredEmail, setRegisteredEmail] = useState<string | undefined>(undefined);
+  const [resendSent, setResendSent] = useState(false);
 
   const { data: turnstileConfig } = useQuery({
     queryKey: ["turnstile-config"],
@@ -280,10 +321,8 @@ function RegisterForm() {
 
     try {
       const { confirmPassword: _, ...registerData } = values;
-      const user = await apiRegister({ ...registerData, turnstileToken });
-      queryClient.setQueryData(ME_QUERY_KEY, user);
-      toast.success("Your registration request has been submitted and is awaiting administrator approval.");
-      void navigate({ to: "/" });
+      await apiRegister({ ...registerData, turnstileToken });
+      setRegisteredEmail(registerData.email);
     } catch (err) {
       if (err instanceof ApiError && err.status === 409) {
         const detail = err.detail ?? err.message;
@@ -301,6 +340,46 @@ function RegisterForm() {
       }
     }
   };
+
+  const handleResend = async () => {
+    if (!registeredEmail) return;
+    try {
+      await apiResendVerification({ identifier: registeredEmail });
+    } catch {
+      // Deliberately ignored: same no-enumeration contract as forgot-password.
+    }
+    setResendSent(true);
+  };
+
+  if (registeredEmail) {
+    return (
+      <Card>
+        <CardHeader>
+          <CardTitle>Check your email</CardTitle>
+        </CardHeader>
+        <CardContent className="grid gap-4">
+          <p className="text-sm">
+            We've sent a verification link to <strong>{registeredEmail}</strong>. Click it to activate
+            your account, then sign in.
+          </p>
+          {resendSent ? (
+            <p className="text-muted-foreground text-sm">A new verification email has been sent.</p>
+          ) : (
+            <button
+              type="button"
+              onClick={() => { void handleResend(); }}
+              className="text-left text-sm underline underline-offset-2 hover:no-underline"
+            >
+              Resend verification email
+            </button>
+          )}
+          <Link to="/login" search={{ mode: "login" }} className="text-sm underline underline-offset-2 hover:no-underline">
+            Back to Sign In
+          </Link>
+        </CardContent>
+      </Card>
+    );
+  }
 
   return (
     <Card>

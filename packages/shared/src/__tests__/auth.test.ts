@@ -1,5 +1,12 @@
 import { describe, expect, it } from "vitest";
-import { passwordSchema, registerSchema, loginSchema, forgotPasswordSchema, resetPasswordSchema } from "../auth.js";
+import {
+  passwordSchema,
+  registerSchema,
+  loginSchema,
+  forgotPasswordSchema,
+  resetPasswordSchema,
+  resendVerificationSchema,
+} from "../auth.js";
 
 describe("passwordSchema", () => {
   it("accepts a valid password", () => {
@@ -162,5 +169,22 @@ describe("resetPasswordSchema", () => {
     const messages = result.error?.issues.map((i) => i.message) ?? [];
     expect(messages.some((m) => /uppercase/i.test(m))).toBe(true);
     expect(messages.some((m) => /digit/i.test(m))).toBe(true);
+  });
+});
+
+describe("resendVerificationSchema", () => {
+  it("accepts an email as the identifier", () => {
+    const result = resendVerificationSchema.safeParse({ identifier: "test@example.com" });
+    expect(result.success).toBe(true);
+  });
+
+  it("accepts a username as the identifier", () => {
+    const result = resendVerificationSchema.safeParse({ identifier: "TestUser" });
+    expect(result.success).toBe(true);
+  });
+
+  it("rejects an empty identifier", () => {
+    const result = resendVerificationSchema.safeParse({ identifier: "" });
+    expect(result.success).toBe(false);
   });
 });

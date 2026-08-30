@@ -54,6 +54,13 @@ export declare const resetPasswordSchema: z.ZodObject<{
     password: string;
     token: string;
 }>;
+export declare const resendVerificationSchema: z.ZodObject<{
+    identifier: z.ZodString;
+}, "strip", z.ZodTypeAny, {
+    identifier: string;
+}, {
+    identifier: string;
+}>;
 export declare const userDtoSchema: z.ZodObject<{
     id: z.ZodString;
     email: z.ZodString;
@@ -140,6 +147,7 @@ export type RegisterDto = z.infer<typeof registerSchema>;
 export type LoginDto = z.infer<typeof loginSchema>;
 export type ForgotPasswordDto = z.infer<typeof forgotPasswordSchema>;
 export type ResetPasswordDto = z.infer<typeof resetPasswordSchema>;
+export type ResendVerificationDto = z.infer<typeof resendVerificationSchema>;
 export type UserDto = z.infer<typeof userDtoSchema>;
 export type AdminUserDto = z.infer<typeof adminUserSchema>;
 export type PendingUserDto = z.infer<typeof pendingUserDtoSchema>;

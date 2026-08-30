@@ -71,4 +71,16 @@ export const Errors = {
       "This password reset link is invalid or has expired.",
       400
     ),
+  EMAIL_NOT_VERIFIED: () =>
+    new DomainError(
+      "EMAIL_NOT_VERIFIED",
+      "Please verify your email address before signing in.",
+      403
+    ),
+  INVALID_VERIFICATION_TOKEN: () =>
+    new DomainError(
+      "INVALID_VERIFICATION_TOKEN",
+      "This verification link is invalid or has expired.",
+      400
+    ),
 } as const;

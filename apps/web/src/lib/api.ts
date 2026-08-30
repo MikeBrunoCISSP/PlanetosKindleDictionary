@@ -12,6 +12,7 @@ import type {
   PublicEntryDto,
   RegisterDto,
   RejectEntryDto,
+  ResendVerificationDto,
   ResetPasswordDto,
   SearchResultsDto,
   SeriesDto,
@@ -101,6 +102,26 @@ export async function apiForgotPassword(data: ForgotPasswordDto): Promise<void> 
 
 export async function apiResetPassword(data: ResetPasswordDto): Promise<void> {
   const res = await fetch("/api/auth/reset-password", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(data),
+    credentials: "include",
+  });
+  return handleResponse<void>(res);
+}
+
+export async function apiVerifyEmail(data: { token: string }): Promise<void> {
+  const res = await fetch("/api/auth/verify-email", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(data),
+    credentials: "include",
+  });
+  return handleResponse<void>(res);
+}
+
+export async function apiResendVerification(data: ResendVerificationDto): Promise<void> {
+  const res = await fetch("/api/auth/resend-verification", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(data),

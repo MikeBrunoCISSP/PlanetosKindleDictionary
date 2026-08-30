@@ -1,7 +1,10 @@
-import { describe, it, expect, beforeAll, afterAll, afterEach } from "vitest";
+import { describe, it, expect, beforeAll, afterAll, afterEach, vi } from "vitest";
 import type { FastifyInstance } from "fastify";
 import type { PrismaClient } from "@prisma/client";
 import { buildApp, cleanUsers } from "./helpers.js";
+import * as mailer from "../src/lib/mailer.js";
+
+const MAILPIT_API = "http://localhost:8025/api/v1";
 
 const ADMIN_EMAIL = "regadmin@example.com";
 const ADMIN_USERNAME = "RegAdminUser";
@@ -16,12 +19,21 @@ let app: FastifyInstance;
 let prisma: PrismaClient;
 
 async function registerAndGetCookie(email: string, username: string, reasonForJoining = REASON): Promise<string> {
-  const res = await app.inject({
+  await app.inject({
     method: "POST",
     url: "/api/auth/register",
     payload: { email, username, reasonForJoining, password: PASSWORD },
   });
-  const cookie = res.headers["set-cookie"] as string | string[];
+  // Registration no longer opens a session (email verification is required
+  // before login) - mark the test account verified directly, then log in
+  // for a real cookie.
+  await prisma.user.update({ where: { email }, data: { emailVerified: true } });
+  const loginRes = await app.inject({
+    method: "POST",
+    url: "/api/auth/login",
+    payload: { identifier: email, password: PASSWORD },
+  });
+  const cookie = loginRes.headers["set-cookie"] as string | string[];
   return ((Array.isArray(cookie) ? cookie[0] : cookie) ?? "").split(";")[0] ?? "";
 }
 
@@ -144,6 +156,44 @@ describe("POST /api/admin/users/:id/approve", () => {
       headers: { cookie: adminCookie },
     });
     expect(listRes.json<{ email: string }[]>().some((u) => u.email === MEMBER_EMAIL)).toBe(true);
+  });
+
+  it("sends a real approval-notification email to the approved user", async () => {
+    const adminCookie = await setupAdmin();
+    await registerAndGetCookie(MEMBER_EMAIL, MEMBER_USERNAME);
+    const target = await prisma.user.findUniqueOrThrow({ where: { email: MEMBER_EMAIL } });
+
+    const res = await app.inject({
+      method: "POST",
+      url: `/api/admin/users/${target.id}/approve`,
+      headers: { cookie: adminCookie },
+    });
+    expect(res.statusCode).toBe(200);
+
+    const listRes = await fetch(`${MAILPIT_API}/search?query=to:${encodeURIComponent(MEMBER_EMAIL)}`);
+    const { messages } = (await listRes.json()) as { messages: { Subject: string }[] };
+    expect(messages.some((m) => m.Subject.includes("account has been approved"))).toBe(true);
+  });
+
+  it("still approves the user even when sending the notification email fails", async () => {
+    const adminCookie = await setupAdmin();
+    await registerAndGetCookie(MEMBER_EMAIL, MEMBER_USERNAME);
+    const target = await prisma.user.findUniqueOrThrow({ where: { email: MEMBER_EMAIL } });
+
+    const spy = vi
+      .spyOn(mailer, "sendAccountApprovedEmail")
+      .mockRejectedValueOnce(new Error("simulated SMTP failure"));
+
+    const res = await app.inject({
+      method: "POST",
+      url: `/api/admin/users/${target.id}/approve`,
+      headers: { cookie: adminCookie },
+    });
+    expect(res.statusCode).toBe(200);
+    const body = res.json<{ approvalStatus: string }>();
+    expect(body.approvalStatus).toBe("APPROVED");
+
+    spy.mockRestore();
   });
 
   it("returns 409 when approving an already-approved user", async () => {

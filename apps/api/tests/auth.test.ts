@@ -1,7 +1,16 @@
 import { describe, it, expect, beforeAll, beforeEach, afterAll, afterEach } from "vitest";
 import type { FastifyInstance } from "fastify";
 import type { PrismaClient } from "@prisma/client";
+import { hash as hashPassword } from "@node-rs/argon2";
 import { buildApp, cleanUsers } from "./helpers.js";
+
+const MAILPIT_API = "http://localhost:8025/api/v1";
+
+interface MailpitMessageSummary {
+  ID: string;
+  To: { Address: string }[];
+  Subject: string;
+}
 
 const TEST_EMAIL = "authtest@example.com";
 const TEST_EMAIL_2 = "authtest2@example.com";
@@ -35,6 +44,20 @@ function register(email: string, username: string, extra: Record<string, unknown
   });
 }
 
+async function markVerified(email: string) {
+  await prisma.user.update({ where: { email }, data: { emailVerified: true } });
+}
+
+async function loginAndGetCookie(identifier: string, password: string): Promise<string> {
+  const res = await app.inject({
+    method: "POST",
+    url: "/api/auth/login",
+    payload: { identifier, password },
+  });
+  const cookie = res.headers["set-cookie"] as string | string[];
+  return (Array.isArray(cookie) ? cookie[0] : cookie)?.split(";")[0] ?? "";
+}
+
 describe("POST /api/auth/register", () => {
   it("creates a user and returns 201 with UserDto", async () => {
     const res = await register(TEST_EMAIL, TEST_USERNAME);
@@ -51,7 +74,7 @@ describe("POST /api/auth/register", () => {
     expect(body.role).toBe("MEMBER");
     expect(body.approvalStatus).toBe("PENDING");
     expect(body).not.toHaveProperty("passwordHash");
-    expect(res.headers["set-cookie"]).toBeDefined();
+    expect(res.headers["set-cookie"]).toBeUndefined();
   });
 
   it("stores and returns the email lowercased regardless of submitted case", async () => {
@@ -129,11 +152,26 @@ describe("POST /api/auth/register", () => {
     });
     expect(res.statusCode).toBe(400);
   });
+
+  it("sends a real verification email to the registered address", async () => {
+    const res = await register(TEST_EMAIL, TEST_USERNAME);
+    expect(res.statusCode).toBe(201);
+
+    const listRes = await fetch(`${MAILPIT_API}/search?query=to:${encodeURIComponent(TEST_EMAIL)}`);
+    const { messages } = (await listRes.json()) as { messages: MailpitMessageSummary[] };
+    expect(messages.length).toBeGreaterThan(0);
+    expect(messages[0]!.Subject).toContain("Verify your eReader Dictionaries email address");
+
+    const fullRes = await fetch(`${MAILPIT_API}/message/${messages[0]!.ID}`);
+    const full = (await fullRes.json()) as { Text: string };
+    expect(full.Text).toContain("/verify-email?token=");
+  });
 });
 
 describe("POST /api/auth/login", () => {
   beforeEach(async () => {
     await register(TEST_EMAIL, TEST_USERNAME);
+    await markVerified(TEST_EMAIL);
   });
 
   it("returns 200 and sets session cookie when logging in with the email", async () => {
@@ -205,6 +243,47 @@ describe("POST /api/auth/login", () => {
     });
     expect(res.statusCode).toBe(401);
   });
+
+  it("returns 403 EMAIL_NOT_VERIFIED for an unverified account with correct credentials, no session opened", async () => {
+    await register(TEST_EMAIL_2, TEST_USERNAME_2);
+    // Deliberately not calling markVerified - this account stays unverified.
+
+    const res = await app.inject({
+      method: "POST",
+      url: "/api/auth/login",
+      payload: { identifier: TEST_EMAIL_2, password: VALID_PASSWORD },
+    });
+    expect(res.statusCode).toBe(403);
+    const body = res.json<{ type?: string }>();
+    expect(body.type).toBe("urn:planetos:error:email-not-verified");
+    expect(res.headers["set-cookie"]).toBeUndefined();
+  });
+
+  it("a pre-existing account (already emailVerified, never redeemed a token) logs in normally", async () => {
+    // Simulates an account grandfathered in by the migration backfill:
+    // isActive + emailVerified = true, with no EmailVerificationToken ever
+    // created or redeemed for it.
+    await prisma.user.create({
+      data: {
+        email: TEST_EMAIL_2,
+        username: TEST_USERNAME_2,
+        usernameNormalized: TEST_USERNAME_2.toLowerCase(),
+        reasonForJoining: REASON,
+        passwordHash: await hashPassword(VALID_PASSWORD),
+        role: "MEMBER",
+        approvalStatus: "PENDING",
+        emailVerified: true,
+      },
+    });
+
+    const res = await app.inject({
+      method: "POST",
+      url: "/api/auth/login",
+      payload: { identifier: TEST_EMAIL_2, password: VALID_PASSWORD },
+    });
+    expect(res.statusCode).toBe(200);
+    expect(res.headers["set-cookie"]).toBeDefined();
+  });
 });
 
 describe("GET /api/auth/me", () => {
@@ -214,14 +293,14 @@ describe("GET /api/auth/me", () => {
   });
 
   it("returns 200 with UserDto when authenticated", async () => {
-    const registerRes = await register(TEST_EMAIL, TEST_USERNAME);
-    const cookie = registerRes.headers["set-cookie"] as string | string[];
-    const cookieHeader = Array.isArray(cookie) ? cookie[0] : cookie;
+    await register(TEST_EMAIL, TEST_USERNAME);
+    await markVerified(TEST_EMAIL);
+    const cookieHeader = await loginAndGetCookie(TEST_EMAIL, VALID_PASSWORD);
 
     const res = await app.inject({
       method: "GET",
       url: "/api/auth/me",
-      headers: { cookie: cookieHeader?.split(";")[0] ?? "" },
+      headers: { cookie: cookieHeader },
     });
     expect(res.statusCode).toBe(200);
     const body = res.json<{ email: string; username: string; approvalStatus: string }>();
@@ -233,9 +312,9 @@ describe("GET /api/auth/me", () => {
 
 describe("POST /api/auth/logout", () => {
   it("destroys session and returns 204", async () => {
-    const registerRes = await register(TEST_EMAIL, TEST_USERNAME);
-    const cookie = registerRes.headers["set-cookie"] as string | string[];
-    const cookieHeader = (Array.isArray(cookie) ? cookie[0] : cookie)?.split(";")[0] ?? "";
+    await register(TEST_EMAIL, TEST_USERNAME);
+    await markVerified(TEST_EMAIL);
+    const cookieHeader = await loginAndGetCookie(TEST_EMAIL, VALID_PASSWORD);
 
     const logoutRes = await app.inject({
       method: "POST",

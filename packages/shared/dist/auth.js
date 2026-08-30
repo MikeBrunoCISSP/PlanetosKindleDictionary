@@ -44,6 +44,9 @@ export const resetPasswordSchema = z.object({
     token: z.string().min(1, "Reset token is required"),
     password: passwordSchema,
 });
+export const resendVerificationSchema = z.object({
+    identifier: z.string().min(1, "Username or email is required"),
+});
 export const userDtoSchema = z.object({
     id: z.string(),
     email: z.string().email(),
