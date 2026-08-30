@@ -2,5 +2,14 @@ node_modules
 .tanstack
 .env
 
+# Compiled API/worker output (built fresh on deploy; see DEPLOYMENT.md)
+/apps/api/dist/
+
 *.log
 .playwright-mcp/
+
+# curl / libcurl cookie jars (never commit session cookies)
+*cookies.txt
+*.cookie-jar
+*.cookies
+cookies/
