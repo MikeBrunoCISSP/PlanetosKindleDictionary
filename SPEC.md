@@ -23,7 +23,7 @@ shows the community definition.
 | Browse series, browse entries, search | No |
 | Download a generated dictionary | No |
 | Register an account (starts Pending; see below) | No |
-| Create a series | Yes (any account, Pending or Approved) |
+| Create a series | Admin only |
 | Submit a new entry (Pending until reviewed) | Approved user, or admin |
 | Review the pending-entry queue, approve/reject entries | Admin only |
 | Review pending registrations, approve/deny new accounts | Admin only |
@@ -37,8 +37,8 @@ entry is unaffected by this and remains a plain authenticated write (§6) -
 only *new* entries go through approval.
 
 **Registration is also gated.** A new account starts `approvalStatus=PENDING`
-and can browse/create series like any authenticated user, but cannot submit a
-new entry until an admin approves the account (see §4, §6). Denying a
+and can browse like any visitor, but cannot submit a new entry until an admin
+approves the account (see §4, §6). Series creation remains admin-only. Denying a
 registration permanently deletes the account rather than storing a rejected
 state. Registration optionally requires passing a Cloudflare Turnstile
 challenge, configured by an admin (see §6, §10).
@@ -512,8 +512,8 @@ GET    /api/search                       ?q=&page= — cross-dictionary search (
 ### Authenticated writes
 
 ```
-POST   /api/series                       create series (+ books)
-PATCH  /api/series/:slug
+POST   /api/series                       admin only; create series (+ books)
+PATCH  /api/series/:slug                  admin only; edit series metadata (slug is immutable)
 POST   /api/series/:slug/entries         submit a new entry; starts approvalStatus=PENDING, except an
                                           administrator's own submission is saved as APPROVED immediately,
                                           self-reviewed (reviewedById/reviewedAt set to that admin)
@@ -683,7 +683,8 @@ objects in the `maintenance` queue. Never delete the newest.
                                     (Headword is never editable) rather than writing the entry directly
 /entries/new                        Add Entry - dictionary picker + Headword/Definition/Inflections (auth); saves as Pending
 /entries/delete                     Placeholder only, no workflow yet (admin)
-/series/new                         Series creation (auth)
+/series/new                         Series creation (admin only)
+/series/:slug/edit                  Series metadata editor — Name + Description (admin only)
 /login                               Sign In / Register tabs, plus a `?mode=forgot-password` mode
                                     reached via a "Forgot Password?" link on the Sign In form.
                                     Sign In shows a distinct "please verify your email" message
@@ -749,8 +750,8 @@ objects in the `maintenance` queue. Never delete the newest.
   returns 409.
 - **Sweep logic** — unchanged series enqueues nothing; changed series enqueues
   once; twelve rapid edits collapse to one job via the deterministic `jobId`.
-- **E2E** (Playwright) — register → create series → add entry → force rebuild →
-  download EPUB → assert the ZIP contains the entry's headword.
+- **E2E** (Playwright) — admin creates series → register and approve contributor →
+  add entry → force rebuild → download EPUB → assert the ZIP contains the entry's headword.
 - **Manual, per release** — sideload the generated `.mobi` on a physical Kindle
   and confirm long-press lookup resolves a headword and one inflected form.
   Nothing in CI can substitute for this; the format's failure mode is a

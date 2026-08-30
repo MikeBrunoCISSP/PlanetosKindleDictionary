@@ -196,6 +196,24 @@ The Administration shelf SHALL contain an "Approval Queue" action item. Activati
 - **WHEN** an admin expands the Administration section and clicks "Approval Queue"
 - **THEN** the menu closes and the browser navigates to `/admin/approval-queue`
 
+### Requirement: User Management Action in Administration Shelf
+
+The Administration shelf SHALL contain a "User Management" action item. Activating it SHALL navigate the user to `/admin`.
+
+#### Scenario: User Management navigates to the admin dashboard
+
+- **WHEN** an admin expands the Administration section and clicks "User Management"
+- **THEN** the menu closes and the browser navigates to `/admin`
+
+### Requirement: Turnstile Action in Administration Shelf
+
+The Administration shelf SHALL contain a "Turnstile" action item. Activating it SHALL navigate the user to `/admin/turnstile`.
+
+#### Scenario: Turnstile navigates to the Turnstile administration page
+
+- **WHEN** an admin expands the Administration section and clicks "Turnstile"
+- **THEN** the menu closes and the browser navigates to `/admin/turnstile`
+
 ### Requirement: Account Menu for Authenticated Users
 
 The persistent header SHALL display an account-menu button directly to the left of the hamburger menu button for every logged-in user, showing a user icon and the current user's username. Activating it SHALL open a popup menu containing exactly two items: "Preferences" and "Log out". The account menu and the hamburger menu SHALL be separate, independently-triggered popups — each menu's own trigger button and its own accordion/expansion state (in the hamburger's case) are unaffected by the other menu's state. At most one of the two menus is open at a time: opening one while the other is already open dismisses the one that was open, consistent with how a single popup is dismissed by an outside interaction elsewhere in the app.

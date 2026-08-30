@@ -17,12 +17,20 @@ Administrators need a way to create and update dictionary (Series) records from 
 
 ### New Capabilities
 
-- `navigation/global-nav`: Persistent header component with a hamburger/dropdown menu in the upper-right corner; menu items vary by authentication state and role; always visible across all pages
-- `series/management`: Admin-only Series (dictionary) create and update flows — API endpoints, shared DTOs, and frontend routes; tracks creator identity and creation timestamp
+- `dictionary-management/series-crud`: Admin-only Series (dictionary) create and update flows — API endpoints, shared DTOs, and frontend routes (`/series/new`, `/series/:slug/edit`); public `GET /api/series` listing; tracks creator identity and creation timestamp
 
 ### Modified Capabilities
 
 <!-- none — no existing requirement changes -->
+
+> **Reconciliation note (pre-archive).** This change originally also declared a
+> `navigation/global-nav` capability for the persistent header and its role-aware menu.
+> That work shipped, but the persistent-header / menu / route-guard contract has since been
+> owned and expanded by the already-archived `accordion-app-menu`, `add-account-menu`, and
+> `dictionary-crud-menu` changes, which live in `navigation/app-menu` and
+> `navigation/route-guards`. The `navigation/global-nav` delta was dropped from this change
+> to avoid publishing a duplicate, now-outdated capability; only the series CRUD delta is
+> synced on archive.
 
 ## Impact
 
@@ -32,4 +40,4 @@ Administrators need a way to create and update dictionary (Series) records from 
 - **Web** (`apps/web`): new header/nav component wired into the root layout; new `/series/new` and `/series/:slug/edit` routes; `GET /api/series` fetch helper for the dropdown
 - **Assumption**: slug is auto-generated from the title (kebab-case, deduplication via a numeric suffix if taken); the create form does not expose a slug field directly
 - **Assumption**: `inLanguage` and `outLanguage` default to `"en"` on create; these can be edited later in a future settings change
-- **Assumption**: the PATCH endpoint in this change is admin-only even though SPEC.md permits authenticated members to create series — the UI is the restricted surface here; the permission model can be relaxed in a follow-on change
+- **Decision**: both `POST` and `PATCH /api/series` are admin-only (`requireAdmin`), and the `/series/new` + `/series/:slug/edit` routes redirect non-admins. SPEC.md has been updated to state series creation/editing is admin-only, resolving the earlier deviation.

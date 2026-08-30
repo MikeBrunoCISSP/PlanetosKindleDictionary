@@ -44,7 +44,7 @@ The system SHALL expose `GET /api/admin/users` to authenticated administrators. 
 
 ### Requirement: User Account Updates
 
-The system SHALL expose `PATCH /api/admin/users/:id` to authenticated administrators. The endpoint SHALL accept updates to `isActive` (Boolean) and `role` (`MEMBER` | `ADMIN`). Non-administrator requests SHALL be rejected with `403 Forbidden`. Any update that would result in zero active administrator accounts (i.e., no user with `role = ADMIN` and `isActive = true`) SHALL be rejected with `409 Conflict`.
+The system SHALL expose `PATCH /api/admin/users/:id` to authenticated administrators. The endpoint SHALL accept updates to `isActive` (Boolean) and `role` (`MEMBER` | `ADMIN`). Non-administrator requests SHALL be rejected with `403 Forbidden`. Any update that would result in zero active administrator accounts (i.e., no user with `role = ADMIN` and `isActive = true`) SHALL be rejected with `409 Conflict`. This constraint SHALL be enforced atomically: concurrent requests that would each individually appear safe but together would leave zero active administrators MUST result in at most one succeeding.
 
 #### Scenario: Admin disables a user account
 
@@ -76,6 +76,11 @@ The system SHALL expose `PATCH /api/admin/users/:id` to authenticated administra
 - **WHEN** a valid admin sends `PATCH /api/admin/users/:id` with `{ "role": "MEMBER" }` and the target is the only remaining active admin account
 - **THEN** the system returns `409 Conflict` with an RFC 9457 problem body and does not modify the record
 
+#### Scenario: Concurrent last-admin protection holds
+
+- **WHEN** two simultaneous PATCH requests both target admins and each would individually pass the last-admin guard, but together they would leave zero active administrators
+- **THEN** exactly one request returns `200` and the other returns `409 Conflict` with an RFC 9457 problem body; the system is never left with zero active administrators
+
 #### Scenario: Non-admin is rejected
 
 - **WHEN** a request with a valid non-admin session is sent to `PATCH /api/admin/users/:id`
@@ -88,7 +93,7 @@ The system SHALL expose `PATCH /api/admin/users/:id` to authenticated administra
 
 ### Requirement: Admin Dashboard Page
 
-The system SHALL expose a frontend route at `/admin` accessible only to authenticated administrators. Non-authenticated visitors SHALL be redirected to `/login`. Authenticated non-admins SHALL see a `403 Forbidden` page. The page SHALL display a table of all users showing display name, email, role, and active status, and SHALL provide per-row controls to enable/disable accounts, promote to ADMIN, and demote to MEMBER. Controls that would leave zero active administrators SHALL be rendered as disabled in the UI.
+The system SHALL expose a frontend route at `/admin` accessible only to authenticated administrators. Non-authenticated visitors SHALL be redirected to `/login`. Authenticated non-admins SHALL be redirected to `/`. The page SHALL display a table of all non-Pending users showing username, email, role, and active status, and SHALL provide per-row controls to enable/disable accounts, promote to ADMIN, and demote to MEMBER. Controls that would leave zero active administrators SHALL be rendered as disabled in the UI. The page SHALL also display a Pending Registrations section (see the `admin/registration-approval` capability) — this is the route's only navigation entry point in the application.
 
 #### Scenario: Unauthenticated visitor is redirected
 
@@ -98,12 +103,12 @@ The system SHALL expose a frontend route at `/admin` accessible only to authenti
 #### Scenario: Authenticated non-admin sees forbidden page
 
 - **WHEN** an authenticated user with `role = MEMBER` navigates to `/admin`
-- **THEN** the page renders a `403 Forbidden` message without the user table
+- **THEN** the browser redirects them to `/` (superseding the earlier behavior of rendering a `403 Forbidden` page in place, to match the redirect convention established for other admin-only routes)
 
 #### Scenario: Admin sees user table
 
 - **WHEN** an authenticated administrator navigates to `/admin`
-- **THEN** the page renders a table listing all users with their display name, email, role, and active status
+- **THEN** the page renders a table listing all non-Pending users with their username, email, role, and active status
 
 #### Scenario: Disable toggle calls PATCH endpoint
 

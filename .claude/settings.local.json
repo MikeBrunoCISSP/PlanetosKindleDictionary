@@ -21,7 +21,19 @@
       "PowerShell($conn = Get-NetTCPConnection -LocalPort 4173 -ErrorAction SilentlyContinue; if \\($conn\\) { $conn | ForEach-Object { Stop-Process -Id $_.OwningProcess -Force -ErrorAction SilentlyContinue }; \"killed\" } else { \"no process found on 4173\" })",
       "Bash(openspec validate *)",
       "Bash(node -e \"let d='';process.stdin.on\\('data',c=>d+=c\\);process.stdin.on\\('end',\\(\\)=>{const j=JSON.parse\\(d\\);console.log\\('rules:',JSON.stringify\\(j.rules\\)\\);console.log\\('instruction present:',!!j.instruction\\)}\\)\")",
-      "Bash(python3 -c \"import json,sys; d=json.load\\(sys.stdin\\); print\\('context' in d, 'operationGuidance' in d, d.get\\('state'\\), d.get\\('instruction'\\)\\)\")"
+      "Bash(python3 -c \"import json,sys; d=json.load\\(sys.stdin\\); print\\('context' in d, 'operationGuidance' in d, d.get\\('state'\\), d.get\\('instruction'\\)\\)\")",
+      "Bash(rm -rf openspec/changes/add-dictionary-management/specs/navigation)",
+      "Bash(mkdir -p openspec/changes/add-dictionary-management/specs/dictionary-management/series-crud)",
+      "Bash(git mv *)",
+      "Bash(mv openspec/changes/add-dictionary-management/specs/series/management/spec.md openspec/changes/add-dictionary-management/specs/dictionary-management/series-crud/spec.md)",
+      "Bash(rmdir openspec/changes/add-dictionary-management/specs/series/management openspec/changes/add-dictionary-management/specs/series)",
+      "Skill(openspec-archive-change)",
+      "Skill(openspec-archive-change:*)",
+      "Bash(echo \"exit=$?\")",
+      "Skill(openspec-sync-specs)",
+      "Skill(openspec-sync-specs:*)",
+      "Bash(git rm *)",
+      "Bash(git add *)"
     ]
   }
 }

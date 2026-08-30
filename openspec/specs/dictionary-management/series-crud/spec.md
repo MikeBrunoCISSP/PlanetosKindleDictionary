@@ -1,8 +1,12 @@
+# series-crud Specification
+
 ## Purpose
 
-Provides authenticated administrators with the ability to create new dictionary (Series) records and update their metadata, with creator identity and creation timestamp recorded on every new Series.
+Provides administrators with the ability to create new dictionary (Series) records and
+update their metadata, with creator identity and creation timestamp recorded on every new
+Series, plus a public endpoint for listing all dictionaries.
 
-## ADDED Requirements
+## Requirements
 
 ### Requirement: Series Creator Tracking
 
@@ -20,7 +24,7 @@ Every Series record SHALL store the identity of the user who created it (`create
 
 ### Requirement: List Series
 
-The system SHALL expose `GET /api/series` to return an array of Series records ordered by `title` ascending. Each entry SHALL include at minimum: `id`, `slug`, `title`, and `description`. The endpoint SHALL be accessible without authentication (public read). Pagination SHALL be supported via `?page=` and `?limit=` query parameters (default limit 50, max 200).
+The system SHALL expose `GET /api/series` to return an array of Series records ordered by `title` ascending (case-insensitive). Each entry SHALL include at minimum: `id`, `slug`, `title`, and `description` (which MAY be null). The endpoint SHALL be accessible without authentication (public read). Pagination SHALL be supported via `?page=` and `?limit=` query parameters (default limit 50, max 200).
 
 #### Scenario: Public listing returns all series
 
@@ -39,7 +43,7 @@ The system SHALL expose `GET /api/series` to return an array of Series records o
 
 ### Requirement: Create Series
 
-The system SHALL expose `POST /api/series` to authenticated administrators. The request body SHALL require `title` (non-empty string) and `description` (non-empty string). The system SHALL auto-generate a URL-safe `slug` from the title (lowercase, non-alphanumeric characters replaced with hyphens, leading/trailing hyphens removed); if the generated slug is already in use the system SHALL append a numeric suffix (e.g. `-2`) until the slug is unique. The new Series SHALL be returned with status `201`. Non-admin requests SHALL be rejected with `403`. Missing or invalid fields SHALL return `400`.
+The system SHALL expose `POST /api/series` to authenticated administrators only. The request body SHALL require `title` and `description`, each a non-empty plain-text string (no HTML) capped at 200 and 5000 characters respectively. The system SHALL auto-generate a URL-safe `slug` from the title (lowercase, non-alphanumeric runs replaced with hyphens, leading/trailing hyphens removed); if the generated slug is already in use the system SHALL append a numeric suffix (e.g. `-2`) until the slug is unique. The new Series SHALL be returned with status `201`. Unauthenticated requests SHALL be rejected with `401`. Authenticated non-admin requests SHALL be rejected with `403`. Missing or invalid fields SHALL return `400`.
 
 #### Scenario: Admin creates a series
 
@@ -73,7 +77,7 @@ The system SHALL expose `POST /api/series` to authenticated administrators. The 
 
 ### Requirement: Update Series
 
-The system SHALL expose `PATCH /api/series/:slug` to authenticated administrators. The request body SHALL accept `title` (string) and/or `description` (string); at least one field is required. If `title` is updated the Series's `slug` SHALL NOT change (the slug is immutable once set). The updated Series SHALL be returned with status `200`. Non-admin requests SHALL be rejected with `403`. An unknown slug SHALL return `404`.
+The system SHALL expose `PATCH /api/series/:slug` to authenticated administrators only. The request body SHALL accept `title` and/or `description` (each a non-empty plain-text string with the same length caps as create); at least one field is required. The Series's `slug` SHALL NOT change when `title` is updated — the slug is immutable once set. The updated Series SHALL be returned with status `200`. Authenticated non-admin requests SHALL be rejected with `403`. An unknown slug SHALL return `404`.
 
 #### Scenario: Admin updates title and description
 
@@ -102,12 +106,12 @@ The system SHALL expose `PATCH /api/series/:slug` to authenticated administrator
 
 ### Requirement: Create Dictionary Page
 
-The system SHALL expose a frontend route at `/series/new`, accessible only to authenticated administrators, that presents a form for creating a new dictionary. The form SHALL require a **Name** field (mapped to Series `title`) and a **Description** field. On successful submission the user SHALL be redirected to the newly created dictionary's browse page. Non-admin visitors SHALL be redirected or shown a `403 Forbidden` message consistent with the admin dashboard behavior. Unauthenticated visitors SHALL be redirected to `/login`.
+The system SHALL expose a frontend route at `/series/new`, accessible only to authenticated administrators, that presents a form for creating a new dictionary. The form SHALL require a **Name** field (mapped to Series `title`) and a **Description** field, showing inline validation errors before any API call is made. On successful submission the user SHALL be navigated to the home page (`/`). An authenticated non-admin visitor SHALL be redirected to `/`. An unauthenticated visitor SHALL be redirected to `/login`.
 
 #### Scenario: Admin submits valid creation form
 
 - **WHEN** an authenticated ADMIN fills in Name and Description and submits the form
-- **THEN** a new dictionary is created and the browser navigates to the series browse page for the new entry
+- **THEN** a new dictionary is created and the browser navigates to the home page
 
 #### Scenario: Empty name shows inline validation error
 
@@ -119,10 +123,10 @@ The system SHALL expose a frontend route at `/series/new`, accessible only to au
 - **WHEN** the ADMIN submits the creation form with an empty Description field
 - **THEN** a validation error is shown adjacent to the Description field and no API call is made
 
-#### Scenario: Non-admin is denied access
+#### Scenario: Non-admin is redirected
 
 - **WHEN** an authenticated MEMBER navigates to `/series/new`
-- **THEN** the page shows a `403 Forbidden` message
+- **THEN** the browser redirects to `/`
 
 #### Scenario: Unauthenticated visitor is redirected
 
@@ -131,7 +135,7 @@ The system SHALL expose a frontend route at `/series/new`, accessible only to au
 
 ### Requirement: Update Dictionary Page
 
-The system SHALL expose a frontend route at `/series/:slug/edit`, accessible only to authenticated administrators, that presents a pre-populated form for updating the dictionary's Name and Description. On successful submission the user SHALL remain on the edit page (or be redirected to the series browse page). API errors SHALL be surfaced to the user with the problem `title`. Non-admin visitors SHALL be redirected or shown a `403 Forbidden` message. Unauthenticated visitors SHALL be redirected to `/login`.
+The system SHALL expose a frontend route at `/series/:slug/edit`, accessible only to authenticated administrators, that presents a form pre-populated with the dictionary's current Name and Description. On successful submission the user SHALL be navigated to the home page (`/`). API errors SHALL be surfaced to the user with the problem `title`. If the slug does not resolve to a dictionary the page SHALL render a not-found message rather than a form. An authenticated non-admin visitor SHALL be redirected to `/`. An unauthenticated visitor SHALL be redirected to `/login`.
 
 #### Scenario: Edit page pre-fills existing values
 
@@ -141,17 +145,17 @@ The system SHALL expose a frontend route at `/series/:slug/edit`, accessible onl
 #### Scenario: Admin submits valid update
 
 - **WHEN** an ADMIN modifies the Name or Description and submits the form
-- **THEN** the changes are saved and the page reflects the updated values
+- **THEN** the changes are saved and the browser navigates to the home page
 
-#### Scenario: Unknown slug shows 404
+#### Scenario: Unknown slug shows a not-found message
 
 - **WHEN** an ADMIN navigates to `/series/nonexistent-slug/edit`
-- **THEN** the page renders a not-found message
+- **THEN** the page renders a not-found message instead of an editable form
 
-#### Scenario: Non-admin is denied access
+#### Scenario: Non-admin is redirected
 
 - **WHEN** an authenticated MEMBER navigates to `/series/:slug/edit`
-- **THEN** the page shows a `403 Forbidden` message
+- **THEN** the browser redirects to `/`
 
 #### Scenario: Unauthenticated visitor is redirected
 

@@ -2,12 +2,12 @@
 
 ### Requirement: User Registration
 
-The system SHALL allow a visitor to create a new account by supplying a unique Username, a unique Email address, a Reason for Joining, and a password that meets complexity requirements, subject to Cloudflare Turnstile verification when Turnstile is enabled. On success the system SHALL create the account with approval status Pending, establish an authenticated session, and return the new user's profile. The client SHALL NOT be able to specify or influence the account's role or approval status at registration — the server SHALL explicitly assign role `MEMBER` and approval status `PENDING` regardless of request body contents.
+The system SHALL allow a visitor to create a new account by supplying a unique Username, a unique Email address, a Reason for Joining, and a password that meets complexity requirements, subject to Cloudflare Turnstile verification when Turnstile is enabled. Username and Email uniqueness SHALL both be enforced case-insensitively. On success the system SHALL create the account with approval status `PENDING` and role `MEMBER` — the client SHALL NOT be able to specify or influence either, regardless of request body contents — send a verification email to the supplied address, and return the new user's profile. The system SHALL NOT establish an authenticated session at registration time; the account cannot be used to log in until its email address has been verified.
 
 #### Scenario: Successful registration
 
 - **WHEN** a POST request is sent to `/api/auth/register` with a valid `{ username, email, reasonForJoining, password }` body (and a valid Turnstile token, when Turnstile is enabled)
-- **THEN** the system creates a User record with approval status `PENDING` and role `MEMBER`, stores an Argon2id hash of the password, opens a signed HTTP-only session cookie, and returns `201` with `{ id, email, username, role, approvalStatus, createdAt }`
+- **THEN** the system creates a User record with approval status `PENDING` and role `MEMBER`, stores an Argon2id hash of the password, sends a verification email to the supplied address, does NOT open a session cookie, and returns `201` with `{ id, email, username, role, approvalStatus, createdAt }`
 
 #### Scenario: Duplicate email rejected
 
@@ -61,16 +61,16 @@ The system SHALL allow a visitor to create a new account by supplying a unique U
 
 ### Requirement: User Login
 
-The system SHALL allow a registered, active user to authenticate using either their Username or their Email address (a single identifier field), matched case-insensitively against both, together with their password. On success the system SHALL establish a session and return the user's profile. A registered user whose account is disabled (`isActive = false`) SHALL NOT be able to authenticate; the system SHALL return `403 Forbidden` with an RFC 9457 problem body whose `type` is distinct from the generic invalid-credentials error. All other authentication failures — unknown identifier or wrong password — SHALL return the same generic message, regardless of which case applies or whether the identifier matched a username or an email.
+The system SHALL allow a registered, active, email-verified user to authenticate using either their Username or their Email address (a single identifier field), matched case-insensitively against both, together with their password. On success the system SHALL establish a session and return the user's profile. A registered user whose account is disabled (`isActive = false`) SHALL NOT be able to authenticate; the system SHALL return `403 Forbidden` with an RFC 9457 problem body whose `type` is distinct from the generic invalid-credentials error. A registered user whose email address has not been verified SHALL likewise NOT be able to authenticate, rejected with `403 Forbidden` and a `type` distinct from both the invalid-credentials error and the disabled-account error. All other authentication failures — unknown identifier or wrong password — SHALL return the same generic message, regardless of which case applies or whether the identifier matched a username or an email.
 
 #### Scenario: Successful login with username
 
-- **WHEN** a POST request is sent to `/api/auth/login` with `{ identifier: <username>, password }` matching a stored, active user
+- **WHEN** a POST request is sent to `/api/auth/login` with `{ identifier: <username>, password }` matching a stored, active, email-verified user
 - **THEN** the system opens a signed HTTP-only session cookie and returns `200` with `{ id, email, username, role, approvalStatus, createdAt }`
 
 #### Scenario: Successful login
 
-- **WHEN** a POST request is sent to `/api/auth/login` with `{ identifier: <email>, password }` matching a stored, active user
+- **WHEN** a POST request is sent to `/api/auth/login` with `{ identifier: <email>, password }` matching a stored, active, email-verified user
 - **THEN** the system opens a signed HTTP-only session cookie and returns `200` with the user's profile
 
 #### Scenario: Successful login with email in a different case
@@ -103,6 +103,11 @@ The system SHALL allow a registered, active user to authenticate using either th
 - **WHEN** a POST request is sent to `/api/auth/login` with valid credentials for a user whose `isActive` is `false`
 - **THEN** the system returns `403 Forbidden` with an RFC 9457 problem body and does NOT open a session
 
+#### Scenario: Unverified email rejected at login
+
+- **WHEN** a POST request is sent to `/api/auth/login` with valid credentials for a user whose email address has not been verified
+- **THEN** the system returns `403 Forbidden` with an RFC 9457 problem body distinct from the disabled-account error, and does NOT open a session
+
 #### Scenario: Login rate limit exceeded
 
 - **WHEN** more than 10 login requests originate from the same IP address within a rolling 15-minute window
@@ -110,7 +115,7 @@ The system SHALL allow a registered, active user to authenticate using either th
 
 ### Requirement: Combined Login/Registration Page
 
-The front-end SHALL expose a single `/login` route that presents both a Sign In form and a Register form accessible via a tab toggle. The active tab SHALL be controllable via the URL query parameter `?mode=login` (default) or `?mode=register`. The Sign In form's identifier field SHALL be labeled "Username or Email". The Register form SHALL include Username and Reason for Joining fields in addition to the existing fields, and SHALL render a Cloudflare Turnstile widget when Turnstile is enabled.
+The front-end SHALL expose a single `/login` route that presents both a Sign In form and a Register form accessible via a tab toggle. The active tab SHALL be controllable via the URL query parameter `?mode=login` (default), `?mode=register`, or `?mode=forgot-password`. The Sign In form's identifier field SHALL be labeled "Username or Email". The Sign In form SHALL include a "Forgot Password?" link that navigates to `?mode=forgot-password`, replacing the tabbed Sign In/Register content with a single form asking for the user's username or email address. The Register form SHALL include Username and Reason for Joining fields in addition to Email and Password, and SHALL render a Cloudflare Turnstile widget when Turnstile is enabled.
 
 #### Scenario: Default tab is Sign In
 
@@ -147,25 +152,40 @@ The front-end SHALL expose a single `/login` route that presents both a Sign In 
 - **WHEN** the Sign In form is submitted with valid credentials
 - **THEN** the user is redirected to `/` after the session is established
 
-#### Scenario: Successful registration redirects home
+#### Scenario: Successful registration shows a check-your-email confirmation
 
-- **WHEN** the Register form is submitted with all valid fields and the server confirms the account was created
-- **THEN** the user is redirected to `/` after the session is established, and a toast is displayed reading "Your registration request has been submitted and is awaiting administrator approval."
+- **WHEN** the Register form is submitted with all valid fields
+- **THEN** the page does not navigate away and instead shows a confirmation that a verification email was sent, with an action to resend it
+
+#### Scenario: Login blocked on an unverified account shows a resend action
+
+- **WHEN** the Sign In form is submitted with credentials for an account whose email has not been verified
+- **THEN** the page shows a distinct message explaining that verification is required, with an action to resend the verification email using the identifier already entered
 
 #### Scenario: Confirm-password mismatch
 
-- **WHEN** the Register form is submitted with `password` and `confirmPassword` values that differ
-- **THEN** a validation error is displayed adjacent to the `confirmPassword` field before the request is sent to the API
+- **WHEN** the Register form's Confirm Password field has content that does not match the current value of the Password field
+- **THEN** a mismatch indicator is displayed adjacent to the Confirm Password field immediately, live as the values differ, without requiring a submit attempt
+
+#### Scenario: Confirm-password mismatch clears once the values match
+
+- **WHEN** the Register form's Confirm Password field is edited so that it now matches the current value of the Password field
+- **THEN** the mismatch indicator is no longer displayed
 
 #### Scenario: Password rule violations shown inline
 
-- **WHEN** the Register form is submitted with a password that violates the complexity rules
-- **THEN** the specific rule violation(s) are displayed adjacent to the password field before the request is sent to the API
+- **WHEN** the Register form's Password field has content that violates one or more complexity rules
+- **THEN** each violated rule is shown as unsatisfied in the password requirement checklist beneath the field, live as the user types, without requiring a submit attempt (see the Password Requirement Checklist requirement for the checklist's own behavior)
 
 #### Scenario: Authenticated user visiting /login
 
 - **WHEN** a user who already has an active session navigates to `/login`
 - **THEN** the page redirects them to `/` without displaying any form
+
+#### Scenario: Forgot Password link navigates to the request form
+
+- **WHEN** a user on the Sign In form clicks "Forgot Password?"
+- **THEN** the page navigates to `/login?mode=forgot-password` and shows a form asking for username or email, replacing the Sign In/Register tabs
 
 ## ADDED Requirements
 

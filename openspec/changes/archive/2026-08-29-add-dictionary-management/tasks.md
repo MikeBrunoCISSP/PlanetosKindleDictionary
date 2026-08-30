@@ -1,3 +1,11 @@
+> **Pre-archive reconciliation (2026-08-29).** All implementation tasks below were completed.
+> Before archiving, the spec deltas were reconciled against the current spec tree: the
+> `navigation/global-nav` delta was dropped (superseded by `navigation/app-menu` +
+> `navigation/route-guards`), and `series/management` was rewritten as
+> `dictionary-management/series-crud` to match shipped behavior (plain-text length caps,
+> non-admin redirect to `/`, post-submit navigation to `/`). SPEC.md was updated to state
+> series creation/editing is admin-only.
+
 ## 1. Database Schema
 
 - [x] 1.1 Add `createdById String?` and `createdBy User? @relation(fields: [createdById], references: [id], onDelete: SetNull)` to the `Series` model in `apps/api/prisma/schema.prisma`; add the inverse `createdSeries Series[]` relation to `User`; verify `pnpm --filter api prisma validate` passes with no errors
