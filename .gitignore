@@ -13,3 +13,7 @@ node_modules
 *.cookie-jar
 *.cookies
 cookies/
+
+# AI
+.claude/
+.codex/
