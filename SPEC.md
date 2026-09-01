@@ -84,7 +84,20 @@ build. An untouched dictionary is never rebuilt.
   Bull Board provides the same dashboard experience)*
 - Argon2id password hashing (`@node-rs/argon2`)
 - Sessions: HTTP-only, `SameSite=Lax`, signed cookies backed by Redis
-- Object storage: S3-compatible (MinIO locally, S3/R2 in prod) for build outputs
+- Object storage: S3-compatible (MinIO locally, a Railway bucket — or any
+  S3/R2 — in prod) for build outputs
+
+**Deployment** — Railway, from GitHub (see `infra/railway/README.md`):
+
+- One public `app` service runs the Fastify API, which also serves the built
+  SPA from the same origin (`@fastify/static` + an SPA history fallback), so the
+  browser makes only same-origin `/api` calls — no CORS, no cross-site cookies,
+  no build-time API URL.
+- A private `worker` service runs `apps/api`'s worker entrypoint.
+- Managed Postgres + Redis + a bucket, all in one Railway project.
+- The whole project graph is source-controlled in `.railway/railway.ts`
+  (Railway TypeScript IaC); `prisma migrate deploy` runs as the `app` service's
+  pre-deploy step.
 
 **Frontend**
 
@@ -105,7 +118,10 @@ build. An untouched dictionary is never rebuilt.
   /shared     zod schemas, DTO types, constants shared by api/web
   /kindle     dictionary generator library (pure, no I/O) — see §5
 /infra
-  docker-compose.yml   postgres + redis + minio for local dev
+  docker-compose.yml   postgres + redis + minio + mailpit for local dev
+  railway/README.md     production deployment runbook
+/.railway
+  railway.ts            Railway project graph (services, DBs, bucket, wiring)
 ```
 
 `packages/kindle` must have **no dependency on Prisma, Fastify, or the
@@ -769,21 +785,38 @@ pnpm --filter api seed                              # 2 series, ~50 entries
 pnpm dev                                            # api :3000, worker, web :5173
 ```
 
-`.env` (see `.env.example`):
+`.env` (see `.env.example` for the annotated, authoritative list):
 
 ```
-DATABASE_URL=postgresql://…
-REDIS_URL=redis://localhost:6379
-SESSION_SECRET=…
-SETTINGS_ENCRYPTION_KEY=…        # AES-256-GCM key for encrypted-at-rest admin settings (Turnstile Secret Key)
-S3_ENDPOINT=http://localhost:9000
-S3_BUCKET=dictionaries
-S3_ACCESS_KEY_ID=…
-S3_SECRET_ACCESS_KEY=…
-PUBLIC_BASE_URL=http://localhost:5173
-SMTP_URL=…                # verification + password reset
-BUILD_CRON=0 * * * *      # override for local testing
+# [R] = wired automatically by .railway/railway.ts in production
+# [O] = operator-set as a Railway variable in production
+# [L] = local dev only (prod default is fine)
+DATABASE_URL=postgresql://…                      # [R] managed Postgres
+REDIS_URL=redis://localhost:6379                 # [R] managed Redis
+NODE_ENV=development                             # [R] "production" on Railway
+PORT=3000                                        # [R] injected by Railway
+SESSION_SECRET=…                                 # [O] ≥32 random chars
+SETTINGS_ENCRYPTION_KEY=…                        # [O] ≥32 chars; AES-256-GCM key for
+                                                #     encrypted-at-rest admin settings
+                                                #     (Turnstile Secret Key). Must match
+                                                #     on app + worker; never rotate.
+S3_ENDPOINT=http://localhost:9000               # [O] from `railway bucket credentials`
+S3_BUCKET=dictionaries                           # [O]
+S3_REGION=us-east-1                              # [O]
+S3_ACCESS_KEY_ID=…                               # [O]
+S3_SECRET_ACCESS_KEY=…                           # [O]
+PUBLIC_BASE_URL=http://localhost:5173            # [R] app's public origin; [O] only to
+                                                #     override for a custom domain
+SMTP_URL=…                                       # [O] verification + password reset;
+                                                #     Railway has no managed email
+BUILD_CRON=0 * * * *                             # [L] override for local testing
+ADMIN_EMAIL=…                                    # [O] seeded admin (see §11 / runbook)
+ADMIN_PASSWORD=…                                 # [O] ≥8 chars, mixed case + digit
 ```
+
+**Production deployment** is on Railway from GitHub — see
+`infra/railway/README.md` for the full runbook and `.railway/railway.ts` for
+the project graph.
 
 Conventions: ESLint + Prettier, `pnpm typecheck` clean before commit, Conventional
 Commits, no `any` outside `.d.ts` shims.

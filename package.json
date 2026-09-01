@@ -2,14 +2,20 @@
   "name": "planetos",
   "private": true,
   "scripts": {
-    "dev": "pnpm --parallel --filter \"./apps/*\" dev",
-    "build": "pnpm --recursive --filter \"./packages/*\" build && pnpm --recursive --filter \"./apps/*\" build",
-    "typecheck": "pnpm --recursive typecheck",
+    "build:packages": "pnpm --recursive --filter \"./packages/*\" build",
+    "dev": "pnpm run build:packages && pnpm --parallel --filter \"./packages/*\" --filter \"./apps/*\" dev",
+    "build": "pnpm run build:packages && pnpm --recursive --filter \"./apps/*\" build",
+    "build:railway": "pnpm run build:packages && pnpm --filter @planetos/api exec prisma generate && pnpm --filter @planetos/web build && pnpm --filter @planetos/api build",
+    "typecheck": "pnpm run build:packages && pnpm --recursive typecheck && pnpm run typecheck:railway",
+    "typecheck:railway": "pnpm --filter @planetos/api exec tsc --noEmit -p ../../.railway/tsconfig.json",
     "lint": "pnpm --recursive lint",
-    "test": "pnpm --recursive test"
+    "test": "pnpm run build:packages && pnpm --recursive test"
   },
   "engines": {
     "node": ">=22.0.0",
     "pnpm": ">=9.0.0"
+  },
+  "devDependencies": {
+    "railway": "^3.11.0"
   }
 }

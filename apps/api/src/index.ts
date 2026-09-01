@@ -1,8 +1,10 @@
 import { config } from "dotenv";
 import { join, dirname } from "path";
 import { fileURLToPath } from "url";
+import { readFileSync } from "node:fs";
 config({ path: join(dirname(fileURLToPath(import.meta.url)), "../../../.env") });
 import Fastify from "fastify";
+import fastifyStatic from "@fastify/static";
 import { PrismaClient } from "@prisma/client";
 import { createBullBoard } from "@bull-board/api";
 import { BullMQAdapter } from "@bull-board/api/bullMQAdapter";
@@ -23,6 +25,7 @@ import entryEditProposalRoutes from "./routes/entryEditProposals.js";
 import downloadsRoutes from "./routes/downloads.js";
 import { ensureBucketExists } from "./lib/storage.js";
 import { getDictionaryBuildQueue, getMaintenanceQueue } from "./lib/queues.js";
+import { resolveWebDist } from "./lib/staticSite.js";
 
 const prisma = new PrismaClient();
 const app = Fastify({ logger: true });
@@ -59,6 +62,35 @@ await app.register(async (adminJobsApp) => {
 });
 
 app.get("/health", async () => ({ status: "ok" }));
+
+// Serve the built web SPA from the same origin as the API (see
+// openspec deployment/railway). Registered last so every explicit API
+// route, Bull Board, and /health win; the SPA only owns what's left.
+// Absent in dev (`pnpm dev:api`) and in tests, which never build the web app.
+const webDist = resolveWebDist();
+if (webDist) {
+  await app.register(fastifyStatic, { root: webDist.root, wildcard: false });
+  const spaIndexHtml = readFileSync(webDist.indexHtml, "utf8");
+  app.setNotFoundHandler((request, reply) => {
+    const path = request.url.split("?", 1)[0] ?? "";
+    const isServerPath =
+      path === "/api" ||
+      path.startsWith("/api/") ||
+      path === "/admin" ||
+      path.startsWith("/admin/") ||
+      path === "/health";
+    if (request.method === "GET" && !isServerPath) {
+      // Client-side route (or a hard refresh of one): hand back the SPA shell.
+      return reply.code(200).type("text/html").send(spaIndexHtml);
+    }
+    return reply
+      .code(404)
+      .header("content-type", "application/problem+json")
+      .send({ type: "about:blank", title: "Not Found", status: 404 });
+  });
+} else {
+  app.log.warn("apps/web/dist not found - the API will not serve the SPA (expected in dev/test)");
+}
 
 await ensureBucketExists();
 

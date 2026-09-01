@@ -2,8 +2,11 @@ node_modules
 .tanstack
 .env
 
-# Compiled API/worker output (built fresh on deploy; see DEPLOYMENT.md)
+# Compiled output — every entry point (pnpm dev / build / build:railway /
+# typecheck / test) rebuilds packages/*/dist first via `pnpm run build:packages`
 /apps/api/dist/
+/apps/web/dist/
+/packages/*/dist/
 
 *.log
 .playwright-mcp/

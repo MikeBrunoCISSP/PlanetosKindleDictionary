@@ -69,3 +69,19 @@ Edit `ADMIN_EMAIL` / `ADMIN_PASSWORD` in `.env`, then re-run:
 ```bash
 pnpm --filter api seed
 ```
+
+---
+
+## Production deployment
+
+The app deploys to [Railway](https://railway.com) from GitHub: one public
+service runs the API and serves the built SPA from the same origin, a private
+service runs the worker, and Railway hosts Postgres, Redis, and the object
+storage bucket.
+
+- **Runbook:** [`infra/railway/README.md`](infra/railway/README.md) — account
+  setup, `railway config apply`, secrets, first migrate + seed, custom domain.
+- **Project graph:** [`.railway/railway.ts`](.railway/railway.ts) — services,
+  databases, bucket, and variable wiring as code.
+- **Build:** `pnpm run build:railway` builds every package, generates the Prisma
+  client, and builds both apps.
