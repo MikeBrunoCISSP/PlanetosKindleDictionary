@@ -1,14 +1,12 @@
 import { createTransport, type Transporter } from "nodemailer";
+import { config } from "../config.js";
 
-// Reading process.env and constructing the transporter is deferred to first
-// use (not module top-level): in an ESM entry point, static imports are
-// resolved and evaluated before the importing module's own top-level code
-// runs, so a top-level `process.env` read here would run before
-// index.ts's own `dotenv.config()` call takes effect.
+// The transporter is created lazily so importing this module doesn't open
+// an SMTP connection until the first email is actually sent.
 let transporter: Transporter | undefined;
 
 function getTransporter(): Transporter {
-  transporter ??= createTransport(process.env["SMTP_URL"] ?? "smtp://localhost:1025");
+  transporter ??= createTransport(config.smtpUrl);
   return transporter;
 }
 

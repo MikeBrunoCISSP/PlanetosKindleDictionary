@@ -814,6 +814,15 @@ ADMIN_EMAIL=…                                    # [O] seeded admin (see §11 
 ADMIN_PASSWORD=…                                 # [O] ≥8 chars, mixed case + digit
 ```
 
+**Configuration validation.** `apps/api/src/config.ts` parses `process.env`
+once at startup. Unless `NODE_ENV` is exactly `development` or `test`, the API
+and worker run **strict** validation and exit non-zero before serving if any
+required value is missing, a secret is weak or a known placeholder, or a URL is
+malformed / points at localhost — so `NODE_ENV=development` must be set locally
+(it is, in `.env.example`). No other module reads these values from
+`process.env`. The production required set is the operator checklist in
+`infra/railway/README.md`.
+
 **Production deployment** is on Railway from GitHub — see
 `infra/railway/README.md` for the full runbook and `.railway/railway.ts` for
 the project graph.

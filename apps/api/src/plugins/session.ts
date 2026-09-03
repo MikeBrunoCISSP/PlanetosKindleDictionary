@@ -4,6 +4,7 @@ import fastifyCookie from "@fastify/cookie";
 import fastifySession from "@fastify/session";
 import { RedisStore } from "connect-redis";
 import { Redis } from "ioredis";
+import { config } from "../config.js";
 
 declare module "@fastify/session" {
   interface FastifySessionObject {
@@ -12,16 +13,16 @@ declare module "@fastify/session" {
 }
 
 const sessionPlugin: FastifyPluginAsync = async (fastify) => {
-  const redis = new Redis(process.env["REDIS_URL"] ?? "redis://localhost:6379");
+  const redis = new Redis(config.redisUrl);
   const store = new RedisStore({ client: redis as never });
 
   await fastify.register(fastifyCookie);
   await fastify.register(fastifySession, {
-    secret: process.env["SESSION_SECRET"] ?? "fallback-dev-secret-change-in-production-32c",
+    secret: config.sessionSecret,
     cookie: {
       httpOnly: true,
       sameSite: "lax",
-      secure: process.env["NODE_ENV"] === "production",
+      secure: config.isProduction,
       maxAge: 7 * 24 * 60 * 60 * 1000,
     },
     store: store as never,

@@ -8,34 +8,30 @@ import {
   CreateBucketCommand,
 } from "@aws-sdk/client-s3";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
+import { config } from "../config.js";
 
-// Reading process.env and constructing the client is deferred to first use
-// (not module top-level): in an ESM entry point, static imports are
-// resolved and evaluated before the importing module's own top-level code
-// runs, so a top-level `process.env` read here would run before
-// index.ts's own `dotenv.config()` call takes effect.
+// The S3 client is created lazily so importing this module doesn't
+// construct a client until the first object operation.
 let client: S3Client | undefined;
-let bucketName: string | undefined;
 
 function getBucket(): string {
-  bucketName ??= process.env["S3_BUCKET"] ?? "dictionaries";
-  return bucketName;
+  return config.s3.bucket;
 }
 
 function getClient(): S3Client {
   if (client) return client;
 
-  const endpoint = process.env["S3_ENDPOINT"];
+  const endpoint = config.s3.endpoint;
   // endpoint set => talking to MinIO (or another self-hosted S3-compatible
   // service) locally, which requires path-style addressing; unset => real
   // AWS S3 or a cloud provider using standard virtual-hosted addressing.
   client = new S3Client({
     ...(endpoint ? { endpoint } : {}),
     forcePathStyle: Boolean(endpoint),
-    region: process.env["S3_REGION"] ?? "us-east-1",
+    region: config.s3.region,
     credentials: {
-      accessKeyId: process.env["S3_ACCESS_KEY_ID"] ?? "",
-      secretAccessKey: process.env["S3_SECRET_ACCESS_KEY"] ?? "",
+      accessKeyId: config.s3.accessKeyId,
+      secretAccessKey: config.s3.secretAccessKey,
     },
   });
   return client;

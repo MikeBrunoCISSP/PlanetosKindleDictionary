@@ -1,7 +1,5 @@
-import { config } from "dotenv";
-import { join, dirname } from "path";
-import { fileURLToPath } from "url";
-config({ path: join(dirname(fileURLToPath(import.meta.url)), "../../../.env") });
+import "./load-env.js";
+import { config, assertConfigValid } from "./config.js";
 
 import { Worker, type Job } from "bullmq";
 import { PrismaClient } from "@prisma/client";
@@ -10,6 +8,16 @@ import { ensureBucketExists, putObject, deleteObjects } from "./lib/storage.js";
 import { processDictionaryBuild } from "./jobs/build.js";
 import { pruneOldBuilds } from "./jobs/prune.js";
 import { runSweep } from "./jobs/sweep.js";
+
+// Fail fast on missing/invalid production configuration before the worker
+// registers with any queue (finding PROD-002). Validates only what the
+// worker uses (queues + storage + Prisma). No-op in development / test.
+try {
+  assertConfigValid("worker");
+} catch (err) {
+  console.error(err instanceof Error ? err.message : String(err));
+  process.exit(1);
+}
 
 const prisma = new PrismaClient();
 
@@ -59,7 +67,7 @@ const maintenanceWorker = new Worker(
 // duplicate repeatable job (SPEC.md §7 "The hourly sweep").
 await dictionaryBuildQueue.upsertJobScheduler(
   "sweep-changed-series",
-  { pattern: process.env["BUILD_CRON"] ?? "0 * * * *" },
+  { pattern: config.buildCron },
   { name: "sweep-changed-series", data: {} }
 );
 

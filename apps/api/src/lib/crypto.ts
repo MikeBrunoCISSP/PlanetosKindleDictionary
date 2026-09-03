@@ -1,17 +1,15 @@
 import { createCipheriv, createDecipheriv, createHash, randomBytes } from "node:crypto";
+import { config } from "../config.js";
 
 const ALGORITHM = "aes-256-gcm";
 const IV_LENGTH = 12;
 const AUTH_TAG_LENGTH = 16;
 
+// `config.settingsEncryptionKey` is validated at startup (min 32 chars,
+// no placeholder) in strict mode; in development it is whatever `.env`
+// supplies. AES-256 needs a 32-byte key, so we derive one via SHA-256.
 function getKey(): Buffer {
-  const secret = process.env["SETTINGS_ENCRYPTION_KEY"];
-  if (!secret || secret.length < 32) {
-    throw new Error(
-      "SETTINGS_ENCRYPTION_KEY must be set to a random string of at least 32 characters."
-    );
-  }
-  return createHash("sha256").update(secret).digest();
+  return createHash("sha256").update(config.settingsEncryptionKey).digest();
 }
 
 /** Encrypts `plaintext` with AES-256-GCM, packing IV + auth tag + ciphertext into one base64 string. */

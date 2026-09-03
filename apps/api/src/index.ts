@@ -1,8 +1,6 @@
-import { config } from "dotenv";
-import { join, dirname } from "path";
-import { fileURLToPath } from "url";
+import "./load-env.js";
 import { readFileSync } from "node:fs";
-config({ path: join(dirname(fileURLToPath(import.meta.url)), "../../../.env") });
+import { config, assertConfigValid } from "./config.js";
 import Fastify from "fastify";
 import fastifyStatic from "@fastify/static";
 import { PrismaClient } from "@prisma/client";
@@ -26,6 +24,15 @@ import downloadsRoutes from "./routes/downloads.js";
 import { ensureBucketExists } from "./lib/storage.js";
 import { getDictionaryBuildQueue, getMaintenanceQueue } from "./lib/queues.js";
 import { resolveWebDist } from "./lib/staticSite.js";
+
+// Fail fast on missing/invalid production configuration before anything is
+// constructed (finding PROD-002). No-op in NODE_ENV=development / test.
+try {
+  assertConfigValid();
+} catch (err) {
+  console.error(err instanceof Error ? err.message : String(err));
+  process.exit(1);
+}
 
 const prisma = new PrismaClient();
 const app = Fastify({ logger: true });
@@ -94,5 +101,4 @@ if (webDist) {
 
 await ensureBucketExists();
 
-const port = Number(process.env["PORT"] ?? 3000);
-await app.listen({ port, host: "0.0.0.0" });
+await app.listen({ port: config.port, host: "0.0.0.0" });

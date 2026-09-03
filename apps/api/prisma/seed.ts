@@ -1,13 +1,11 @@
-import { config } from "dotenv";
-import { join, dirname } from "path";
-import { fileURLToPath } from "url";
+import "../src/load-env.js";
 import { PrismaClient } from "@prisma/client";
 import { hash } from "@node-rs/argon2";
 import { passwordSchema, normalizeWord } from "@planetos/shared";
 
-// Load .env from repo root when running directly (apps/api is 2 levels down)
-const __dirname = dirname(fileURLToPath(import.meta.url));
-config({ path: join(__dirname, "../../../.env") });
+// The sample value shipped in .env.example - never acceptable as a real
+// administrator password.
+const PLACEHOLDER_ADMIN_PASSWORDS = new Set(["ChangeMe1!"]);
 
 const prisma = new PrismaClient();
 
@@ -17,6 +15,11 @@ async function main() {
 
   if (!email || !password) {
     console.error("ADMIN_EMAIL and ADMIN_PASSWORD must be set in the environment.");
+    process.exit(1);
+  }
+
+  if (PLACEHOLDER_ADMIN_PASSWORDS.has(password)) {
+    console.error("ADMIN_PASSWORD is the .env.example placeholder - choose a real password.");
     process.exit(1);
   }
 

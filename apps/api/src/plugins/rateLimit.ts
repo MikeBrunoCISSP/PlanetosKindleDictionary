@@ -2,9 +2,10 @@ import fp from "fastify-plugin";
 import type { FastifyPluginAsync } from "fastify";
 import fastifyRateLimit from "@fastify/rate-limit";
 import { Redis } from "ioredis";
+import { config } from "../config.js";
 
 const rateLimitPlugin: FastifyPluginAsync = async (fastify) => {
-  const redis = new Redis(process.env["REDIS_URL"] ?? "redis://localhost:6379");
+  const redis = new Redis(config.redisUrl);
 
   await fastify.register(fastifyRateLimit, {
     global: false,

@@ -1,16 +1,16 @@
 import { Queue } from "bullmq";
 import { Redis } from "ioredis";
+import { config } from "../config.js";
 
-// Lazily initialized for the same reason as apps/api/src/lib/storage.ts:
-// a module-top-level process.env read in an ESM module can run before
-// index.ts's/worker.ts's own dotenv.config() call takes effect.
+// Connection/queues are created lazily so merely importing this module
+// (e.g. from a route in a test) doesn't open a Redis connection.
 let connection: Redis | undefined;
 let dictionaryBuildQueue: Queue | undefined;
 let maintenanceQueue: Queue | undefined;
 
 function getConnection(): Redis {
   // BullMQ requires maxRetriesPerRequest: null on the ioredis connection it's given.
-  connection ??= new Redis(process.env["REDIS_URL"] ?? "redis://localhost:6379", {
+  connection ??= new Redis(config.redisUrl, {
     maxRetriesPerRequest: null,
   });
   return connection;

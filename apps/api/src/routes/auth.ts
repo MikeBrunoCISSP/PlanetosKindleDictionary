@@ -24,6 +24,7 @@ import {
 import { decrypt } from "../lib/crypto.js";
 import { verify as verifyTurnstile } from "../lib/turnstile.js";
 import { sendPasswordResetEmail, sendVerificationEmail } from "../lib/mailer.js";
+import { config } from "../config.js";
 
 const RESET_TOKEN_TTL_MS = 60 * 60 * 1000;
 const VERIFICATION_TOKEN_TTL_MS = 24 * 60 * 60 * 1000;
@@ -146,7 +147,7 @@ const authRoutes: FastifyPluginAsync<{ prisma: PrismaClient }> = async (fastify,
         },
       });
 
-      const baseUrl = process.env["PUBLIC_BASE_URL"] ?? "http://localhost:5173";
+      const baseUrl = config.publicBaseUrl;
       const verifyUrl = `${baseUrl}/verify-email?token=${rawToken}`;
       await sendVerificationEmail(user.email, verifyUrl);
 
@@ -233,7 +234,7 @@ const authRoutes: FastifyPluginAsync<{ prisma: PrismaClient }> = async (fastify,
           },
         });
 
-        const baseUrl = process.env["PUBLIC_BASE_URL"] ?? "http://localhost:5173";
+        const baseUrl = config.publicBaseUrl;
         const resetUrl = `${baseUrl}/reset-password?token=${rawToken}`;
         await sendPasswordResetEmail(user.email, resetUrl);
       }
@@ -335,7 +336,7 @@ const authRoutes: FastifyPluginAsync<{ prisma: PrismaClient }> = async (fastify,
           },
         });
 
-        const baseUrl = process.env["PUBLIC_BASE_URL"] ?? "http://localhost:5173";
+        const baseUrl = config.publicBaseUrl;
         const verifyUrl = `${baseUrl}/verify-email?token=${rawToken}`;
         await sendVerificationEmail(user.email, verifyUrl);
       }
