@@ -100,6 +100,10 @@ build. An untouched dictionary is never rebuilt.
   browser makes only same-origin `/api` calls — no CORS, no cross-site cookies,
   no build-time API URL.
 - A private `worker` service runs `apps/api`'s worker entrypoint.
+- Database migrations run as a pre-deploy step gating both the `app` and
+  `worker` deploys, so neither serves traffic/consumes jobs against a
+  pending schema change — see `infra/railway/README.md` §7 for the
+  migration-authoring, rollback, and backup rules.
 - Managed Postgres + Redis + a bucket, all in one Railway project.
 - The whole project graph is source-controlled in `.railway/railway.ts`
   (Railway TypeScript IaC); `prisma migrate deploy` runs as the `app` service's

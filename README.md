@@ -41,6 +41,10 @@ pnpm --filter api prisma migrate deploy
 
 Applies all pending migrations to Postgres. Use `migrate deploy` (not `migrate dev`) so it doesn't generate new migration files.
 
+In production this runs automatically as a Railway pre-deploy step on both
+the `app` and `worker` services — no manual command needed there. See
+`infra/railway/README.md` §7.
+
 ### 5. Seed the admin account
 
 ```bash

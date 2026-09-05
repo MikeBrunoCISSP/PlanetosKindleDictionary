@@ -63,8 +63,12 @@ export default defineRailway(() => {
     },
     start: "pnpm --filter @planetos/api start",
     // Applied before the new version receives traffic; a failure fails the
-    // deploy and leaves the previous version serving. On the app only - never
-    // the worker - so two services never run `migrate deploy` concurrently.
+    // deploy and leaves the previous version serving. Also set on `worker`
+    // below - `migrate deploy` is idempotent against the shared migration
+    // history, so whichever service's deploy gets here first does the real
+    // work and the other finds nothing pending. This closes the gap where
+    // the worker could start consuming jobs against a schema the API's
+    // migration hasn't applied yet (openspec: deployment/railway).
     preDeploy: "pnpm --filter @planetos/api exec prisma migrate deploy",
     healthcheckPath: "/health",
     env: {
@@ -109,6 +113,9 @@ export default defineRailway(() => {
     },
     start: "pnpm --filter @planetos/api start:worker",
     // No domains[] => private service, reachable only on the project network.
+    // Gates the worker on migrations too, mirroring `app` above - see that
+    // comment for why running this from both services is safe.
+    preDeploy: "pnpm --filter @planetos/api exec prisma migrate deploy",
     env: {
       NODE_ENV: "production",
       RAILPACK_NODE_VERSION: NODE_VERSION,

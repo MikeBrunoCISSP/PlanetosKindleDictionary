@@ -172,16 +172,61 @@ Railway's S3 gateway expects.
 
 ## 7. First deploy: migrations and seed
 
-- **Migrations run automatically.** Each `app` deploy runs
-  `prisma migrate deploy` as its pre-deploy step, before the new version
-  serves traffic. A failed migration fails the deploy and leaves the previous
-  version live.
+- **Migrations run automatically, on both services.** Each `app` **and**
+  `worker` deploy runs `prisma migrate deploy` as its pre-deploy step, before
+  that service's new version serves traffic or consumes jobs. `migrate deploy`
+  is idempotent against the shared migration history, so it's safe for both
+  services to run it — whichever deploy gets there first does the real work,
+  the other finds nothing pending. A failed migration fails only that
+  service's deploy and leaves its previous version live/consuming.
 - **Seed the administrator once:**
   ```bash
   railway run --service app pnpm --filter @planetos/api seed
   ```
   Idempotent (an upsert) — safe to re-run to reset the admin password after
   changing `ADMIN_PASSWORD`.
+
+### 7.1 Writing safe migrations
+
+The API and worker deploy independently, not atomically together — after a
+push, one service can be running new code against the current schema while
+the other is still finishing its own build/migrate/deploy cycle. A migration
+that removes or narrows something the **not-yet-redeployed** service's old
+code still reads will break that service the moment the migration lands,
+even though its own code hasn't changed yet.
+
+- **Split it across two releases** when a migration would remove a column,
+  rename/narrow a column, drop a table, or remove an enum value that running
+  code might still reference. Ship a release that stops all code from
+  reading the old shape first (a plain code deploy, no migration); only in a
+  **later** release does the migration that removes it go out. Example:
+  retiring `Entry.legacyNote` — release 1 stops the API and worker from
+  reading `legacyNote` anywhere; release 2's migration drops the column.
+- **No split needed** for purely additive changes — a new nullable column, a
+  new table, a new index, a new enum value. Example: adding
+  `Entry.reviewedAt DateTime?` can ship in the same release as the code that
+  starts setting it; old and new code both tolerate the column being null.
+
+### 7.2 Rollback & backups
+
+**Rollback reverts code, not schema.** `railway redeploy` (§10) redeploys a
+previous build of a service — it does **not** undo a database migration that
+has already applied. Prisma Migrate has no automatic "down" migration. If a
+bad release included a migration, rolling the code back leaves that schema
+change in place; recovering the previous schema means restoring from a
+backup (below) or hand-writing a reversing migration.
+
+**Take a backup before any deploy that includes a schema-changing migration**,
+especially a destructive one (§7.1):
+
+1. **Enable a recurring schedule** — Railway dashboard → the `postgres`
+   service → **Backups** tab → turn on Daily (6-day retention), Weekly
+   (27-day), and/or Monthly (89-day). Multiple schedules can run at once.
+2. **Take a manual backup immediately before a risky deploy** — same Backups
+   tab → trigger an on-demand backup; wait for it to complete before pushing.
+3. **Restore** — Backups tab → pick the backup by date → **Restore**. Railway
+   stages the restored data as a new volume and keeps the original unmounted,
+   so a restore doesn't destroy the pre-restore state outright.
 
 ---
 
@@ -224,7 +269,7 @@ and the CORS origin pick it up.
 |---|---|
 | Deploy | push to `main` — `app` and `worker` rebuild automatically (scoped by their watch paths). |
 | Manual redeploy | `railway redeploy --service app --yes` |
-| Roll back | `railway deployment list --service app --json`, then redeploy the previous good deployment, or disconnect auto-deploy. |
+| Roll back | `railway deployment list --service app --json`, then redeploy the previous good deployment, or disconnect auto-deploy. Reverts code only — see §7.2 for what it doesn't undo. |
 | Logs | `railway logs --service app --lines 200` · `--build` for build logs |
 | One-off command | `railway run --service app <cmd>` |
 | Change infra | edit `.railway/railway.ts` → `railway config plan` → `railway config apply` |
