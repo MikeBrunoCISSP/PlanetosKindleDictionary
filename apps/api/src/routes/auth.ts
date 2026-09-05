@@ -149,7 +149,13 @@ const authRoutes: FastifyPluginAsync<{ prisma: PrismaClient }> = async (fastify,
 
       const baseUrl = config.publicBaseUrl;
       const verifyUrl = `${baseUrl}/verify-email?token=${rawToken}`;
-      await sendVerificationEmail(user.email, verifyUrl);
+      // Best-effort: a delivery failure must not fail registration or leave an
+      // orphaned user - the "check your email" card offers a resend.
+      try {
+        await sendVerificationEmail(user.email, verifyUrl);
+      } catch (err) {
+        request.log.error(err, "Failed to send verification email after registration");
+      }
 
       return reply.status(201).send(toUserDto(user));
     }
@@ -236,7 +242,13 @@ const authRoutes: FastifyPluginAsync<{ prisma: PrismaClient }> = async (fastify,
 
         const baseUrl = config.publicBaseUrl;
         const resetUrl = `${baseUrl}/reset-password?token=${rawToken}`;
-        await sendPasswordResetEmail(user.email, resetUrl);
+        // Best-effort: swallow send failures so the response stays identical to
+        // the non-matching-identifier path (no account-existence leak).
+        try {
+          await sendPasswordResetEmail(user.email, resetUrl);
+        } catch (err) {
+          request.log.error(err, "Failed to send password-reset email");
+        }
       }
 
       return reply.status(200).send({
@@ -338,7 +350,13 @@ const authRoutes: FastifyPluginAsync<{ prisma: PrismaClient }> = async (fastify,
 
         const baseUrl = config.publicBaseUrl;
         const verifyUrl = `${baseUrl}/verify-email?token=${rawToken}`;
-        await sendVerificationEmail(user.email, verifyUrl);
+        // Best-effort: swallow send failures so the generic response is
+        // unchanged (no account-existence leak).
+        try {
+          await sendVerificationEmail(user.email, verifyUrl);
+        } catch (err) {
+          request.log.error(err, "Failed to send verification email on resend");
+        }
       }
 
       return reply.status(200).send({

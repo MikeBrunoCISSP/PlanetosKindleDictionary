@@ -23,6 +23,9 @@ export const PLACEHOLDER_SECRETS: ReadonlySet<string> = new Set([
   "change-me-to-a-long-random-string-at-least-32-chars",
 ]);
 
+/** Sample `BREVO_API_KEY` value from .env.example — rejected in strict mode. */
+const PLACEHOLDER_BREVO_KEYS: ReadonlySet<string> = new Set(["your-brevo-api-key"]);
+
 const LOOPBACK_HOSTS: ReadonlySet<string> = new Set(["localhost", "127.0.0.1", "[::1]", "::1"]);
 
 /** Local defaults — applied only outside strict mode. Mirrors .env.example / docker-compose. */
@@ -33,6 +36,9 @@ const DEV_DEFAULTS = {
   SETTINGS_ENCRYPTION_KEY: "dev-only-settings-encryption-key-not-valid-in-prod",
   PUBLIC_BASE_URL: "http://localhost:5173",
   SMTP_URL: "smtp://localhost:1025",
+  BREVO_API_KEY: "",
+  MAIL_FROM_ADDRESS: "no-reply@localhost",
+  MAIL_FROM_NAME: "eReader Dictionaries",
   S3_ENDPOINT: "http://localhost:9000",
   S3_BUCKET: "dictionaries",
   S3_REGION: "us-east-1",
@@ -41,6 +47,10 @@ const DEV_DEFAULTS = {
   BUILD_CRON: "0 * * * *",
   PORT: "3000",
 } as const;
+
+/** Mail transports, in `.env.example` order. */
+const MAIL_TRANSPORTS = ["smtp", "brevo-api"] as const;
+export type MailTransport = (typeof MAIL_TRANSPORTS)[number];
 
 type RawEnv = Record<string, string | undefined>;
 
@@ -113,10 +123,47 @@ export function validateEnv(env: RawEnv, scope: Scope = "api"): string[] {
   requireSecret("SESSION_SECRET");
   requireSecret("SETTINGS_ENCRYPTION_KEY");
   requireUrl("PUBLIC_BASE_URL", ["http", "https"], { noLoopback: true });
-  requireUrl("SMTP_URL", ["smtp", "smtps"]);
   requireNonEmpty("S3_BUCKET");
   requireNonEmpty("S3_ACCESS_KEY_ID");
   requireNonEmpty("S3_SECRET_ACCESS_KEY");
+
+  // Mail — api scope only (the worker sends no mail). The required set
+  // depends on the selected transport.
+  if (requiredFor("MAIL_TRANSPORT", scope)) {
+    const transport = env["MAIL_TRANSPORT"];
+    if (!transport) {
+      issues.push(`MAIL_TRANSPORT — required (one of ${MAIL_TRANSPORTS.map((t) => `"${t}"`).join(", ")})`);
+    } else if (!(MAIL_TRANSPORTS as readonly string[]).includes(transport)) {
+      issues.push(`MAIL_TRANSPORT — must be one of ${MAIL_TRANSPORTS.map((t) => `"${t}"`).join(", ")}`);
+    } else if (transport === "smtp") {
+      requireUrl("SMTP_URL", ["smtp", "smtps"]);
+    } else {
+      const key = env["BREVO_API_KEY"];
+      if (!key) issues.push(`BREVO_API_KEY — required when MAIL_TRANSPORT=brevo-api`);
+      else if (PLACEHOLDER_BREVO_KEYS.has(key)) {
+        issues.push(`BREVO_API_KEY — must not be a placeholder / example value`);
+      }
+    }
+
+    const from = env["MAIL_FROM_ADDRESS"];
+    if (!from) {
+      issues.push(`MAIL_FROM_ADDRESS — required`);
+    } else {
+      const match = /^[^@\s]+@([^@\s]+\.[^@\s]+)$/.exec(from);
+      const host = match?.[1]?.toLowerCase();
+      const blocked =
+        !host ||
+        host === "localhost" ||
+        host === "127.0.0.1" ||
+        /\.(local|test|example)$/.test(host) ||
+        ["example.com", "example.org", "example.net"].includes(host);
+      if (blocked) {
+        issues.push(
+          `MAIL_FROM_ADDRESS — must be a valid address on a real public domain (not localhost / .local / .test / .example)`
+        );
+      }
+    }
+  }
 
   // Format checks for optional-but-if-set values, regardless of scope.
   const port = env["PORT"];
@@ -139,7 +186,11 @@ export interface Config {
   readonly sessionSecret: string;
   readonly settingsEncryptionKey: string;
   readonly publicBaseUrl: string;
+  readonly mailTransport: MailTransport;
   readonly smtpUrl: string;
+  readonly brevoApiKey: string;
+  readonly mailFromAddress: string;
+  readonly mailFromName: string;
   readonly s3: {
     readonly endpoint: string | undefined;
     readonly bucket: string;
@@ -178,7 +229,11 @@ export function parseEnv(env: RawEnv): Config {
     sessionSecret: secret("SESSION_SECRET"),
     settingsEncryptionKey: secret("SETTINGS_ENCRYPTION_KEY"),
     publicBaseUrl: secret("PUBLIC_BASE_URL"),
+    mailTransport: env["MAIL_TRANSPORT"] === "brevo-api" ? "brevo-api" : "smtp",
     smtpUrl: secret("SMTP_URL"),
+    brevoApiKey: secret("BREVO_API_KEY"),
+    mailFromAddress: secret("MAIL_FROM_ADDRESS"),
+    mailFromName: operational("MAIL_FROM_NAME"),
     s3: {
       endpoint: env["S3_ENDPOINT"] ?? (strict ? undefined : DEV_DEFAULTS.S3_ENDPOINT),
       bucket: secret("S3_BUCKET"),

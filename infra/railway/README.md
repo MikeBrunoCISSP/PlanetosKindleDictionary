@@ -16,8 +16,10 @@ the GitHub connection, secret values, and a domain. That's this document.
 | `redis` | ❌ private | managed | `REDIS_URL` — sessions, queues, rate-limit |
 | `dictionaries` (bucket) | ❌ private | S3-compatible | generated EPUB + source-zip artifacts |
 
-Everything runs on Railway. The **only** external dependency is SMTP —
-Railway has no managed email service (see `SMTP_URL` below).
+Everything runs on Railway. The **only** external dependency is transactional
+email — Railway has no managed email service. The app sends through
+[Brevo](https://www.brevo.com)'s HTTPS API by default (`MAIL_TRANSPORT=brevo-api`),
+which works on every Railway plan; see §5.1.
 
 ---
 
@@ -87,9 +89,10 @@ them on **both** `app` and `worker` where noted.
 |---|---|---|
 | `SESSION_SECRET` | `app` | `node -e "console.log(require('crypto').randomBytes(48).toString('base64url'))"` — ≥ 32 chars, random, secret. |
 | `SETTINGS_ENCRYPTION_KEY` | `app`, `worker` | same generator. ≥ 32 chars. Encrypts the admin-set Turnstile secret at rest — **must be identical on both services** and must never change after data is written. |
-| `SMTP_URL` | `app` | `smtp://user:pass@host:port` from an email provider — Railway has none. Options: [Resend](https://resend.com), [Postmark](https://postmarkapp.com), [Amazon SES](https://aws.amazon.com/ses/), [Mailgun](https://mailgun.com). Percent-encode `@ : /` in the user/pass. |
 | `ADMIN_EMAIL` | `app` | The email address for the seeded administrator account. |
 | `ADMIN_PASSWORD` | `app` | ≥ 8 chars, ≥ 1 uppercase, ≥ 1 lowercase, ≥ 1 digit. Used once by the seed (§7); rotate afterwards from the app. |
+
+Email variables are in §5.1.
 
 ```bash
 node -e "console.log(require('crypto').randomBytes(48).toString('base64url'))" \
@@ -100,9 +103,44 @@ railway variable set SETTINGS_ENCRYPTION_KEY --stdin --service app   < /tmp/sek
 railway variable set SETTINGS_ENCRYPTION_KEY --stdin --service worker < /tmp/sek
 rm /tmp/sek
 
-railway variable set SMTP_URL='smtp://…' ADMIN_EMAIL='you@example.com' --service app
+railway variable set ADMIN_EMAIL='you@example.com' --service app
 printf '%s' 'YourStrongPassw0rd' | railway variable set ADMIN_PASSWORD --stdin --service app
 ```
+
+### 5.1 Email (Brevo)
+
+Transactional mail (verification, password reset, account-approved) goes through
+[Brevo](https://www.brevo.com). `.railway/railway.ts` sets `MAIL_TRANSPORT=brevo-api`
+— the HTTPS API, which works on **any** Railway plan.
+
+1. **Verify a sender domain.** Brevo dashboard → *Senders, Domains & Dedicated IPs*
+   → add the domain your app mail comes from (e.g. `mail.yourdomain.com`), add the
+   DNS records Brevo shows, wait for verification. Mail from an unverified domain
+   is rejected.
+2. **Create an API key.** Brevo dashboard → *SMTP & API* → *API Keys* → generate one
+   (this is the `api-key`, **not** an SMTP key).
+3. **Set the variables** on the `app` service:
+
+   ```bash
+   printf '%s' 'xkeysib-…' | railway variable set BREVO_API_KEY --stdin --service app
+   railway variable set \
+     MAIL_FROM_ADDRESS='no-reply@mail.yourdomain.com' \
+     MAIL_FROM_NAME='eReader Dictionaries' \
+     --service app
+   ```
+
+   `MAIL_FROM_ADDRESS` must be on the verified domain; startup rejects a
+   `localhost` / `.local` / `.test` / `.example` address.
+
+> **Pro-plan SMTP alternative.** If your Railway project is on the Pro plan and
+> you'd rather use SMTP: in `.railway/railway.ts` change `MAIL_TRANSPORT` to
+> `"smtp"` and set `SMTP_URL='smtp://<brevo-login>:<brevo-SMTP-key>@smtp-relay.brevo.com:587'`
+> on the `app` service (an **SMTP key**, generated under *SMTP & API* → *SMTP*).
+> `BREVO_API_KEY` is then unused.
+
+**Post-deploy smoke:** register a test account, use *Forgot password*, and approve
+a pending registration — then confirm all three mails in the Brevo dashboard →
+*Transactional* → *Logs*, sent from your `MAIL_FROM_ADDRESS`.
 
 ---
 
@@ -232,6 +270,7 @@ Everything else in this runbook is unchanged.
 | `RAILWAY_PUBLIC_DOMAIN` | Railway, once a domain is attached (feeds `PUBLIC_BASE_URL`) |
 | `NODE_ENV` | `production` (literal in IaC) |
 | `RAILPACK_NODE_VERSION` | `22` (literal in IaC — pins the builder's Node) |
+| `MAIL_TRANSPORT` | `brevo-api` (literal in IaC; change to `smtp` for the Pro-plan relay path) |
 
 **Operator-set:**
 
@@ -239,7 +278,8 @@ Everything else in this runbook is unchanged.
 |---|---|---|
 | `SESSION_SECRET` | `app` | 5 |
 | `SETTINGS_ENCRYPTION_KEY` | `app`, `worker` | 5 |
-| `SMTP_URL` | `app` | 5 |
+| `BREVO_API_KEY`, `MAIL_FROM_ADDRESS`, `MAIL_FROM_NAME` | `app` | 5.1 |
+| `SMTP_URL` | `app` | 5.1 — only if `MAIL_TRANSPORT=smtp` |
 | `ADMIN_EMAIL`, `ADMIN_PASSWORD` | `app` | 5, 7 |
 | `S3_ENDPOINT`, `S3_BUCKET`, `S3_REGION`, `S3_ACCESS_KEY_ID`, `S3_SECRET_ACCESS_KEY` | `app`, `worker` | 6 |
 | `PUBLIC_BASE_URL` | `app` | only to override the default for a custom domain (§9) |

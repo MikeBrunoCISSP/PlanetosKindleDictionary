@@ -86,6 +86,12 @@ build. An untouched dictionary is never rebuilt.
 - Sessions: HTTP-only, `SameSite=Lax`, signed cookies backed by Redis
 - Object storage: S3-compatible (MinIO locally, a Railway bucket — or any
   S3/R2 — in prod) for build outputs
+- Transactional email: a `MAIL_TRANSPORT` selector — SMTP via Nodemailer
+  (Mailpit locally) or Brevo's HTTPS API (`brevo-api`, the production default,
+  works on any Railway plan). Sender identity (`MAIL_FROM_ADDRESS` /
+  `MAIL_FROM_NAME`) is required, validated configuration. All sends are
+  best-effort: a delivery failure is logged and never fails the triggering
+  request.
 
 **Deployment** — Railway, from GitHub (see `infra/railway/README.md`):
 
@@ -480,7 +486,11 @@ POST   /api/auth/register        { email, username, reasonForJoining, password, 
                                   starts approvalStatus=PENDING; email/username matched case-insensitively;
                                   turnstileToken required+verified only when Turnstile is enabled (see below);
                                   does NOT open a session - sends a verification email instead (24h
-                                  token); the account cannot log in until it's verified
+                                  token); the account cannot log in until it's verified. The verification
+                                  send is best-effort: a mail failure is logged, the account + token are
+                                  still created, and the response is still 201 (the user resends from the
+                                  confirmation card). forgot-password / resend-verification are likewise
+                                  best-effort so a mail failure can't leak account existence.
 POST   /api/auth/login           { identifier, password }  identifier = username or email, case-insensitive;
                                   rejects with 403 EMAIL_NOT_VERIFIED if the account's email hasn't been
                                   confirmed yet (accounts that existed before this requirement was added
@@ -807,8 +817,12 @@ S3_ACCESS_KEY_ID=…                               # [O]
 S3_SECRET_ACCESS_KEY=…                           # [O]
 PUBLIC_BASE_URL=http://localhost:5173            # [R] app's public origin; [O] only to
                                                 #     override for a custom domain
-SMTP_URL=…                                       # [O] verification + password reset;
-                                                #     Railway has no managed email
+MAIL_TRANSPORT=smtp                              # [R] "brevo-api" on Railway; smtp | brevo-api
+MAIL_FROM_ADDRESS=no-reply@localhost             # [O] real verified domain in prod
+MAIL_FROM_NAME=eReader Dictionaries              # [O] defaulted
+BREVO_API_KEY=…                                  # [O] only when MAIL_TRANSPORT=brevo-api
+SMTP_URL=…                                       # [O] only when MAIL_TRANSPORT=smtp
+                                                #     (local: Mailpit; prod Pro: Brevo relay)
 BUILD_CRON=0 * * * *                             # [L] override for local testing
 ADMIN_EMAIL=…                                    # [O] seeded admin (see §11 / runbook)
 ADMIN_PASSWORD=…                                 # [O] ≥8 chars, mixed case + digit

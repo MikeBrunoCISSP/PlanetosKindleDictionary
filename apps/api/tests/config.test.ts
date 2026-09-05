@@ -9,11 +9,21 @@ const VALID_STRICT_ENV: Record<string, string | undefined> = {
   SESSION_SECRET: "s".repeat(40),
   SETTINGS_ENCRYPTION_KEY: "k".repeat(40),
   PUBLIC_BASE_URL: "https://dict.example.com",
-  SMTP_URL: "smtp://mailer:secret@smtp.example.com:587",
+  MAIL_TRANSPORT: "smtp",
+  SMTP_URL: "smtp://mailer:secret@smtp.provider.net:587",
+  MAIL_FROM_ADDRESS: "notify@mail.dict-app.io",
   S3_BUCKET: "dictionaries",
   S3_ACCESS_KEY_ID: "AKIAEXAMPLE",
   S3_SECRET_ACCESS_KEY: "abc123secret",
   PORT: "8080",
+};
+
+// The same, but delivering through the Brevo HTTPS API.
+const VALID_BREVO_ENV: Record<string, string | undefined> = {
+  ...VALID_STRICT_ENV,
+  MAIL_TRANSPORT: "brevo-api",
+  SMTP_URL: undefined,
+  BREVO_API_KEY: "xkeysib-realish-key",
 };
 
 describe("validateEnv (strict mode)", () => {
@@ -84,6 +94,64 @@ describe("validateEnv (strict mode)", () => {
   it("treats an unset NODE_ENV as strict", () => {
     const { NODE_ENV: _omit, REDIS_URL: _omit2, ...env } = VALID_STRICT_ENV;
     expect(validateEnv(env).length).toBeGreaterThan(0);
+  });
+});
+
+describe("validateEnv (mail transport)", () => {
+  it("accepts a fully-valid Brevo-API environment", () => {
+    expect(validateEnv(VALID_BREVO_ENV)).toEqual([]);
+  });
+
+  it("requires MAIL_TRANSPORT in strict mode", () => {
+    const { MAIL_TRANSPORT: _omit, ...env } = VALID_STRICT_ENV;
+    expect(validateEnv(env).some((i) => i.startsWith("MAIL_TRANSPORT"))).toBe(true);
+  });
+
+  it("rejects an unknown MAIL_TRANSPORT value", () => {
+    const issues = validateEnv({ ...VALID_STRICT_ENV, MAIL_TRANSPORT: "sendgrid" });
+    expect(issues.some((i) => i.startsWith("MAIL_TRANSPORT"))).toBe(true);
+  });
+
+  it("requires SMTP_URL only for the smtp transport", () => {
+    const { SMTP_URL: _omit, ...smtpEnv } = VALID_STRICT_ENV;
+    expect(validateEnv(smtpEnv).some((i) => i.startsWith("SMTP_URL"))).toBe(true);
+
+    const { SMTP_URL: _omit2, ...brevoEnv } = VALID_BREVO_ENV;
+    expect(validateEnv(brevoEnv).some((i) => i.startsWith("SMTP_URL"))).toBe(false);
+  });
+
+  it("requires BREVO_API_KEY only for the brevo-api transport", () => {
+    const { BREVO_API_KEY: _omit, ...env } = VALID_BREVO_ENV;
+    expect(validateEnv(env).some((i) => i.startsWith("BREVO_API_KEY"))).toBe(true);
+  });
+
+  it("rejects the .env.example placeholder Brevo key", () => {
+    const issues = validateEnv({ ...VALID_BREVO_ENV, BREVO_API_KEY: "your-brevo-api-key" });
+    expect(issues.some((i) => i.startsWith("BREVO_API_KEY"))).toBe(true);
+  });
+
+  it("requires MAIL_FROM_ADDRESS and rejects a .local domain", () => {
+    const { MAIL_FROM_ADDRESS: _omit, ...env } = VALID_STRICT_ENV;
+    expect(validateEnv(env).some((i) => i.startsWith("MAIL_FROM_ADDRESS"))).toBe(true);
+
+    const issues = validateEnv({ ...VALID_STRICT_ENV, MAIL_FROM_ADDRESS: "no-reply@planetos.local" });
+    expect(issues.some((i) => i.startsWith("MAIL_FROM_ADDRESS"))).toBe(true);
+  });
+
+  it("rejects an example.com sender but not an example.com public base URL", () => {
+    const issues = validateEnv({ ...VALID_STRICT_ENV, MAIL_FROM_ADDRESS: "hi@example.com" });
+    expect(issues.some((i) => i.startsWith("MAIL_FROM_ADDRESS"))).toBe(true);
+    // PUBLIC_BASE_URL is https://dict.example.com and stays valid
+    expect(issues.some((i) => i.startsWith("PUBLIC_BASE_URL"))).toBe(false);
+  });
+
+  it("parseEnv exposes the transport and sender", () => {
+    const cfg = parseEnv(VALID_BREVO_ENV);
+    expect(cfg.mailTransport).toBe("brevo-api");
+    expect(cfg.brevoApiKey).toBe("xkeysib-realish-key");
+    expect(cfg.mailFromAddress).toBe("notify@mail.dict-app.io");
+    expect(cfg.mailFromName).toBe("eReader Dictionaries");
+    expect(parseEnv({ NODE_ENV: "development" }).mailTransport).toBe("smtp");
   });
 });
 
