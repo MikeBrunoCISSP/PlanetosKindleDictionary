@@ -8,7 +8,7 @@ let connection: Redis | undefined;
 let dictionaryBuildQueue: Queue | undefined;
 let maintenanceQueue: Queue | undefined;
 
-function getConnection(): Redis {
+export function getConnection(): Redis {
   // BullMQ requires maxRetriesPerRequest: null on the ioredis connection it's given.
   connection ??= new Redis(config.redisUrl, {
     maxRetriesPerRequest: null,

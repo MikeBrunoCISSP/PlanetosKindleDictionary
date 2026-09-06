@@ -3,8 +3,9 @@ import { config, assertConfigValid } from "./config.js";
 
 import { Worker, type Job } from "bullmq";
 import { PrismaClient } from "@prisma/client";
-import { getDictionaryBuildQueue, getMaintenanceQueue, closeQueues } from "./lib/queues.js";
+import { getDictionaryBuildQueue, getMaintenanceQueue, getConnection, closeQueues } from "./lib/queues.js";
 import { ensureBucketExists, putObject, deleteObjects } from "./lib/storage.js";
+import { runPreflight } from "./lib/health.js";
 import { processDictionaryBuild } from "./jobs/build.js";
 import { pruneOldBuilds } from "./jobs/prune.js";
 import { runSweep } from "./jobs/sweep.js";
@@ -20,6 +21,16 @@ try {
 }
 
 const prisma = new PrismaClient();
+
+// Refuse to register for jobs against a dependency that isn't actually
+// usable (finding PROD-005) - retries briefly to tolerate a Postgres/Redis
+// service still starting up in the same deploy window (see
+// openspec/changes/add-readiness-checks/design.md Decision 4).
+const preflight = await runPreflight(prisma, getConnection());
+if (!preflight.ok) {
+  console.error(`[worker] preflight failed, not starting: ${preflight.failed.join(", ")} unreachable`);
+  process.exit(1);
+}
 
 await ensureBucketExists();
 

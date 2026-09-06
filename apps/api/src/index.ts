@@ -24,6 +24,7 @@ import downloadsRoutes from "./routes/downloads.js";
 import { ensureBucketExists } from "./lib/storage.js";
 import { getDictionaryBuildQueue, getMaintenanceQueue } from "./lib/queues.js";
 import { resolveWebDist } from "./lib/staticSite.js";
+import { checkReadiness } from "./lib/health.js";
 
 // Fail fast on missing/invalid production configuration before anything is
 // constructed (finding PROD-002). No-op in NODE_ENV=development / test.
@@ -78,7 +79,16 @@ await app.register(async (adminJobsApp) => {
   await adminJobsApp.register(serverAdapter.registerPlugin(), { prefix: "/admin/jobs" });
 });
 
-app.get("/health", async () => ({ status: "ok" }));
+// Railway's deployment healthcheck (openspec: deployment/railway) - reports
+// real dependency health so a deploy that can't reach Postgres/Redis is
+// never promoted to serve traffic. Object storage is deliberately not
+// checked here; see openspec/changes/add-readiness-checks/design.md.
+app.get("/health", async (_request, reply) => {
+  const readiness = await checkReadiness(prisma);
+  return reply
+    .code(readiness.ok ? 200 : 503)
+    .send({ status: readiness.ok ? "ok" : "error", checks: readiness.checks });
+});
 
 // Serve the built web SPA from the same origin as the API (see
 // openspec deployment/railway). Registered last so every explicit API

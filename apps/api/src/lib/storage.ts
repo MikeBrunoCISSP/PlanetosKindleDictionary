@@ -88,6 +88,11 @@ export async function deleteObjects(keys: string[]): Promise<void> {
   );
 }
 
+/** Issues the HeadBucket call used both to probe and to ensure the bucket exists. */
+export function headBucket(): Promise<unknown> {
+  return getClient().send(new HeadBucketCommand({ Bucket: getBucket() }));
+}
+
 /**
  * Idempotently ensures the configured bucket exists. Fails soft (logs a
  * warning, never throws) - real cloud deployments commonly use scoped IAM
@@ -97,7 +102,7 @@ export async function deleteObjects(keys: string[]): Promise<void> {
 export async function ensureBucketExists(): Promise<void> {
   const bucket = getBucket();
   try {
-    await getClient().send(new HeadBucketCommand({ Bucket: bucket }));
+    await headBucket();
   } catch {
     try {
       await getClient().send(new CreateBucketCommand({ Bucket: bucket }));

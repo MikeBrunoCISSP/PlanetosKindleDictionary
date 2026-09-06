@@ -99,6 +99,27 @@ adds a hop (e.g. an internal load balancer or CDN layer), set
 `TRUST_PROXY_HOPS=2` on `app` and redeploy — nothing detects that drift
 automatically. (`worker` has no HTTP listener and isn't affected.)
 
+### 4.2 Readiness and the worker's dependency gate
+
+`/health` (`app`'s Railway `healthcheckPath`) reports real dependency
+health, not just that the process is up: it checks PostgreSQL and Redis,
+each with a bounded ~1.5s timeout, and returns `503` if either is
+unreachable — so a deploy that can't actually serve requests is never
+promoted to receive traffic. A recent result may be reused for a couple of
+seconds so rapid polling during a deploy doesn't hammer either dependency.
+Object storage is deliberately not part of this check (see
+`openspec/changes/add-readiness-checks/design.md` Decision 2) — the API's
+only storage use is presigned-URL generation, which makes no network call.
+
+`worker` has no HTTP listener, so it has no Railway healthcheck. Instead it
+runs an in-process startup preflight — Postgres, Redis, **and** object
+storage — before registering to process any job, retrying briefly (a few
+seconds total) to tolerate a dependency still starting up in the same
+deploy window. If a dependency is still unreachable after those retries,
+the worker exits without accepting any job; recovering from a
+persistently broken dependency (as opposed to a startup race) relies on
+Railway's platform restart behavior, not on this in-process retry.
+
 ---
 
 ## 5. Set the operator secrets
@@ -298,7 +319,9 @@ and the CORS origin pick it up.
 ### Acceptance checks (run after the first green deploy)
 
 1. `curl -I https://<app-domain>/` → `200` `text/html` (the SPA).
-2. `curl https://<app-domain>/health` → `{"status":"ok"}`.
+2. `curl https://<app-domain>/health` → `200` with
+   `{"status":"ok","checks":{"postgres":{"ok":true},"redis":{"ok":true}}}`.
+   A `503` here means Postgres or Redis is actually unreachable — see §4.2.
 3. `curl -I https://<app-domain>/login` → `200` HTML (client-side route via the SPA fallback).
 4. `curl -s https://<app-domain>/api/does-not-exist` → `application/problem+json`, **not** HTML.
 5. In a browser: log in, reload a deep link (e.g. `/entries/…`), confirm the

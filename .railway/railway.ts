@@ -71,6 +71,11 @@ export default defineRailway(() => {
     // migration hasn't applied yet (openspec: deployment/railway).
     preDeploy: "pnpm --filter @planetos/api exec prisma migrate deploy",
     healthcheckPath: "/health",
+    // /health now checks real Postgres/Redis connectivity with a bounded
+    // ~1.5s worst case (openspec: deployment/railway) rather than an
+    // instant 200, so a deliberate timeout replaces Railway's undocumented
+    // default.
+    healthcheckTimeout: 10,
     env: {
       NODE_ENV: "production",
       RAILPACK_NODE_VERSION: NODE_VERSION,
