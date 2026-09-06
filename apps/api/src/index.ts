@@ -35,7 +35,17 @@ try {
 }
 
 const prisma = new PrismaClient();
-const app = Fastify({ logger: true });
+// Trusts exactly `config.trustProxyHops` hops back from the raw socket peer
+// (openspec: security/input-hardening) - resolves `request.ip` to the real
+// client through Railway's edge rather than the edge's own address. Fastify's
+// numeric `trustProxy` form is a no-op on this Fastify version, so this must
+// be a function. Safety depends on the `app` container never being reachable
+// except through that edge - see openspec/changes/add-trusted-proxy-config
+// design.md for why a hop count alone can't verify that on its own.
+const app = Fastify({
+  logger: true,
+  trustProxy: (_address, hop) => hop < config.trustProxyHops,
+});
 
 await app.register(corsPlugin);
 await app.register(securityPlugin);

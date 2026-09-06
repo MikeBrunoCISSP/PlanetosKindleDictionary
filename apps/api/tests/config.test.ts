@@ -95,6 +95,29 @@ describe("validateEnv (strict mode)", () => {
     const { NODE_ENV: _omit, REDIS_URL: _omit2, ...env } = VALID_STRICT_ENV;
     expect(validateEnv(env).length).toBeGreaterThan(0);
   });
+
+  it("rejects a non-numeric TRUST_PROXY_HOPS regardless of NODE_ENV", () => {
+    expect(
+      validateEnv({ ...VALID_STRICT_ENV, TRUST_PROXY_HOPS: "one" }).some((i) =>
+        i.startsWith("TRUST_PROXY_HOPS")
+      )
+    ).toBe(true);
+    expect(
+      validateEnv({ NODE_ENV: "development", TRUST_PROXY_HOPS: "one" }).some((i) =>
+        i.startsWith("TRUST_PROXY_HOPS")
+      )
+    ).toBe(false); // format checks only run in strict mode, matching PORT/S3_ENDPOINT
+  });
+
+  it("rejects a negative TRUST_PROXY_HOPS", () => {
+    const issues = validateEnv({ ...VALID_STRICT_ENV, TRUST_PROXY_HOPS: "-1" });
+    expect(issues.some((i) => i.startsWith("TRUST_PROXY_HOPS"))).toBe(true);
+  });
+
+  it("accepts an explicit TRUST_PROXY_HOPS of 0", () => {
+    const issues = validateEnv({ ...VALID_STRICT_ENV, TRUST_PROXY_HOPS: "0" });
+    expect(issues.some((i) => i.startsWith("TRUST_PROXY_HOPS"))).toBe(false);
+  });
 });
 
 describe("validateEnv (mail transport)", () => {

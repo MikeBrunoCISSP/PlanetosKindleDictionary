@@ -37,6 +37,26 @@ describe("verify", () => {
     expect(result.success).toBe(false);
     expect(result.errorCodes).toContain("network-error");
   });
+
+  it("forwards the given remoteIp to Cloudflare as `remoteip`", async () => {
+    const fetchMock = vi.fn().mockResolvedValue({ ok: true, json: () => Promise.resolve({ success: true }) });
+    vi.stubGlobal("fetch", fetchMock);
+
+    await verify("secret", "token", "203.0.113.7");
+
+    const body = fetchMock.mock.calls[0]?.[1]?.body as URLSearchParams;
+    expect(body.get("remoteip")).toBe("203.0.113.7");
+  });
+
+  it("omits `remoteip` when no remoteIp is given", async () => {
+    const fetchMock = vi.fn().mockResolvedValue({ ok: true, json: () => Promise.resolve({ success: true }) });
+    vi.stubGlobal("fetch", fetchMock);
+
+    await verify("secret", "token");
+
+    const body = fetchMock.mock.calls[0]?.[1]?.body as URLSearchParams;
+    expect(body.has("remoteip")).toBe(false);
+  });
 });
 
 describe("isSecretKeyRecognized", () => {

@@ -622,8 +622,10 @@ POST   /api/admin/turnstile/test              admin only; { success } — checks
 - Rate limits: 5 registrations/hour/IP, 10 logins/15min/IP, 60 writes/hour/user,
   300 reads/min/IP, 60 searches/min/IP (`GET /api/search` — a public,
   arbitrary-input, cross-table search gets its own tighter tier rather than
-  the general read limit). Downloads are uncapped but served via presigned
-  URLs so bandwidth leaves the app server.
+  the general read limit). "/IP" is the client IP resolved through Railway's
+  trusted edge hop (`TRUST_PROXY_HOPS`), not the raw connection peer — see
+  `infra/railway/README.md` §4.1. Downloads are uncapped but served via
+  presigned URLs so bandwidth leaves the app server.
 - Pagination is cursor-based on `(sortKey, id)`; `limit` caps at 200.
 
 ---

@@ -1,7 +1,8 @@
-import Fastify from "fastify";
+import Fastify, { type FastifyServerOptions } from "fastify";
 import { PrismaClient } from "@prisma/client";
 import sessionPlugin from "../src/plugins/session.js";
 import errorHandlerPlugin from "../src/plugins/errorHandler.js";
+import rateLimitPlugin from "../src/plugins/rateLimit.js";
 import authRoutes from "../src/routes/auth.js";
 import adminRoutes from "../src/routes/admin.js";
 import seriesRoutes from "../src/routes/series.js";
@@ -11,12 +12,23 @@ import searchRoutes from "../src/routes/search.js";
 import entryEditProposalRoutes from "../src/routes/entryEditProposals.js";
 import downloadsRoutes from "../src/routes/downloads.js";
 
-export async function buildApp() {
+export interface BuildAppOptions {
+  /** Opt in to trusting a proxy hop, e.g. `(_address, hop) => hop < 1`. Unset preserves today's no-trustProxy behavior. */
+  trustProxy?: FastifyServerOptions["trustProxy"];
+  /** Opt in to registering the real rate-limit plugin (off by default, as today). */
+  rateLimit?: boolean;
+}
+
+export async function buildApp(opts: BuildAppOptions = {}) {
   const prisma = new PrismaClient();
-  const app = Fastify({ logger: false });
+  const app = Fastify({
+    logger: false,
+    ...(opts.trustProxy !== undefined ? { trustProxy: opts.trustProxy } : {}),
+  });
 
   await app.register(sessionPlugin);
   await app.register(errorHandlerPlugin);
+  if (opts.rateLimit) await app.register(rateLimitPlugin);
   await app.register(authRoutes, { prisma });
   await app.register(adminRoutes, { prisma });
   await app.register(seriesRoutes, { prisma });

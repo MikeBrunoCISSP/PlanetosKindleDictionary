@@ -78,6 +78,27 @@ railway domain --service app --json          # generates <name>-<hash>.up.railwa
 IaC, so once the domain exists a redeploy picks it up. For a **custom domain**,
 see §9.
 
+### 4.1 Network trust boundary
+
+`app` trusts exactly one proxy hop (`TRUST_PROXY_HOPS`, default `1`) when
+resolving a request's client IP — used by rate limiting and Turnstile
+verification (openspec: security/input-hardening). This is correct because
+Railway's edge is the only documented network path into the container: no
+internal load balancer sits in front of it, and the container has no
+publicly reachable address of its own. That assumption is asserted from
+Railway's standard PaaS model, not independently re-verified with Railway
+support.
+
+**Residual risk, not automated:** a hop-count check can't itself tell
+Railway's edge apart from a client that somehow reached the container
+directly — that guarantee depends entirely on the assumption above holding.
+No monitoring is built for this. If you want to check it by hand: after a
+deploy, `railway logs --service app` should show real client IPs on
+requests, never Railway's internal edge address. If Railway's topology ever
+adds a hop (e.g. an internal load balancer or CDN layer), set
+`TRUST_PROXY_HOPS=2` on `app` and redeploy — nothing detects that drift
+automatically. (`worker` has no HTTP listener and isn't affected.)
+
 ---
 
 ## 5. Set the operator secrets
@@ -328,6 +349,7 @@ Everything else in this runbook is unchanged.
 | `ADMIN_EMAIL`, `ADMIN_PASSWORD` | `app` | 5, 7 |
 | `S3_ENDPOINT`, `S3_BUCKET`, `S3_REGION`, `S3_ACCESS_KEY_ID`, `S3_SECRET_ACCESS_KEY` | `app`, `worker` | 6 |
 | `PUBLIC_BASE_URL` | `app` | only to override the default for a custom domain (§9) |
+| `TRUST_PROXY_HOPS` | `app` | 4.1 — defaults to `1`; only set if Railway's edge topology ever changes (unlike most defaults here, this one may need a real operator override some day) |
 
 **In-app, post-deploy:** Cloudflare Turnstile Site/Secret keys (§8).
 

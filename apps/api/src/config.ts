@@ -46,6 +46,7 @@ const DEV_DEFAULTS = {
   S3_SECRET_ACCESS_KEY: "minioadmin",
   BUILD_CRON: "0 * * * *",
   PORT: "3000",
+  TRUST_PROXY_HOPS: "1",
 } as const;
 
 /** Mail transports, in `.env.example` order. */
@@ -170,6 +171,10 @@ export function validateEnv(env: RawEnv, scope: Scope = "api"): string[] {
   if (port !== undefined && !/^[1-9]\d*$/.test(port)) {
     issues.push(`PORT — must be a positive integer`);
   }
+  const trustProxyHops = env["TRUST_PROXY_HOPS"];
+  if (trustProxyHops !== undefined && !/^\d+$/.test(trustProxyHops)) {
+    issues.push(`TRUST_PROXY_HOPS — must be a non-negative integer`);
+  }
   if (env["S3_ENDPOINT"] !== undefined && parseUrl(env["S3_ENDPOINT"]) === null) {
     issues.push(`S3_ENDPOINT — must be a valid URL when set`);
   }
@@ -199,6 +204,7 @@ export interface Config {
     readonly secretAccessKey: string;
   };
   readonly buildCron: string;
+  readonly trustProxyHops: number;
 }
 
 /**
@@ -219,6 +225,12 @@ export function parseEnv(env: RawEnv): Config {
     env[name] ?? DEV_DEFAULTS[name];
 
   const portNum = z.coerce.number().int().positive().catch(3000).parse(operational("PORT"));
+  const trustProxyHops = z.coerce
+    .number()
+    .int()
+    .nonnegative()
+    .catch(1)
+    .parse(operational("TRUST_PROXY_HOPS"));
 
   return {
     nodeEnv: env["NODE_ENV"] ?? "",
@@ -242,6 +254,7 @@ export function parseEnv(env: RawEnv): Config {
       secretAccessKey: secret("S3_SECRET_ACCESS_KEY"),
     },
     buildCron: operational("BUILD_CRON"),
+    trustProxyHops,
   };
 }
 

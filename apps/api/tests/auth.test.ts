@@ -1,8 +1,20 @@
-import { describe, it, expect, beforeAll, beforeEach, afterAll, afterEach } from "vitest";
+import { describe, it, expect, beforeAll, beforeEach, afterAll, afterEach, vi } from "vitest";
 import type { FastifyInstance } from "fastify";
 import type { PrismaClient } from "@prisma/client";
 import { hash as hashPassword } from "@node-rs/argon2";
-import { buildApp, cleanUsers } from "./helpers.js";
+import { buildApp, cleanUsers, resetTurnstileSettings } from "./helpers.js";
+import { encrypt } from "../src/lib/crypto.js";
+
+// Turnstile is disabled for every test in this file except the dedicated
+// "behind a trusted proxy" block below, so mocking it here has no effect on
+// the rest of the suite - `verify` is only ever called when Turnstile is
+// enabled (see apps/api/src/routes/auth.ts).
+vi.mock("../src/lib/turnstile.js", () => ({
+  verify: vi.fn(),
+  isSecretKeyRecognized: vi.fn(),
+}));
+
+import { verify as verifyTurnstileMock } from "../src/lib/turnstile.js";
 
 const MAILPIT_API = "http://localhost:8025/api/v1";
 
@@ -329,5 +341,56 @@ describe("POST /api/auth/logout", () => {
       headers: { cookie: cookieHeader },
     });
     expect(meRes.statusCode).toBe(401);
+  });
+});
+
+describe("POST /api/auth/register (behind a trusted proxy, Turnstile enabled)", () => {
+  const TURNSTILE_EMAIL = "authtest-proxied@example.com";
+  const TURNSTILE_USERNAME = "AuthTestProxied";
+  const EDGE_IP = "10.0.0.1"; // simulated Railway edge - the raw socket peer
+  const REAL_CLIENT_IP = "203.0.113.42";
+  const TRUST_ONE_HOP = (_address: string, hop: number) => hop < 1;
+
+  let proxiedApp: FastifyInstance;
+  let proxiedPrisma: PrismaClient;
+
+  beforeAll(async () => {
+    ({ app: proxiedApp, prisma: proxiedPrisma } = await buildApp({ trustProxy: TRUST_ONE_HOP }));
+    await resetTurnstileSettings(proxiedPrisma);
+    await proxiedPrisma.turnstileSettings.create({
+      data: { id: "singleton", enabled: true, siteKey: "test-site-key", secretKeyEncrypted: encrypt("test-secret") },
+    });
+  });
+
+  afterEach(async () => {
+    await cleanUsers(proxiedPrisma, [TURNSTILE_EMAIL]);
+    vi.mocked(verifyTurnstileMock).mockClear();
+  });
+
+  afterAll(async () => {
+    await resetTurnstileSettings(proxiedPrisma);
+    await proxiedApp.close();
+    await proxiedPrisma.$disconnect();
+  });
+
+  it("sends the resolved client IP, not the proxy's, to Turnstile verification", async () => {
+    vi.mocked(verifyTurnstileMock).mockResolvedValue({ success: true, errorCodes: [] });
+
+    const res = await proxiedApp.inject({
+      method: "POST",
+      url: "/api/auth/register",
+      remoteAddress: EDGE_IP,
+      headers: { "x-forwarded-for": REAL_CLIENT_IP },
+      payload: {
+        email: TURNSTILE_EMAIL,
+        username: TURNSTILE_USERNAME,
+        reasonForJoining: REASON,
+        password: VALID_PASSWORD,
+        turnstileToken: "dummy-token",
+      },
+    });
+
+    expect(res.statusCode).toBe(201);
+    expect(verifyTurnstileMock).toHaveBeenCalledWith(expect.any(String), "dummy-token", REAL_CLIENT_IP);
   });
 });
