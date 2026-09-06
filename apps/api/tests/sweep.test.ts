@@ -105,8 +105,9 @@ describe("runSweep", () => {
 
     await runSweep(prisma, queue);
     const afterSecondRun = await waitingJobIdsFor(series.id);
-    // Same jobId (deterministic on unchanged content hash) means BullMQ
-    // dedups - still exactly one job, not two.
+    // BullMQ's deduplication option (keyed by series id) dedups the second
+    // add() against the still-waiting first job - still exactly one job,
+    // not two, and it's the same job.
     expect(afterSecondRun).toHaveLength(1);
     expect(afterSecondRun[0]).toBe(firstRunJobIds[0]);
   });
@@ -142,11 +143,5 @@ describe("runSweep", () => {
 
     const jobIds = await waitingJobIdsFor(series.id);
     expect(jobIds).toHaveLength(1);
-
-    const { computeContentHash } = await import("@planetos/kindle");
-    const { loadSeriesInputs } = await import("../src/jobs/mapping.js");
-    const { series: seriesInput, entries } = await loadSeriesInputs(prisma, series.id);
-    const finalHash = computeContentHash(seriesInput, entries);
-    expect(jobIds[0]).toBe(`${series.id}-${finalHash}`);
   });
 });

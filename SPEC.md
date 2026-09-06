@@ -659,10 +659,18 @@ A repeatable job `sweep-changed-series` runs at `0 * * * *`:
 2. Compare with the `contentHash` of the most recent `SUCCESS` build.
 3. **Equal → skip.** No job enqueued, nothing written. This is the "only if there
    were any changes" requirement, and it is the common case.
-4. Different → enqueue `dictionary-build` with `jobId = ${seriesId}-${hash}`.
-   (BullMQ rejects `:` in custom job ids, so the delimiter is `-`, not `:`.)
-   The deterministic `jobId` makes enqueueing idempotent: a series edited twelve
-   times in an hour still builds once.
+4. Different → enqueue `dictionary-build` with BullMQ's `deduplication` option
+   keyed by `seriesId` (`{ id: seriesId, keepLastIfActive: true }`), no
+   explicit `jobId`. This makes enqueueing idempotent only while a build for
+   that series is already outstanding (waiting or active) — a series edited
+   twelve times in an hour still builds once — without permanently blocking
+   a later rebuild of a content state the series happens to return to.
+   (A deterministic `jobId` was used originally, but BullMQ dedups a custom
+   `jobId` against *any* retained job with that id, including old completed
+   ones; since nothing expired those records, a series that reverted to a
+   previously-built hash could never be rebuilt again. `deduplication`'s
+   dedup key is cleared by BullMQ on every job's finalization, so it can't
+   accumulate that stale state — see COR-001 / `fix-sweep-job-dedup`.)
 
 Only the hash comparison decides whether to build. Do not use `Series.updatedAt`
 as the trigger — a no-op edit that reverts a typo would otherwise cause a
@@ -781,7 +789,8 @@ objects in the `maintenance` queue. Never delete the newest.
   401; every entry mutation writes exactly one Revision; `If-Match` conflict
   returns 409.
 - **Sweep logic** — unchanged series enqueues nothing; changed series enqueues
-  once; twelve rapid edits collapse to one job via the deterministic `jobId`.
+  once; twelve rapid edits collapse to one job via `deduplication`; a content
+  state reverted to after a prior build completes still produces a new build.
 - **E2E** (Playwright) — admin creates series → register and approve contributor →
   add entry → force rebuild → download EPUB → assert the ZIP contains the entry's headword.
 - **Manual, per release** — sideload the generated `.mobi` on a physical Kindle
