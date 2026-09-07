@@ -13,6 +13,7 @@ import { makeRequireAdmin } from "../plugins/requireAdmin.js";
 import { makeRequireAuth, makeRequireApproved } from "../plugins/requireAuth.js";
 import { WRITE_RATE_LIMIT } from "../plugins/rateLimit.js";
 import { Errors, isPrismaError } from "../lib/errors.js";
+import { markSeriesDirty } from "../lib/dirtySeries.js";
 
 type EntryWithInflections = {
   id: string;
@@ -125,6 +126,14 @@ const entriesRoutes: FastifyPluginAsync<{ prisma: PrismaClient }> = async (fasti
                 ...(isAdmin ? { reviewedById: userId, reviewedAt: new Date() } : {}),
               },
             });
+
+            // Only an admin's auto-approved submission actually enters the
+            // Published+Approved hashed set immediately (PERF-001) - a
+            // non-admin PENDING submission doesn't change what the sweep
+            // would hash until it's later approved (which marks dirty then).
+            if (isAdmin) {
+              await markSeriesDirty(tx, series.id);
+            }
 
             await tx.seriesWord.create({
               data: {
@@ -241,6 +250,9 @@ const entriesRoutes: FastifyPluginAsync<{ prisma: PrismaClient }> = async (fasti
           include: entryInclude,
         });
 
+        // Moves the entry into the Published+Approved hashed set (PERF-001).
+        await markSeriesDirty(tx, entry.seriesId);
+
         await tx.revision.create({
           data: {
             entryId: id,
@@ -275,6 +287,12 @@ const entriesRoutes: FastifyPluginAsync<{ prisma: PrismaClient }> = async (fasti
         if (!entry) throw Errors.NOT_FOUND();
         if (entry.approvalStatus !== "PENDING") throw Errors.ALREADY_REVIEWED();
 
+        // No markSeriesDirty here (PERF-001): the guard above means this is
+        // always a PENDING->REJECTED transition, and a PENDING entry was
+        // never in the Published+Approved hashed set - rejecting it can't
+        // change what the sweep would hash. If this guard is ever loosened
+        // to allow rejecting an already-APPROVED entry, that would remove a
+        // row from the hashed set and this omission would need revisiting.
         const result = await tx.entry.update({
           where: { id },
           data: {

@@ -8,6 +8,7 @@ import { buildApp, cleanSeries } from "./helpers.js";
 import { runSweep } from "../src/jobs/sweep.js";
 import { processDictionaryBuild } from "../src/jobs/build.js";
 import { loadSeriesInputs } from "../src/jobs/mapping.js";
+import { markSeriesDirty } from "../src/lib/dirtySeries.js";
 import * as storage from "../src/lib/storage.js";
 
 // COR-001: proves the fixed dedup mechanism against real Redis, driving an
@@ -34,6 +35,14 @@ async function createApprovedEntry(seriesId: string, headword: string, definitio
   });
   await prisma.seriesWord.create({ data: { seriesId, entryId: entry.id, normalizedWord: normalizeWord(headword) } });
   return entry;
+}
+
+// PERF-001: raw prisma.entry.update calls below bypass the route layer,
+// which is where dirty-marking actually lives - simulate the same contract
+// a real write path upholds, or these series would never become sweep
+// candidates once a prior build has set their contentHash.
+async function markDirty(seriesId: string): Promise<void> {
+  await prisma.$transaction((tx) => markSeriesDirty(tx, seriesId));
 }
 
 async function currentHash(seriesId: string): Promise<string> {
@@ -91,6 +100,7 @@ describe("sweep + worker: content reverted to a previously-built state", () => {
 
       // Edit to B, build B.
       await prisma.entry.update({ where: { id: entry.id }, data: { definitionHtml: "<p>State B.</p>" } });
+      await markDirty(series.id);
       const hashB = await currentHash(series.id);
       expect(hashB).not.toBe(hashA);
       await runSweep(prisma, queue);
@@ -103,6 +113,7 @@ describe("sweep + worker: content reverted to a previously-built state", () => {
       // silently no-oped under the old deterministic-jobId scheme, because
       // a completed job for "seriesId-hashA" already existed in Redis.
       await prisma.entry.update({ where: { id: entry.id }, data: { definitionHtml: "<p>State A.</p>" } });
+      await markDirty(series.id);
       const revertedHash = await currentHash(series.id);
       expect(revertedHash).toBe(hashA);
       await runSweep(prisma, queue);

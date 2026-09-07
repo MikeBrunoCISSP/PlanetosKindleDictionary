@@ -5,6 +5,7 @@ import { Redis } from "ioredis";
 import { normalizeWord } from "@planetos/shared";
 import { buildApp, cleanSeries } from "./helpers.js";
 import { runSweep } from "../src/jobs/sweep.js";
+import { markSeriesDirty } from "../src/lib/dirtySeries.js";
 
 const SLUG_PREFIX = "test-sweep-series";
 
@@ -35,6 +36,14 @@ async function createApprovedEntry(seriesId: string, headword: string, definitio
     data: { seriesId, entryId: entry.id, normalizedWord: normalizeWord(headword) },
   });
   return entry;
+}
+
+// PERF-001: raw prisma.entry.update calls below bypass the route layer,
+// which is where dirty-marking actually lives - simulate the same contract
+// a real write path upholds, or these series would never become sweep
+// candidates and the assertions below would pass vacuously.
+async function markDirty(seriesId: string): Promise<void> {
+  await prisma.$transaction((tx) => markSeriesDirty(tx, seriesId));
 }
 
 async function waitingJobIdsFor(seriesId: string): Promise<string[]> {
@@ -125,6 +134,7 @@ describe("runSweep", () => {
     // Edit, then revert to the exact original text.
     await prisma.entry.update({ where: { id: entry.id }, data: { definitionHtml: "<p>Changed.</p>" } });
     await prisma.entry.update({ where: { id: entry.id }, data: { definitionHtml: "<p>Original definition.</p>" } });
+    await markDirty(series.id);
 
     await runSweep(prisma, queue);
 
@@ -138,10 +148,36 @@ describe("runSweep", () => {
 
     await prisma.entry.update({ where: { id: entry.id }, data: { definitionHtml: "<p>V2.</p>" } });
     await prisma.entry.update({ where: { id: entry.id }, data: { definitionHtml: "<p>V3 final.</p>" } });
+    await markDirty(series.id);
 
     await runSweep(prisma, queue);
 
     const jobIds = await waitingJobIdsFor(series.id);
     expect(jobIds).toHaveLength(1);
+  });
+
+  it("PERF-001: a clean, already-built series is never re-checked while a dirty series is", async () => {
+    const clean = await createTestSeries("proportional-clean");
+    await createApprovedEntry(clean.id, "Wolf");
+    const { computeContentHash } = await import("@planetos/kindle");
+    const { loadSeriesInputs } = await import("../src/jobs/mapping.js");
+    const { series: cleanSeriesInput, entries: cleanEntries } = await loadSeriesInputs(prisma, clean.id);
+    const cleanHash = computeContentHash(cleanSeriesInput, cleanEntries);
+    await prisma.series.update({ where: { id: clean.id }, data: { contentHash: cleanHash } });
+
+    const dirty = await createTestSeries("proportional-dirty");
+    const dirtyEntry = await createApprovedEntry(dirty.id, "Fox", "<p>V1.</p>");
+    const { series: dirtySeriesInput, entries: dirtyEntries } = await loadSeriesInputs(prisma, dirty.id);
+    await prisma.series.update({
+      where: { id: dirty.id },
+      data: { contentHash: computeContentHash(dirtySeriesInput, dirtyEntries) },
+    });
+    await prisma.entry.update({ where: { id: dirtyEntry.id }, data: { definitionHtml: "<p>V2.</p>" } });
+    await markDirty(dirty.id);
+
+    await runSweep(prisma, queue);
+
+    expect(await waitingJobIdsFor(clean.id)).toHaveLength(0);
+    expect(await waitingJobIdsFor(dirty.id)).toHaveLength(1);
   });
 });

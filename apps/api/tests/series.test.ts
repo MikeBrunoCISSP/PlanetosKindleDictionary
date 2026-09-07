@@ -369,4 +369,31 @@ describe("PATCH /api/series/:slug", () => {
     });
     expect(res.statusCode).toBe(400);
   });
+
+  it("PERF-001: marks the series dirty", async () => {
+    const adminCookie = await setupAdmin();
+    const created = await app.inject({
+      method: "POST",
+      url: "/api/series",
+      headers: { cookie: adminCookie },
+      payload: { title: "Test Series Patch Dirty", description: "Original" },
+    });
+    const slug = created.json<{ slug: string }>().slug;
+
+    // A build success would clear a freshly-created series' dirtySince back
+    // to null (it starts null too) - set it explicitly first so this test
+    // actually proves the PATCH sets it, not merely that it was never null.
+    await prisma.series.update({ where: { slug }, data: { dirtySince: null } });
+
+    const res = await app.inject({
+      method: "PATCH",
+      url: `/api/series/${slug}`,
+      headers: { cookie: adminCookie },
+      payload: { description: "Updated, should mark dirty" },
+    });
+    expect(res.statusCode).toBe(200);
+
+    const row = await prisma.series.findUniqueOrThrow({ where: { slug } });
+    expect(row.dirtySince).not.toBeNull();
+  });
 });

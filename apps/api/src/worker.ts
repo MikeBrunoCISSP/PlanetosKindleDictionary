@@ -8,7 +8,7 @@ import { ensureBucketExists, putObject, deleteObjects } from "./lib/storage.js";
 import { runPreflight } from "./lib/health.js";
 import { processDictionaryBuild } from "./jobs/build.js";
 import { pruneOldBuilds } from "./jobs/prune.js";
-import { runSweep } from "./jobs/sweep.js";
+import { runSweep, runReconciliation } from "./jobs/sweep.js";
 import { processEmailOutbox, EMAIL_JOB_RETRY_OPTIONS } from "./lib/outbox.js";
 
 // Fail fast on missing/invalid production configuration before the worker
@@ -39,15 +39,19 @@ const dictionaryBuildQueue = getDictionaryBuildQueue();
 const maintenanceQueue = getMaintenanceQueue();
 const emailQueue = getEmailQueue();
 
-// The dictionary-build queue carries two distinct job types, told apart by
-// job name: the repeatable "sweep-changed-series" scheduler job (no
-// per-series data - it enqueues the real per-series build jobs itself) and
-// individual per-series build jobs (named "dictionary-build", data:
-// { seriesId }) enqueued either by the sweep or by an admin's manual
-// rebuild request.
+// The dictionary-build queue carries three distinct job types, told apart
+// by job name: the repeatable "sweep-changed-series" scheduler job (checks
+// only dirty/new series - PERF-001), the repeatable "reconcile-all-series"
+// scheduler job (the full-corpus safety net, PERF-001), and individual
+// per-series build jobs (named "dictionary-build", data: { seriesId })
+// enqueued by either of those or by an admin's manual rebuild request.
 async function processDictionaryBuildQueueJob(job: Job): Promise<void> {
   if (job.name === "sweep-changed-series") {
     await runSweep(prisma, dictionaryBuildQueue);
+    return;
+  }
+  if (job.name === "reconcile-all-series") {
+    await runReconciliation(prisma, dictionaryBuildQueue);
     return;
   }
 
@@ -129,6 +133,16 @@ await dictionaryBuildQueue.upsertJobScheduler(
   "sweep-changed-series",
   { pattern: config.buildCron },
   { name: "sweep-changed-series", data: {} }
+);
+
+// PERF-001's safety net: runs far less often than the hourly sweep, on its
+// own fixed daily cadence, independent of config.buildCron (that value
+// tunes the dirty/new-only sweep specifically, not this) - same reasoning
+// as reconcile-pending-emails above.
+await dictionaryBuildQueue.upsertJobScheduler(
+  "reconcile-all-series",
+  { pattern: "0 3 * * *" },
+  { name: "reconcile-all-series", data: {} }
 );
 
 dictionaryBuildWorker.on("failed", (job, err) => {

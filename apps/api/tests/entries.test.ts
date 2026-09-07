@@ -818,3 +818,82 @@ describe("POST /api/admin/entries/:id/reject", () => {
     expect(ids).not.toContain(id);
   });
 });
+
+describe("PERF-001: dirty-marking on writes that change hash-relevant content", () => {
+  it("a non-admin's Pending submission does not mark the series dirty", async () => {
+    const memberCookie = await setupMember();
+    const series = await createTestSeries("dirty-pending-create");
+
+    await app.inject({
+      method: "POST",
+      url: `/api/series/${series.slug}/entries`,
+      headers: { cookie: memberCookie },
+      payload: { headword: "Not Hashed Yet", definitionHtml: "<p>Detail</p>", inflections: [] },
+    });
+
+    const row = await prisma.series.findUniqueOrThrow({ where: { id: series.id } });
+    expect(row.dirtySince).toBeNull();
+  });
+
+  it("an admin's auto-approved submission marks the series dirty", async () => {
+    const adminCookie = await setupAdmin();
+    const series = await createTestSeries("dirty-admin-create");
+
+    await app.inject({
+      method: "POST",
+      url: `/api/series/${series.slug}/entries`,
+      headers: { cookie: adminCookie },
+      payload: { headword: "Hashed Immediately", definitionHtml: "<p>Detail</p>", inflections: [] },
+    });
+
+    const row = await prisma.series.findUniqueOrThrow({ where: { id: series.id } });
+    expect(row.dirtySince).not.toBeNull();
+  });
+
+  it("approving a Pending entry marks the series dirty", async () => {
+    const memberCookie = await setupMember();
+    const adminCookie = await setupAdmin();
+    const series = await createTestSeries("dirty-on-approve");
+    const created = await app.inject({
+      method: "POST",
+      url: `/api/series/${series.slug}/entries`,
+      headers: { cookie: memberCookie },
+      payload: { headword: "Approve Marks Dirty", definitionHtml: "<p>Detail</p>", inflections: [] },
+    });
+    const id = created.json<{ id: string }>().id;
+
+    // A Pending submission alone must not have marked it dirty yet.
+    expect((await prisma.series.findUniqueOrThrow({ where: { id: series.id } })).dirtySince).toBeNull();
+
+    await app.inject({
+      method: "POST",
+      url: `/api/admin/entries/${id}/approve`,
+      headers: { cookie: adminCookie },
+    });
+
+    const row = await prisma.series.findUniqueOrThrow({ where: { id: series.id } });
+    expect(row.dirtySince).not.toBeNull();
+  });
+
+  it("rejecting a Pending entry does not mark the series dirty", async () => {
+    const memberCookie = await setupMember();
+    const adminCookie = await setupAdmin();
+    const series = await createTestSeries("dirty-on-reject");
+    const created = await app.inject({
+      method: "POST",
+      url: `/api/series/${series.slug}/entries`,
+      headers: { cookie: memberCookie },
+      payload: { headword: "Reject Never Dirties", definitionHtml: "<p>Detail</p>", inflections: [] },
+    });
+    const id = created.json<{ id: string }>().id;
+
+    await app.inject({
+      method: "POST",
+      url: `/api/admin/entries/${id}/reject`,
+      headers: { cookie: adminCookie },
+    });
+
+    const row = await prisma.series.findUniqueOrThrow({ where: { id: series.id } });
+    expect(row.dirtySince).toBeNull();
+  });
+});

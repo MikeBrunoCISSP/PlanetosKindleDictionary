@@ -134,10 +134,19 @@ model Series {
   builds      Build[]
   words       SeriesWord[]
   contentHash String?
+  // Set (to now()) by any write that changes this series' hashed content
+  // (Published+Approved entries/inflections, or the series' own hashed
+  // fields), cleared once the hourly sweep confirms the hash still matches
+  // or a build succeeds (PERF-001, see apps/api/src/lib/dirtySeries.ts).
+  // Null does not mean "definitely clean" - contentHash: null (never
+  // built) is also always swept regardless of this field.
+  dirtySince  DateTime?
   createdAt   DateTime     @default(now())
   updatedAt   DateTime     @updatedAt
   createdById String?
   createdBy   User?        @relation(fields: [createdById], references: [id], onDelete: SetNull)
+
+  @@index([dirtySince])
 }
 
 model Book {

@@ -26,6 +26,10 @@ export async function processDictionaryBuild(
   storage: BuildStorage,
   seriesId: string
 ): Promise<{ buildId: string }> {
+  // Read before loadSeriesInputs to minimize the race window this value is
+  // used to guard against below (PERF-001 Decision 8).
+  const before = await prisma.series.findUniqueOrThrow({ where: { id: seriesId }, select: { dirtySince: true } });
+
   const { series, entries } = await loadSeriesInputs(prisma, seriesId);
   const contentHash = computeContentHash(series, entries);
 
@@ -64,6 +68,16 @@ export async function processDictionaryBuild(
       // Only advance the series' "what's currently built" pointer once this
       // build has actually succeeded - never from the sweep or a failed attempt.
       prisma.series.update({ where: { id: seriesId }, data: { contentHash } }),
+      // Separate, conditional clear (PERF-001 Decision 8): compare-and-swap
+      // on the dirtySince value read before this build started. An edit
+      // that lands mid-build sets a newer dirtySince, which this WHERE then
+      // no longer matches - the clear no-ops (contentHash above still gets
+      // set unconditionally) and the newer mark survives so the next sweep
+      // picks up the just-landed edit instead of silently missing it.
+      prisma.series.updateMany({
+        where: { id: seriesId, dirtySince: before.dirtySince },
+        data: { dirtySince: null },
+      }),
     ]);
 
     return { buildId: build.id };

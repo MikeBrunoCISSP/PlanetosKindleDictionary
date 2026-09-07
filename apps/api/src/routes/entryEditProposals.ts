@@ -12,6 +12,7 @@ import { makeRequireAdmin } from "../plugins/requireAdmin.js";
 import { makeRequireAuth } from "../plugins/requireAuth.js";
 import { WRITE_RATE_LIMIT } from "../plugins/rateLimit.js";
 import { Errors, isPrismaError } from "../lib/errors.js";
+import { markSeriesDirty } from "../lib/dirtySeries.js";
 import { toEntryDto, entryInclude } from "./entries.js";
 
 // Applies a proposal's proposed Definition/Inflections to its target entry,
@@ -58,6 +59,12 @@ async function applyEditProposalToEntry(
     });
     if (conflict) throw Errors.DUPLICATE_WORD();
   }
+
+  // Applying an approved edit always changes this entry's hashed content
+  // (or at minimum its definitionHtml write below), so the series is
+  // always dirty here (PERF-001) - covers both call sites into this
+  // shared function.
+  await markSeriesDirty(tx, entry.seriesId);
 
   try {
     // Always executed, even if the definition text is unchanged, so

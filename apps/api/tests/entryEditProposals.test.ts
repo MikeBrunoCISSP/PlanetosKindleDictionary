@@ -737,3 +737,87 @@ describe("POST /api/admin/entry-edit-proposals/:id/reject", () => {
     expect(res.statusCode).toBe(409);
   });
 });
+
+describe("PERF-001: dirty-marking when an edit proposal is applied", () => {
+  it("submitting a proposal (non-admin, still Pending) does not mark the series dirty", async () => {
+    const memberCookie = await setupMember();
+    const series = await createTestSeries("dirty-submit-pending");
+    const { id } = await createTestEntry(series.id, { headword: "Dirtysubmitword" });
+
+    await app.inject({
+      method: "POST",
+      url: `/api/entries/${id}/edit-proposals`,
+      headers: { cookie: memberCookie },
+      payload: { definitionHtml: "<p>Proposed.</p>", inflections: [] },
+    });
+
+    const row = await prisma.series.findUniqueOrThrow({ where: { id: series.id } });
+    expect(row.dirtySince).toBeNull();
+  });
+
+  it("an admin's self-approved edit proposal marks the series dirty", async () => {
+    const adminCookie = await setupAdmin();
+    const series = await createTestSeries("dirty-self-approve");
+    const { id } = await createTestEntry(series.id, { headword: "Dirtyselfapproveword" });
+
+    await app.inject({
+      method: "POST",
+      url: `/api/entries/${id}/edit-proposals`,
+      headers: { cookie: adminCookie },
+      payload: { definitionHtml: "<p>Self-approved.</p>", inflections: [] },
+    });
+
+    const row = await prisma.series.findUniqueOrThrow({ where: { id: series.id } });
+    expect(row.dirtySince).not.toBeNull();
+  });
+
+  it("admin-approving a Pending proposal marks the series dirty", async () => {
+    const memberCookie = await setupMember();
+    const adminCookie = await setupAdmin();
+    const series = await createTestSeries("dirty-admin-approve");
+    const { id } = await createTestEntry(series.id, { headword: "Dirtyadminapproveword" });
+
+    const submitRes = await app.inject({
+      method: "POST",
+      url: `/api/entries/${id}/edit-proposals`,
+      headers: { cookie: memberCookie },
+      payload: { definitionHtml: "<p>Proposed.</p>", inflections: [] },
+    });
+    const proposalId = submitRes.json<{ id: string }>().id;
+
+    expect((await prisma.series.findUniqueOrThrow({ where: { id: series.id } })).dirtySince).toBeNull();
+
+    await app.inject({
+      method: "POST",
+      url: `/api/admin/entry-edit-proposals/${proposalId}/approve`,
+      headers: { cookie: adminCookie },
+    });
+
+    const row = await prisma.series.findUniqueOrThrow({ where: { id: series.id } });
+    expect(row.dirtySince).not.toBeNull();
+  });
+
+  it("rejecting a Pending proposal does not mark the series dirty", async () => {
+    const memberCookie = await setupMember();
+    const adminCookie = await setupAdmin();
+    const series = await createTestSeries("dirty-reject-proposal");
+    const { id } = await createTestEntry(series.id, { headword: "Dirtyrejectword" });
+
+    const submitRes = await app.inject({
+      method: "POST",
+      url: `/api/entries/${id}/edit-proposals`,
+      headers: { cookie: memberCookie },
+      payload: { definitionHtml: "<p>Proposed.</p>", inflections: [] },
+    });
+    const proposalId = submitRes.json<{ id: string }>().id;
+
+    await app.inject({
+      method: "POST",
+      url: `/api/admin/entry-edit-proposals/${proposalId}/reject`,
+      headers: { cookie: adminCookie },
+    });
+
+    const row = await prisma.series.findUniqueOrThrow({ where: { id: series.id } });
+    expect(row.dirtySince).toBeNull();
+  });
+});

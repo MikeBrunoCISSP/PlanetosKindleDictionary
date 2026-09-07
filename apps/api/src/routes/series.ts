@@ -155,7 +155,9 @@ const seriesRoutes: FastifyPluginAsync<{ prisma: PrismaClient }> = async (fastif
     const { slug } = request.params as { slug: string };
     const body = updateSeriesSchema.parse(request.body);
 
-    const data: { title?: string; description?: string } = {};
+    // title/description both feed the sweep's content hash (PERF-001) - fold
+    // the dirty marker into this same update rather than a second statement.
+    const data: { title?: string; description?: string; dirtySince: Date } = { dirtySince: new Date() };
     if (body.title !== undefined) data.title = body.title;
     if (body.description !== undefined) data.description = body.description;
 
