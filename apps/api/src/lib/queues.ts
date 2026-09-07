@@ -7,6 +7,7 @@ import { config } from "../config.js";
 let connection: Redis | undefined;
 let dictionaryBuildQueue: Queue | undefined;
 let maintenanceQueue: Queue | undefined;
+let emailQueue: Queue | undefined;
 
 export function getConnection(): Redis {
   // BullMQ requires maxRetriesPerRequest: null on the ioredis connection it's given.
@@ -26,8 +27,14 @@ export function getMaintenanceQueue(): Queue {
   return maintenanceQueue;
 }
 
+export function getEmailQueue(): Queue {
+  emailQueue ??= new Queue("email", { connection: getConnection() });
+  return emailQueue;
+}
+
 export async function closeQueues(): Promise<void> {
   await dictionaryBuildQueue?.close();
   await maintenanceQueue?.close();
+  await emailQueue?.close();
   await connection?.quit();
 }

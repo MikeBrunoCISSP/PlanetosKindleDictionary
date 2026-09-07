@@ -191,7 +191,7 @@ The system SHALL allow a registered, active, email-verified user to authenticate
 
 ### Requirement: Email Verification
 
-The system SHALL allow a visitor holding a valid, unexpired, unused email verification token to mark the associated account's email address as verified. On success the token SHALL be invalidated so it cannot be used again. The system SHALL NOT automatically establish a session on success. An invalid, expired, or already-used token SHALL be rejected with a single generic error that does not distinguish between those cases. Accounts that existed before this capability shipped SHALL already be marked verified and never need to redeem a token.
+The system SHALL allow a visitor holding a valid, unexpired, unused email verification token to mark the associated account's email address as verified. On success the token SHALL be invalidated so it cannot be used again. The system SHALL NOT automatically establish a session on success. An invalid, expired, or already-used token SHALL be rejected with a single generic error that does not distinguish between those cases. Accounts that existed before this capability shipped SHALL already be marked verified and never need to redeem a token. When two requests attempt to redeem the same token concurrently, exactly one SHALL succeed; the other SHALL be rejected as if the token were already used.
 
 #### Scenario: Valid token verifies the account
 
@@ -218,34 +218,44 @@ The system SHALL allow a visitor holding a valid, unexpired, unused email verifi
 - **WHEN** an account that existed before email verification was introduced attempts to log in with correct credentials
 - **THEN** login succeeds without ever having redeemed a verification token
 
+#### Scenario: Concurrent redemption attempts: only one succeeds
+
+- **WHEN** two requests submit the same valid, unexpired, unused verification token at the same time
+- **THEN** exactly one request succeeds, the other is rejected with the generic invalid-or-expired error, and the token is invalidated exactly once
+
 ### Requirement: Resend Verification Email
 
-The system SHALL accept a username-or-email identifier and, regardless of whether it matches an account needing verification, always respond with the same generic confirmation message, disclosing nothing about whether an account exists or is already verified. If the identifier matches a registered, active account whose email is not yet verified, the system SHALL generate a new single-use, time-limited verification token, invalidate any previously issued unused verification tokens for that account, and email the new link to the account's registered email address.
+The system SHALL accept a username-or-email identifier and, regardless of whether it matches an account needing verification, always respond with the same generic confirmation message, disclosing nothing about whether an account exists or is already verified. If the identifier matches a registered, active account whose email is not yet verified, the system SHALL generate a new single-use, time-limited verification token and queue the new link for delivery to the account's registered email address. Any previously issued unused verification token for that account SHALL NOT be invalidated until the replacement token and its delivery both have a durable record — an interrupted request SHALL leave a previously issued, still-valid token usable rather than invalidating it with no replacement ready.
 
 #### Scenario: Matching unverified active account receives a new verification email
 
 - **WHEN** a request identifies an existing, active account whose email is not yet verified
-- **THEN** a new verification email is sent to that account's email address, and the response is the generic confirmation message
+- **THEN** a new verification email is queued for delivery to that account's email address, and the response is the generic confirmation message
 
 #### Scenario: Already-verified account gives the same response
 
 - **WHEN** a request identifies an existing account whose email is already verified
-- **THEN** no email is sent, and the response is the same generic confirmation message as the matching case
+- **THEN** no email is queued, and the response is the same generic confirmation message as the matching case
 
 #### Scenario: Unknown identifier gives the same response
 
 - **WHEN** a request identifies no existing account
-- **THEN** no email is sent, and the response is the same generic confirmation message as the matching case
+- **THEN** no email is queued, and the response is the same generic confirmation message as the matching case
 
 #### Scenario: Disabled account gives the same response
 
 - **WHEN** a request identifies an existing account whose `isActive` is `false`
-- **THEN** no email is sent, and the response is the same generic confirmation message as the matching case
+- **THEN** no email is queued, and the response is the same generic confirmation message as the matching case
 
 #### Scenario: Resend rate limit exceeded
 
 - **WHEN** more than 5 resend-verification requests originate from the same IP address within a rolling 60-minute window
 - **THEN** the system returns `429 Too Many Requests` with a `Retry-After` header
+
+#### Scenario: A prior token survives an interrupted replacement
+
+- **WHEN** a resend-verification request fails after generating a replacement token but before that replacement has a durable delivery record
+- **THEN** the account's previously issued, still-valid verification token remains usable
 
 ### Requirement: Session Management
 
@@ -371,31 +381,36 @@ The Register form SHALL display the password complexity rules as a bulleted chec
 
 ### Requirement: Forgot Password Request
 
-The system SHALL accept a username-or-email identifier and, regardless of whether it matches an account, always respond with the same generic confirmation message, disclosing nothing about whether an account exists. If the identifier matches a registered, active account, the system SHALL generate a single-use, time-limited password reset token for that account and email a reset link containing it to the account's registered email address. A match against an inactive (disabled) account SHALL be treated the same as no match — no email is sent, and the response is identical either way.
+The system SHALL accept a username-or-email identifier and, regardless of whether it matches an account, always respond with the same generic confirmation message, disclosing nothing about whether an account exists. If the identifier matches a registered, active account, the system SHALL generate a single-use, time-limited password reset token for that account and queue a reset link containing it for delivery to the account's registered email address. A match against an inactive (disabled) account SHALL be treated the same as no match — no email is queued, and the response is identical either way. Any previously issued unused reset token for that account SHALL NOT be invalidated until the replacement token and its delivery both have a durable record — an interrupted request SHALL leave a previously issued, still-valid token usable rather than invalidating it with no replacement ready.
 
 #### Scenario: Matching active account receives a reset email
 
 - **WHEN** a request identifies an existing, active account by username or by email
-- **THEN** a reset email is sent to that account's email address, and the response is the generic confirmation message
+- **THEN** a reset email is queued for delivery to that account's email address, and the response is the generic confirmation message
 
 #### Scenario: Unknown identifier gives the same response
 
 - **WHEN** a request identifies no existing account
-- **THEN** no email is sent, and the response is the same generic confirmation message as the matching case, with no indication that no account was found
+- **THEN** no email is queued, and the response is the same generic confirmation message as the matching case, with no indication that no account was found
 
 #### Scenario: Disabled account gives the same response
 
 - **WHEN** a request identifies an existing account whose `isActive` is `false`
-- **THEN** no email is sent, and the response is the same generic confirmation message as the matching case
+- **THEN** no email is queued, and the response is the same generic confirmation message as the matching case
 
 #### Scenario: Forgot-password rate limit exceeded
 
 - **WHEN** more than 5 forgot-password requests originate from the same IP address within a rolling 60-minute window
 - **THEN** the system returns `429 Too Many Requests` with a `Retry-After` header
 
+#### Scenario: A prior token survives an interrupted replacement
+
+- **WHEN** a forgot-password request fails after generating a replacement token but before that replacement has a durable delivery record
+- **THEN** the account's previously issued, still-valid reset token remains usable
+
 ### Requirement: Password Reset Token Redemption
 
-The system SHALL allow a visitor holding a valid, unexpired, unused password reset token to set a new password for the associated account, subject to the same password complexity rules as registration. On success the token SHALL be invalidated so it cannot be used again, and any other outstanding unused reset tokens for that account SHALL also be invalidated. The system SHALL NOT automatically establish a session on success. An invalid, expired, or already-used token SHALL be rejected with a single generic error that does not distinguish between those cases.
+The system SHALL allow a visitor holding a valid, unexpired, unused password reset token to set a new password for the associated account, subject to the same password complexity rules as registration. On success the token SHALL be invalidated so it cannot be used again, and any other outstanding unused reset tokens for that account SHALL also be invalidated. The system SHALL NOT automatically establish a session on success. An invalid, expired, or already-used token SHALL be rejected with a single generic error that does not distinguish between those cases. When two requests attempt to redeem the same token concurrently, exactly one SHALL succeed; the other SHALL be rejected as if the token were already used.
 
 #### Scenario: Valid token sets a new password
 
@@ -421,6 +436,11 @@ The system SHALL allow a visitor holding a valid, unexpired, unused password res
 
 - **WHEN** an account has an outstanding unused reset token and a new forgot-password request is made for that same account
 - **THEN** the previously issued token can no longer be redeemed, only the newest one can
+
+#### Scenario: Concurrent redemption attempts: only one succeeds
+
+- **WHEN** two requests submit the same valid, unexpired, unused reset token at the same time, each with a different new password
+- **THEN** exactly one request succeeds and sets its password, the other is rejected with the generic invalid-or-expired error, and the account's password matches only the winning request's value
 
 ### Requirement: Reset-Password Page
 

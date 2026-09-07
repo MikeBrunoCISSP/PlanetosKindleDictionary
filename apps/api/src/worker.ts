@@ -3,12 +3,13 @@ import { config, assertConfigValid } from "./config.js";
 
 import { Worker, type Job } from "bullmq";
 import { PrismaClient } from "@prisma/client";
-import { getDictionaryBuildQueue, getMaintenanceQueue, getConnection, closeQueues } from "./lib/queues.js";
+import { getDictionaryBuildQueue, getMaintenanceQueue, getEmailQueue, getConnection, closeQueues } from "./lib/queues.js";
 import { ensureBucketExists, putObject, deleteObjects } from "./lib/storage.js";
 import { runPreflight } from "./lib/health.js";
 import { processDictionaryBuild } from "./jobs/build.js";
 import { pruneOldBuilds } from "./jobs/prune.js";
 import { runSweep } from "./jobs/sweep.js";
+import { processEmailOutbox, EMAIL_JOB_RETRY_OPTIONS } from "./lib/outbox.js";
 
 // Fail fast on missing/invalid production configuration before the worker
 // registers with any queue (finding PROD-002). Validates only what the
@@ -36,6 +37,7 @@ await ensureBucketExists();
 
 const dictionaryBuildQueue = getDictionaryBuildQueue();
 const maintenanceQueue = getMaintenanceQueue();
+const emailQueue = getEmailQueue();
 
 // The dictionary-build queue carries two distinct job types, told apart by
 // job name: the repeatable "sweep-changed-series" scheduler job (no
@@ -74,6 +76,53 @@ const maintenanceWorker = new Worker(
   { connection: maintenanceQueue.opts.connection, concurrency: 2 }
 );
 
+// Reconciliation for the case where the enqueue call right after an
+// outbox row's transaction commit itself failed (e.g. Redis was briefly
+// unreachable) - finds rows nothing ever queued a job for and re-enqueues
+// them (PROD-006). deduplication means this is safe to run even if a job
+// IS still in flight for a given row: the re-add either finds no dedup key
+// (creates a genuine new job, exactly the recovery case this exists for)
+// or finds one already held by a waiting/active job (no-ops/stashes,
+// per the same semantics sweep.ts's own dedup relies on).
+const PENDING_RECONCILE_AGE_MS = 5 * 60 * 1000;
+
+async function reconcilePendingEmails(): Promise<void> {
+  const stale = await prisma.emailOutbox.findMany({
+    where: { status: "PENDING", createdAt: { lt: new Date(Date.now() - PENDING_RECONCILE_AGE_MS) } },
+    select: { id: true },
+  });
+  for (const { id } of stale) {
+    await emailQueue.add(
+      "send-email",
+      { outboxId: id },
+      { ...EMAIL_JOB_RETRY_OPTIONS, deduplication: { id, keepLastIfActive: true } }
+    );
+  }
+}
+
+async function processEmailQueueJob(job: Job): Promise<void> {
+  if (job.name === "reconcile-pending-emails") {
+    await reconcilePendingEmails();
+    return;
+  }
+  const { outboxId } = job.data as { outboxId: string };
+  await processEmailOutbox(prisma, outboxId);
+}
+
+const emailWorker = new Worker("email", processEmailQueueJob, {
+  connection: emailQueue.opts.connection,
+  concurrency: 2,
+});
+
+// Idempotent by scheduler id, same as sweep-changed-series below. Its own
+// fixed hourly cadence, independent of config.buildCron (that value tunes
+// the dictionary-build sweep specifically, not this).
+await emailQueue.upsertJobScheduler(
+  "reconcile-pending-emails",
+  { pattern: "0 * * * *" },
+  { name: "reconcile-pending-emails", data: {} }
+);
+
 // Idempotent by scheduler id - redeploying the worker never registers a
 // duplicate repeatable job (SPEC.md §7 "The hourly sweep").
 await dictionaryBuildQueue.upsertJobScheduler(
@@ -88,10 +137,14 @@ dictionaryBuildWorker.on("failed", (job, err) => {
 maintenanceWorker.on("failed", (job, err) => {
   console.error(`[worker] maintenance job ${job?.id} failed:`, err);
 });
+emailWorker.on("failed", (job, err) => {
+  console.error(`[worker] email job ${job?.id} (${job?.name}) failed:`, err);
+});
 
 async function shutdown(): Promise<void> {
   await dictionaryBuildWorker.close();
   await maintenanceWorker.close();
+  await emailWorker.close();
   await closeQueues();
   await prisma.$disconnect();
 }
@@ -103,4 +156,4 @@ process.on("SIGINT", () => {
   void shutdown().then(() => process.exit(0));
 });
 
-console.log("[worker] dictionary-build and maintenance workers started");
+console.log("[worker] dictionary-build, maintenance, and email workers started");

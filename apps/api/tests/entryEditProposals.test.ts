@@ -127,6 +127,27 @@ describe("POST /api/entries/:id/edit-proposals", () => {
     expect(entry.definitionHtml).toBe("<p>A test definition.</p>");
   });
 
+  it("SEC-003: rejects more than 50 inflections before any database write", async () => {
+    const memberCookie = await setupMember();
+    const series = await createTestSeries("too-many-inflections");
+    const { id } = await createTestEntry(series.id, { headword: "Bear" });
+
+    const res = await app.inject({
+      method: "POST",
+      url: `/api/entries/${id}/edit-proposals`,
+      headers: { cookie: memberCookie },
+      payload: {
+        definitionHtml: "<p>Updated.</p>",
+        inflections: Array.from({ length: 51 }, (_, i) => `Inflection${i}`),
+      },
+    });
+
+    expect(res.statusCode).toBe(400);
+
+    const proposals = await prisma.entryEditProposal.findMany({ where: { entryId: id } });
+    expect(proposals).toHaveLength(0);
+  });
+
   it("rejects an unauthenticated request and creates nothing", async () => {
     const series = await createTestSeries("unauth");
     const { id } = await createTestEntry(series.id, { headword: "Anonword" });

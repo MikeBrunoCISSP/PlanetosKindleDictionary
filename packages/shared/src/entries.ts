@@ -3,6 +3,12 @@ import { plainText } from "./validation.js";
 
 export const DUPLICATE_WORD_MESSAGE = "The word already exists in the dictionary.";
 
+// SEC-003: bounds the number of sequential per-inflection database writes a
+// single request can trigger. Generous for a real dictionary entry (plurals,
+// verb forms, etc. rarely reach double digits) - only bites abusive payloads.
+export const MAX_INFLECTIONS = 50;
+const MAX_INFLECTIONS_MESSAGE = `An entry can have at most ${MAX_INFLECTIONS} inflections.`;
+
 export const definitionHtmlSchema = z
   .string()
   .trim()
@@ -13,7 +19,10 @@ export const createEntrySchema = z
   .object({
     headword: plainText({ max: 200, minMessage: "Headword is required" }),
     definitionHtml: definitionHtmlSchema,
-    inflections: z.array(plainText({ max: 200, minMessage: "Inflection cannot be empty" })).default([]),
+    inflections: z
+      .array(plainText({ max: 200, minMessage: "Inflection cannot be empty" }))
+      .max(MAX_INFLECTIONS, MAX_INFLECTIONS_MESSAGE)
+      .default([]),
   })
   .refine(
     (data) => {
@@ -28,7 +37,10 @@ export const createEntrySchema = z
 export const submitEntryEditProposalSchema = z
   .object({
     definitionHtml: definitionHtmlSchema,
-    inflections: z.array(plainText({ max: 200, minMessage: "Inflection cannot be empty" })).default([]),
+    inflections: z
+      .array(plainText({ max: 200, minMessage: "Inflection cannot be empty" }))
+      .max(MAX_INFLECTIONS, MAX_INFLECTIONS_MESSAGE)
+      .default([]),
   })
   .refine(
     (data) => new Set(data.inflections.map((value) => value.trim().toLowerCase())).size === data.inflections.length,

@@ -1,5 +1,5 @@
 import fp from "fastify-plugin";
-import type { FastifyPluginAsync } from "fastify";
+import type { FastifyPluginAsync, FastifyRequest } from "fastify";
 import fastifyRateLimit from "@fastify/rate-limit";
 import { Redis } from "ioredis";
 import { config } from "../config.js";
@@ -51,6 +51,19 @@ export const RESEND_VERIFICATION_RATE_LIMIT = {
 
 export const SEARCH_RATE_LIMIT = {
   rateLimit: { max: 60, timeWindow: "1 minute" },
+} as const;
+
+// SPEC.md's documented "60 writes/hour/user" tier (SEC-003) - keyed by the
+// authenticated session's user id, not IP, so distinct users behind a
+// shared IP (or one user across several IPs) are budgeted correctly. Falls
+// back to IP only for the sliver of traffic where this hook runs before a
+// route's own auth preHandler has had a chance to reject it.
+export const WRITE_RATE_LIMIT = {
+  rateLimit: {
+    max: 60,
+    timeWindow: "1 hour",
+    keyGenerator: (request: FastifyRequest) => request.session.userId ?? request.ip,
+  },
 } as const;
 
 export default fp(rateLimitPlugin, { name: "rateLimit" });

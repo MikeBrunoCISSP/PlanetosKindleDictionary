@@ -112,6 +112,29 @@ describe("POST /api/series/:slug/entries", () => {
     expect(revisions[0]?.action).toBe("CREATE");
   });
 
+  it("SEC-003: rejects more than 50 inflections before any database write", async () => {
+    const memberCookie = await setupMember();
+    const series = await createTestSeries("too-many-inflections");
+
+    const res = await app.inject({
+      method: "POST",
+      url: `/api/series/${series.slug}/entries`,
+      headers: { cookie: memberCookie },
+      payload: {
+        headword: "Overloaded Word",
+        definitionHtml: "<p>Definition</p>",
+        inflections: Array.from({ length: 51 }, (_, i) => `Inflection${i}`),
+      },
+    });
+
+    expect(res.statusCode).toBe(400);
+
+    const entries = await prisma.entry.findMany({ where: { seriesId: series.id } });
+    expect(entries).toHaveLength(0);
+    const words = await prisma.seriesWord.findMany({ where: { seriesId: series.id } });
+    expect(words).toHaveLength(0);
+  });
+
   it("returns 401 for unauthenticated request", async () => {
     const series = await createTestSeries("unauth");
     const res = await app.inject({
@@ -407,6 +430,58 @@ describe("POST /api/series/:slug/entries", () => {
     expect(entries).toHaveLength(1);
     const words = await prisma.seriesWord.findMany({ where: { seriesId: series.id } });
     expect(words).toHaveLength(1);
+  });
+});
+
+describe("POST /api/series/:slug/entries (WRITE_RATE_LIMIT wiring)", () => {
+  it("SEC-003: the write rate-limit tier is applied to entry creation", async () => {
+    // REGISTRATION_RATE_LIMIT/LOGIN_RATE_LIMIT are IP-keyed and share the
+    // real Redis-backed store across test runs - trustProxy + a unique
+    // simulated IP per run avoids colliding with that budget on repeated
+    // runs (see the equivalent convention in tests/rateLimit.test.ts).
+    const trustOneHop = (_address: string, hop: number) => hop < 1;
+    const edgeIp = "10.0.0.1";
+    const registerIp = `203.0.${(Date.now() >> 8) % 256}.${Date.now() % 256}`;
+
+    const built = await buildApp({ trustProxy: trustOneHop, rateLimit: true });
+    const email = `writelimit-entries-${Date.now()}@example.com`;
+    const username = `WriteLimitEntries${Date.now()}`;
+    await built.app.inject({
+      method: "POST",
+      url: "/api/auth/register",
+      remoteAddress: edgeIp,
+      headers: { "x-forwarded-for": registerIp },
+      payload: { email, username, reasonForJoining: "Testing rate limits.", password: "SecureP4ss!" },
+    });
+    await built.prisma.user.update({ where: { email }, data: { emailVerified: true, approvalStatus: "APPROVED" } });
+    const loginRes = await built.app.inject({
+      method: "POST",
+      url: "/api/auth/login",
+      remoteAddress: edgeIp,
+      headers: { "x-forwarded-for": registerIp },
+      payload: { identifier: email, password: "SecureP4ss!" },
+    });
+    const setCookie = loginRes.headers["set-cookie"] as string | string[];
+    const cookie = ((Array.isArray(setCookie) ? setCookie[0] : setCookie) ?? "").split(";")[0] ?? "";
+
+    const series = await built.prisma.series.create({
+      data: { slug: `${SLUG_PREFIX}-rate-limit-wiring`, title: "Rate Limit Wiring" },
+    });
+
+    const res = await built.app.inject({
+      method: "POST",
+      url: `/api/series/${series.slug}/entries`,
+      headers: { cookie },
+      payload: { headword: "Wired Word", definitionHtml: "<p>Definition</p>", inflections: [] },
+    });
+
+    expect(res.statusCode).toBe(201);
+    expect(res.headers["x-ratelimit-limit"]).toBe("60");
+
+    await cleanSeries(built.prisma, SLUG_PREFIX);
+    await cleanUsers(built.prisma, [email]);
+    await built.app.close();
+    await built.prisma.$disconnect();
   });
 });
 

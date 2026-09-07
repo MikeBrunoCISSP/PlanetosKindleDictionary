@@ -29,8 +29,17 @@ async function sendViaSmtp(msg: Message): Promise<void> {
   });
 }
 
-/** Exported for focused testing. Throws on a non-2xx response from Brevo. */
-export async function sendViaBrevoApi(msg: Message): Promise<void> {
+// Bounds how long a stalled Brevo connection can hold a delivery attempt
+// open (PROD-006) - fetch has no timeout of its own otherwise.
+const BREVO_TIMEOUT_MS = 10_000;
+
+/**
+ * Exported for focused testing. Throws on a non-2xx response from Brevo, or
+ * if it doesn't respond within `timeoutMs`. `timeoutMs` defaults to the real
+ * production bound; tests pass a short override instead of waiting out the
+ * real timeout (AbortSignal.timeout() doesn't respect fake timers).
+ */
+export async function sendViaBrevoApi(msg: Message, timeoutMs = BREVO_TIMEOUT_MS): Promise<void> {
   const res = await fetch(BREVO_API_URL, {
     method: "POST",
     headers: {
@@ -44,6 +53,7 @@ export async function sendViaBrevoApi(msg: Message): Promise<void> {
       subject: msg.subject,
       textContent: msg.text,
     }),
+    signal: AbortSignal.timeout(timeoutMs),
   });
   if (!res.ok) {
     const body = await res.text().catch(() => "");

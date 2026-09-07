@@ -1,5 +1,10 @@
-import { describe, expect, it } from "vitest";
-import { sendPasswordResetEmail, sendVerificationEmail, sendAccountApprovedEmail } from "../../src/lib/mailer.js";
+import { describe, expect, it, vi } from "vitest";
+import {
+  sendPasswordResetEmail,
+  sendVerificationEmail,
+  sendAccountApprovedEmail,
+  sendViaBrevoApi,
+} from "../../src/lib/mailer.js";
 
 const MAILPIT_API = "http://localhost:8025/api/v1";
 
@@ -64,5 +69,28 @@ describe("mailer", () => {
     const fullRes = await fetch(`${MAILPIT_API}/message/${summary.ID}`);
     const full = (await fullRes.json()) as { Text: string };
     expect(full.Text).toContain("You can now log in and start creating and editing dictionary entries.");
+  });
+
+  it("PROD-006: aborts a stalled Brevo request rather than hanging indefinitely", async () => {
+    // AbortSignal.timeout() doesn't respect vitest's fake timers (confirmed
+    // empirically - it kept the real 10s production default running under
+    // fake timers). sendViaBrevoApi's timeoutMs parameter exists precisely
+    // so tests can use a short real timeout instead of waiting one out.
+    const fetchMock = vi.fn((_url: unknown, init: { signal: AbortSignal }) => {
+      return new Promise((_resolve, reject) => {
+        init.signal.addEventListener("abort", () => reject(new Error("The operation was aborted")));
+      });
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    const result = await sendViaBrevoApi({ to: "test@example.com", subject: "Subject", text: "Body" }, 50).then(
+      () => "resolved",
+      (err: unknown) => (err instanceof Error ? err.message : String(err))
+    );
+
+    expect(result).not.toBe("resolved");
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+
+    vi.unstubAllGlobals();
   });
 });

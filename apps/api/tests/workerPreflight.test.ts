@@ -20,6 +20,11 @@ vi.mock("../src/lib/queues.js", () => ({
     upsertJobScheduler: upsertJobSchedulerMock,
   })),
   getMaintenanceQueue: vi.fn(() => ({ opts: { connection: {} } })),
+  getEmailQueue: vi.fn(() => ({
+    opts: { connection: {} },
+    upsertJobScheduler: upsertJobSchedulerMock,
+    add: vi.fn(),
+  })),
   getConnection: vi.fn(() => ({})),
   closeQueues: vi.fn(),
 }));

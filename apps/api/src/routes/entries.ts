@@ -11,6 +11,7 @@ import {
 import { sanitizeDefinitionHtml } from "@planetos/shared/sanitize";
 import { makeRequireAdmin } from "../plugins/requireAdmin.js";
 import { makeRequireAuth, makeRequireApproved } from "../plugins/requireAuth.js";
+import { WRITE_RATE_LIMIT } from "../plugins/rateLimit.js";
 import { Errors, isPrismaError } from "../lib/errors.js";
 
 type EntryWithInflections = {
@@ -94,7 +95,7 @@ const entriesRoutes: FastifyPluginAsync<{ prisma: PrismaClient }> = async (fasti
 
   fastify.post(
     "/api/series/:slug/entries",
-    { preHandler: requireApproved },
+    { preHandler: requireApproved, config: WRITE_RATE_LIMIT },
     async (request, reply) => {
       const { slug } = request.params as { slug: string };
       const body = createEntrySchema.parse(request.body);

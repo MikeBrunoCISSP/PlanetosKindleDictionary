@@ -10,6 +10,7 @@ import {
 import { sanitizeDefinitionHtml } from "@planetos/shared/sanitize";
 import { makeRequireAdmin } from "../plugins/requireAdmin.js";
 import { makeRequireAuth } from "../plugins/requireAuth.js";
+import { WRITE_RATE_LIMIT } from "../plugins/rateLimit.js";
 import { Errors, isPrismaError } from "../lib/errors.js";
 import { toEntryDto, entryInclude } from "./entries.js";
 
@@ -122,7 +123,7 @@ const entryEditProposalRoutes: FastifyPluginAsync<{ prisma: PrismaClient }> = as
   // deliberately looser than entry creation's requireApproved.
   fastify.post(
     "/api/entries/:id/edit-proposals",
-    { preHandler: requireAuth },
+    { preHandler: requireAuth, config: WRITE_RATE_LIMIT },
     async (request, reply) => {
       const { id } = request.params as { id: string };
       const body = submitEntryEditProposalSchema.parse(request.body);

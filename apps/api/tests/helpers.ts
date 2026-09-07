@@ -1,5 +1,8 @@
 import Fastify, { type FastifyServerOptions } from "fastify";
 import { PrismaClient } from "@prisma/client";
+import { Worker } from "bullmq";
+import { getEmailQueue } from "../src/lib/queues.js";
+import { processEmailOutbox } from "../src/lib/outbox.js";
 import sessionPlugin from "../src/plugins/session.js";
 import errorHandlerPlugin from "../src/plugins/errorHandler.js";
 import rateLimitPlugin from "../src/plugins/rateLimit.js";
@@ -51,4 +54,26 @@ export async function cleanSeries(prisma: PrismaClient, slugPrefix: string) {
 
 export async function resetTurnstileSettings(prisma: PrismaClient) {
   await prisma.turnstileSettings.deleteMany({});
+}
+
+/**
+ * PROD-006: account routes now only enqueue an email job on the real
+ * `email` queue rather than sending synchronously. Integration tests that
+ * need an actual email to land (e.g. in Mailpit) must drive a Worker that
+ * processes that queue, the same way apps/api/src/worker.ts does in
+ * production - otherwise nothing ever consumes the job.
+ */
+export function startEmailWorker(prisma: PrismaClient): Worker {
+  const emailQueue = getEmailQueue();
+  const worker = new Worker(
+    "email",
+    async (job) => {
+      if (job.name === "reconcile-pending-emails") return;
+      const { outboxId } = job.data as { outboxId: string };
+      await processEmailOutbox(prisma, outboxId);
+    },
+    { connection: emailQueue.opts.connection }
+  );
+  worker.on("error", () => {});
+  return worker;
 }

@@ -2,7 +2,8 @@ import { describe, it, expect, beforeAll, afterAll } from "vitest";
 import { createHash } from "node:crypto";
 import type { FastifyInstance } from "fastify";
 import type { PrismaClient } from "@prisma/client";
-import { buildApp } from "./helpers.js";
+import type { Worker } from "bullmq";
+import { buildApp, startEmailWorker } from "./helpers.js";
 
 const EMAIL_PREFIX = "resettest-";
 const EMAIL_DOMAIN = "example.com";
@@ -12,6 +13,7 @@ const MAILPIT_API = "http://localhost:8025/api/v1";
 
 let app: FastifyInstance;
 let prisma: PrismaClient;
+let emailWorker: Worker;
 let counter = 0;
 
 function uniqueUser() {
@@ -32,14 +34,25 @@ interface MailpitMessageSummary {
 // Registration now also sends a verification email to the same address, so
 // searching by recipient alone isn't enough to isolate the reset email -
 // filter to the one whose subject is actually the reset email's.
-async function findResetEmail(to: string): Promise<{ id: string; text: string } | undefined> {
-  const listRes = await fetch(`${MAILPIT_API}/search?query=to:${encodeURIComponent(to)}`);
-  const { messages } = (await listRes.json()) as { messages: MailpitMessageSummary[] };
-  const summary = messages.find((m) => m.Subject.includes("Reset your"));
-  if (!summary) return undefined;
-  const fullRes = await fetch(`${MAILPIT_API}/message/${summary.ID}`);
-  const full = (await fullRes.json()) as { Text: string };
-  return { id: summary.ID, text: full.Text };
+//
+// Delivery is now asynchronous (PROD-006: the route only enqueues a job) -
+// even with emailWorker actively draining the queue, the message may not
+// have landed in Mailpit yet by the time this runs, so poll briefly instead
+// of checking once.
+async function findResetEmail(to: string, timeoutMs = 10000): Promise<{ id: string; text: string } | undefined> {
+  const start = Date.now();
+  do {
+    const listRes = await fetch(`${MAILPIT_API}/search?query=to:${encodeURIComponent(to)}`);
+    const { messages } = (await listRes.json()) as { messages: MailpitMessageSummary[] };
+    const summary = messages.find((m) => m.Subject.includes("Reset your"));
+    if (summary) {
+      const fullRes = await fetch(`${MAILPIT_API}/message/${summary.ID}`);
+      const full = (await fullRes.json()) as { Text: string };
+      return { id: summary.ID, text: full.Text };
+    }
+    await new Promise((resolve) => setTimeout(resolve, 100));
+  } while (Date.now() - start < timeoutMs);
+  return undefined;
 }
 
 function extractToken(emailText: string): string {
@@ -90,11 +103,13 @@ async function cleanTestUsers() {
 
 beforeAll(async () => {
   ({ app, prisma } = await buildApp());
+  emailWorker = startEmailWorker(prisma);
   await cleanTestUsers();
 });
 
 afterAll(async () => {
   await cleanTestUsers();
+  await emailWorker.close();
   await app.close();
   await prisma.$disconnect();
 });
@@ -132,7 +147,7 @@ describe("POST /api/auth/forgot-password", () => {
     const body = res.json<{ message: string }>();
     expect(body.message).toMatch(/if an account.*was found/i);
 
-    const email = await findResetEmail(user.email);
+    const email = await findResetEmail(user.email, 500);
     expect(email).toBeUndefined();
   });
 
@@ -146,7 +161,7 @@ describe("POST /api/auth/forgot-password", () => {
     const body = res.json<{ message: string }>();
     expect(body.message).toMatch(/if an account.*was found/i);
 
-    const email = await findResetEmail(user.email);
+    const email = await findResetEmail(user.email, 500);
     expect(email).toBeUndefined();
   });
 
@@ -207,6 +222,35 @@ describe("POST /api/auth/reset-password", () => {
 
     const stillWorks = await login(user.email, "FirstNewP4ss!");
     expect(stillWorks.statusCode).toBe(200);
+  });
+
+  it("SEC-002: exactly one of two concurrent redemptions of the same token succeeds", async () => {
+    const user = uniqueUser();
+    await register(user.email, user.username);
+    await markVerified(user.email);
+    await forgotPassword(user.email);
+    const email = await findResetEmail(user.email);
+    const token = extractToken(email!.text);
+
+    const [first, second] = await Promise.all([
+      resetPassword(token, "ConcurrentFirstP4ss!"),
+      resetPassword(token, "ConcurrentSecondP4ss!"),
+    ]);
+
+    const statuses = [first.statusCode, second.statusCode].sort();
+    expect(statuses).toEqual([200, 400]);
+
+    const winner = first.statusCode === 200 ? "ConcurrentFirstP4ss!" : "ConcurrentSecondP4ss!";
+    const loser = first.statusCode === 200 ? "ConcurrentSecondP4ss!" : "ConcurrentFirstP4ss!";
+
+    const winnerLogin = await login(user.email, winner);
+    expect(winnerLogin.statusCode).toBe(200);
+
+    const loserLogin = await login(user.email, loser);
+    expect(loserLogin.statusCode).toBe(401);
+
+    const originalLogin = await login(user.email, VALID_PASSWORD);
+    expect(originalLogin.statusCode).toBe(401);
   });
 
   it("rejects an expired token", async () => {

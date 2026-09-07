@@ -37,6 +37,17 @@ enum BuildStatus {
   FAILED
 }
 
+enum EmailOutboxType {
+  VERIFICATION
+  PASSWORD_RESET
+}
+
+enum EmailOutboxStatus {
+  PENDING
+  SENT
+  FAILED
+}
+
 enum UserApprovalStatus {
   PENDING
   APPROVED
@@ -276,4 +287,24 @@ model Build {
 
   @@index([seriesId, createdAt])
   @@index([seriesId, status, createdAt])
+}
+
+// Durable record of an account-related transactional email (PROD-006).
+// payloadEncrypted holds the verify/reset URL (embeds the raw single-use
+// token - see apps/api/src/lib/crypto.ts) encrypted with the same
+// AES-256-GCM helper used for TurnstileSettings.secretKeyEncrypted; it is
+// nulled once status becomes SENT so a decryptable copy of an active token
+// doesn't sit at rest longer than necessary.
+model EmailOutbox {
+  id               String            @id @default(cuid())
+  type             EmailOutboxType
+  recipientEmail   String
+  payloadEncrypted String?
+  status           EmailOutboxStatus @default(PENDING)
+  attempts         Int               @default(0)
+  error            String?
+  sentAt           DateTime?
+  createdAt        DateTime          @default(now())
+
+  @@index([status, createdAt])
 }

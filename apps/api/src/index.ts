@@ -22,7 +22,7 @@ import searchRoutes from "./routes/search.js";
 import entryEditProposalRoutes from "./routes/entryEditProposals.js";
 import downloadsRoutes from "./routes/downloads.js";
 import { ensureBucketExists } from "./lib/storage.js";
-import { getDictionaryBuildQueue, getMaintenanceQueue } from "./lib/queues.js";
+import { getDictionaryBuildQueue, getMaintenanceQueue, getEmailQueue } from "./lib/queues.js";
 import { resolveWebDist } from "./lib/staticSite.js";
 import { checkReadiness } from "./lib/health.js";
 
@@ -72,7 +72,11 @@ await app.register(async (adminJobsApp) => {
 
   const serverAdapter = new FastifyAdapter();
   createBullBoard({
-    queues: [new BullMQAdapter(getDictionaryBuildQueue()), new BullMQAdapter(getMaintenanceQueue())],
+    queues: [
+      new BullMQAdapter(getDictionaryBuildQueue()),
+      new BullMQAdapter(getMaintenanceQueue()),
+      new BullMQAdapter(getEmailQueue()),
+    ],
     serverAdapter,
   });
   serverAdapter.setBasePath("/admin/jobs");

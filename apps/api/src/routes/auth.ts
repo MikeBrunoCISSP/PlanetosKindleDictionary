@@ -23,8 +23,9 @@ import {
 } from "../plugins/rateLimit.js";
 import { decrypt } from "../lib/crypto.js";
 import { verify as verifyTurnstile } from "../lib/turnstile.js";
-import { sendPasswordResetEmail, sendVerificationEmail } from "../lib/mailer.js";
 import { config } from "../config.js";
+import { getEmailQueue } from "../lib/queues.js";
+import { createOutboxEntry, EMAIL_JOB_RETRY_OPTIONS } from "../lib/outbox.js";
 
 const RESET_TOKEN_TTL_MS = 60 * 60 * 1000;
 const VERIFICATION_TOKEN_TTL_MS = 24 * 60 * 60 * 1000;
@@ -100,6 +101,9 @@ const authRoutes: FastifyPluginAsync<{ prisma: PrismaClient }> = async (fastify,
       }
 
       const passwordHash = await hash(body.password);
+      const rawToken = randomBytes(32).toString("hex");
+      const baseUrl = config.publicBaseUrl;
+      const verifyUrl = `${baseUrl}/verify-email?token=${rawToken}`;
 
       let user: {
         id: string;
@@ -109,26 +113,42 @@ const authRoutes: FastifyPluginAsync<{ prisma: PrismaClient }> = async (fastify,
         approvalStatus: "PENDING" | "APPROVED";
         createdAt: Date;
       };
+      let outboxId: string;
       try {
-        user = await prisma.user.create({
-          data: {
-            email,
-            username: body.username,
-            usernameNormalized,
-            reasonForJoining: body.reasonForJoining,
-            passwordHash,
-            role: "MEMBER",
-            approvalStatus: "PENDING",
-          },
-          select: {
-            id: true,
-            email: true,
-            username: true,
-            role: true,
-            approvalStatus: true,
-            createdAt: true,
-          },
+        const result = await prisma.$transaction(async (tx) => {
+          const createdUser = await tx.user.create({
+            data: {
+              email,
+              username: body.username,
+              usernameNormalized,
+              reasonForJoining: body.reasonForJoining,
+              passwordHash,
+              role: "MEMBER",
+              approvalStatus: "PENDING",
+            },
+            select: {
+              id: true,
+              email: true,
+              username: true,
+              role: true,
+              approvalStatus: true,
+              createdAt: true,
+            },
+          });
+
+          await tx.emailVerificationToken.create({
+            data: {
+              userId: createdUser.id,
+              tokenHash: hashToken(rawToken),
+              expiresAt: new Date(Date.now() + VERIFICATION_TOKEN_TTL_MS),
+            },
+          });
+
+          const outbox = await createOutboxEntry(tx, "VERIFICATION", createdUser.email, verifyUrl);
+          return { user: createdUser, outboxId: outbox.id };
         });
+        user = result.user;
+        outboxId = result.outboxId;
       } catch (err: unknown) {
         if (isPrismaError(err, "P2002")) {
           const target = (err as { meta?: { target?: string[] } }).meta?.target ?? [];
@@ -138,23 +158,17 @@ const authRoutes: FastifyPluginAsync<{ prisma: PrismaClient }> = async (fastify,
         throw err;
       }
 
-      const rawToken = randomBytes(32).toString("hex");
-      await prisma.emailVerificationToken.create({
-        data: {
-          userId: user.id,
-          tokenHash: hashToken(rawToken),
-          expiresAt: new Date(Date.now() + VERIFICATION_TOKEN_TTL_MS),
-        },
-      });
-
-      const baseUrl = config.publicBaseUrl;
-      const verifyUrl = `${baseUrl}/verify-email?token=${rawToken}`;
-      // Best-effort: a delivery failure must not fail registration or leave an
-      // orphaned user - the "check your email" card offers a resend.
+      // Best-effort: a Redis-at-this-instant failure must not fail
+      // registration - the hourly reconciliation sweep (worker.ts) picks up
+      // any PENDING outbox row nothing ever queued a job for.
       try {
-        await sendVerificationEmail(user.email, verifyUrl);
+        await getEmailQueue().add(
+          "send-email",
+          { outboxId },
+          { ...EMAIL_JOB_RETRY_OPTIONS, deduplication: { id: outboxId, keepLastIfActive: true } }
+        );
       } catch (err) {
-        request.log.error(err, "Failed to send verification email after registration");
+        request.log.error(err, "Failed to enqueue verification email job after registration");
       }
 
       return reply.status(201).send(toUserDto(user));
@@ -226,28 +240,42 @@ const authRoutes: FastifyPluginAsync<{ prisma: PrismaClient }> = async (fastify,
       });
 
       if (user?.isActive) {
-        await prisma.passwordResetToken.updateMany({
-          where: { userId: user.id, usedAt: null },
-          data: { usedAt: new Date() },
-        });
-
         const rawToken = randomBytes(32).toString("hex");
-        await prisma.passwordResetToken.create({
-          data: {
-            userId: user.id,
-            tokenHash: hashToken(rawToken),
-            expiresAt: new Date(Date.now() + RESET_TOKEN_TTL_MS),
-          },
-        });
-
         const baseUrl = config.publicBaseUrl;
         const resetUrl = `${baseUrl}/reset-password?token=${rawToken}`;
-        // Best-effort: swallow send failures so the response stays identical to
-        // the non-matching-identifier path (no account-existence leak).
+
+        // The prior token's invalidation and the new token's creation share a
+        // transaction with the outbox row (PROD-006): if outbox creation
+        // fails, the whole thing rolls back and the prior token remains
+        // valid, rather than leaving the user with zero usable links.
+        const outbox = await prisma.$transaction(async (tx) => {
+          await tx.passwordResetToken.updateMany({
+            where: { userId: user.id, usedAt: null },
+            data: { usedAt: new Date() },
+          });
+
+          await tx.passwordResetToken.create({
+            data: {
+              userId: user.id,
+              tokenHash: hashToken(rawToken),
+              expiresAt: new Date(Date.now() + RESET_TOKEN_TTL_MS),
+            },
+          });
+
+          return createOutboxEntry(tx, "PASSWORD_RESET", user.email, resetUrl);
+        });
+
+        // Best-effort: swallow enqueue failures so the response stays
+        // identical to the non-matching-identifier path (no account-existence
+        // leak). The hourly reconciliation sweep picks up the row otherwise.
         try {
-          await sendPasswordResetEmail(user.email, resetUrl);
+          await getEmailQueue().add(
+            "send-email",
+            { outboxId: outbox.id },
+            { ...EMAIL_JOB_RETRY_OPTIONS, deduplication: { id: outbox.id, keepLastIfActive: true } }
+          );
         } catch (err) {
-          request.log.error(err, "Failed to send password-reset email");
+          request.log.error(err, "Failed to enqueue password-reset email job");
         }
       }
 
@@ -274,13 +302,20 @@ const authRoutes: FastifyPluginAsync<{ prisma: PrismaClient }> = async (fastify,
 
       const passwordHash = await hash(body.password);
 
-      await prisma.$transaction([
-        prisma.user.update({ where: { id: resetToken.userId }, data: { passwordHash } }),
-        prisma.passwordResetToken.update({
-          where: { id: resetToken.id },
+      await prisma.$transaction(async (tx) => {
+        // Atomic claim (SEC-002): re-checks usedAt:null and expiry on the
+        // write itself, not just the read above. Two concurrent requests can
+        // both pass that read; only one can win this updateMany, since
+        // Postgres re-evaluates the WHERE clause after acquiring the row
+        // lock, so the loser sees count 0 once the winner has committed.
+        const claimed = await tx.passwordResetToken.updateMany({
+          where: { id: resetToken.id, usedAt: null, expiresAt: { gt: new Date() } },
           data: { usedAt: new Date() },
-        }),
-      ]);
+        });
+        if (claimed.count !== 1) throw Errors.INVALID_RESET_TOKEN();
+
+        await tx.user.update({ where: { id: resetToken.userId }, data: { passwordHash } });
+      });
 
       return reply.status(200).send({ message: "Your password has been reset." });
     }
@@ -300,16 +335,20 @@ const authRoutes: FastifyPluginAsync<{ prisma: PrismaClient }> = async (fastify,
 
       if (!verificationToken) throw Errors.INVALID_VERIFICATION_TOKEN();
 
-      await prisma.$transaction([
-        prisma.user.update({
+      await prisma.$transaction(async (tx) => {
+        // Atomic claim (SEC-002) - see the equivalent comment in
+        // reset-password above for why this closes the concurrent-reuse race.
+        const claimed = await tx.emailVerificationToken.updateMany({
+          where: { id: verificationToken.id, usedAt: null, expiresAt: { gt: new Date() } },
+          data: { usedAt: new Date() },
+        });
+        if (claimed.count !== 1) throw Errors.INVALID_VERIFICATION_TOKEN();
+
+        await tx.user.update({
           where: { id: verificationToken.userId },
           data: { emailVerified: true },
-        }),
-        prisma.emailVerificationToken.update({
-          where: { id: verificationToken.id },
-          data: { usedAt: new Date() },
-        }),
-      ]);
+        });
+      });
 
       return reply.status(200).send({ message: "Your email address has been verified." });
     }
@@ -334,28 +373,41 @@ const authRoutes: FastifyPluginAsync<{ prisma: PrismaClient }> = async (fastify,
       });
 
       if (user?.isActive && !user.emailVerified) {
-        await prisma.emailVerificationToken.updateMany({
-          where: { userId: user.id, usedAt: null },
-          data: { usedAt: new Date() },
-        });
-
         const rawToken = randomBytes(32).toString("hex");
-        await prisma.emailVerificationToken.create({
-          data: {
-            userId: user.id,
-            tokenHash: hashToken(rawToken),
-            expiresAt: new Date(Date.now() + VERIFICATION_TOKEN_TTL_MS),
-          },
-        });
-
         const baseUrl = config.publicBaseUrl;
         const verifyUrl = `${baseUrl}/verify-email?token=${rawToken}`;
-        // Best-effort: swallow send failures so the generic response is
-        // unchanged (no account-existence leak).
+
+        // Same atomicity guarantee as forgot-password above: the prior
+        // token's invalidation, the new token, and the outbox row commit
+        // together or not at all.
+        const outbox = await prisma.$transaction(async (tx) => {
+          await tx.emailVerificationToken.updateMany({
+            where: { userId: user.id, usedAt: null },
+            data: { usedAt: new Date() },
+          });
+
+          await tx.emailVerificationToken.create({
+            data: {
+              userId: user.id,
+              tokenHash: hashToken(rawToken),
+              expiresAt: new Date(Date.now() + VERIFICATION_TOKEN_TTL_MS),
+            },
+          });
+
+          return createOutboxEntry(tx, "VERIFICATION", user.email, verifyUrl);
+        });
+
+        // Best-effort: swallow enqueue failures so the generic response is
+        // unchanged (no account-existence leak). The hourly reconciliation
+        // sweep picks up the row otherwise.
         try {
-          await sendVerificationEmail(user.email, verifyUrl);
+          await getEmailQueue().add(
+            "send-email",
+            { outboxId: outbox.id },
+            { ...EMAIL_JOB_RETRY_OPTIONS, deduplication: { id: outbox.id, keepLastIfActive: true } }
+          );
         } catch (err) {
-          request.log.error(err, "Failed to send verification email on resend");
+          request.log.error(err, "Failed to enqueue verification email job on resend");
         }
       }
 

@@ -2,7 +2,8 @@ import { describe, it, expect, beforeAll, afterAll } from "vitest";
 import { createHash } from "node:crypto";
 import type { FastifyInstance } from "fastify";
 import type { PrismaClient } from "@prisma/client";
-import { buildApp } from "./helpers.js";
+import type { Worker } from "bullmq";
+import { buildApp, startEmailWorker } from "./helpers.js";
 
 const EMAIL_PREFIX = "verifytest-";
 const EMAIL_DOMAIN = "example.com";
@@ -12,6 +13,7 @@ const MAILPIT_API = "http://localhost:8025/api/v1";
 
 let app: FastifyInstance;
 let prisma: PrismaClient;
+let emailWorker: Worker;
 let counter = 0;
 
 function uniqueUser() {
@@ -29,14 +31,33 @@ interface MailpitMessageSummary {
   Subject: string;
 }
 
-async function findVerificationEmail(to: string): Promise<{ id: string; text: string } | undefined> {
+// Delivery is now asynchronous (PROD-006: the route only enqueues a job) -
+// even with emailWorker actively draining the queue, the message may not
+// have landed in Mailpit yet by the time this runs, so poll briefly instead
+// of checking once.
+async function findVerificationEmail(
+  to: string,
+  timeoutMs = 10000
+): Promise<{ id: string; text: string } | undefined> {
+  const start = Date.now();
+  do {
+    const listRes = await fetch(`${MAILPIT_API}/search?query=to:${encodeURIComponent(to)}`);
+    const { messages } = (await listRes.json()) as { messages: MailpitMessageSummary[] };
+    const summary = messages.find((m) => m.Subject.includes("Verify your"));
+    if (summary) {
+      const fullRes = await fetch(`${MAILPIT_API}/message/${summary.ID}`);
+      const full = (await fullRes.json()) as { Text: string };
+      return { id: summary.ID, text: full.Text };
+    }
+    await new Promise((resolve) => setTimeout(resolve, 100));
+  } while (Date.now() - start < timeoutMs);
+  return undefined;
+}
+
+async function countVerificationEmails(to: string): Promise<number> {
   const listRes = await fetch(`${MAILPIT_API}/search?query=to:${encodeURIComponent(to)}`);
   const { messages } = (await listRes.json()) as { messages: MailpitMessageSummary[] };
-  const summary = messages.find((m) => m.Subject.includes("Verify your"));
-  if (!summary) return undefined;
-  const fullRes = await fetch(`${MAILPIT_API}/message/${summary.ID}`);
-  const full = (await fullRes.json()) as { Text: string };
-  return { id: summary.ID, text: full.Text };
+  return messages.filter((m) => m.Subject.includes("Verify your")).length;
 }
 
 function extractToken(emailText: string): string {
@@ -81,13 +102,25 @@ async function cleanTestUsers() {
   await prisma.user.deleteMany({ where: { email: { startsWith: EMAIL_PREFIX } } });
 }
 
+async function waitForVerificationEmailCount(to: string, atLeast: number, timeoutMs = 5000): Promise<number> {
+  const start = Date.now();
+  let count = await countVerificationEmails(to);
+  while (count < atLeast && Date.now() - start < timeoutMs) {
+    await new Promise((resolve) => setTimeout(resolve, 100));
+    count = await countVerificationEmails(to);
+  }
+  return count;
+}
+
 beforeAll(async () => {
   ({ app, prisma } = await buildApp());
+  emailWorker = startEmailWorker(prisma);
   await cleanTestUsers();
 });
 
 afterAll(async () => {
   await cleanTestUsers();
+  await emailWorker.close();
   await app.close();
   await prisma.$disconnect();
 });
@@ -121,6 +154,25 @@ describe("POST /api/auth/verify-email", () => {
     const body = second.json<{ type?: string; detail?: string }>();
     expect(body.type).toBe("urn:planetos:error:invalid-verification-token");
     expect(body.detail).toMatch(/invalid or has expired/i);
+  });
+
+  it("SEC-002: exactly one of two concurrent redemptions of the same token succeeds", async () => {
+    const user = uniqueUser();
+    await register(user.email, user.username);
+    const email = await findVerificationEmail(user.email);
+    const token = extractToken(email!.text);
+
+    const [first, second] = await Promise.all([verifyEmail(token), verifyEmail(token)]);
+
+    const statuses = [first.statusCode, second.statusCode].sort();
+    expect(statuses).toEqual([200, 400]);
+
+    const failing = first.statusCode === 400 ? first : second;
+    const failingBody = failing.json<{ type?: string }>();
+    expect(failingBody.type).toBe("urn:planetos:error:invalid-verification-token");
+
+    const updatedUser = await prisma.user.findUniqueOrThrow({ where: { email: user.email } });
+    expect(updatedUser.emailVerified).toBe(true);
   });
 
   it("rejects an expired token", async () => {
@@ -158,10 +210,8 @@ describe("POST /api/auth/resend-verification", () => {
     const body = res.json<{ message: string }>();
     expect(body.message).toMatch(/if an account.*needs verification/i);
 
-    const listRes = await fetch(`${MAILPIT_API}/search?query=to:${encodeURIComponent(user.email)}`);
-    const { messages } = (await listRes.json()) as { messages: MailpitMessageSummary[] };
-    const verificationEmails = messages.filter((m) => m.Subject.includes("Verify your"));
-    expect(verificationEmails.length).toBeGreaterThanOrEqual(2);
+    const count = await waitForVerificationEmailCount(user.email, 2);
+    expect(count).toBeGreaterThanOrEqual(2);
   });
 
   it("returns the identical generic message and sends no email for an already-verified account", async () => {
@@ -175,10 +225,10 @@ describe("POST /api/auth/resend-verification", () => {
     const body = res.json<{ message: string }>();
     expect(body.message).toMatch(/if an account.*needs verification/i);
 
-    const listRes = await fetch(`${MAILPIT_API}/search?query=to:${encodeURIComponent(user.email)}`);
-    const { messages } = (await listRes.json()) as { messages: MailpitMessageSummary[] };
-    const verificationEmails = messages.filter((m) => m.Subject.includes("Verify your"));
-    expect(verificationEmails.length).toBe(1); // only the original, no new one
+    // Give a wrongly-enqueued job a chance to be delivered before asserting
+    // none was - this is a negative check, so there's nothing to poll for.
+    await new Promise((resolve) => setTimeout(resolve, 300));
+    expect(await countVerificationEmails(user.email)).toBe(1); // only the original, no new one
   });
 
   it("returns the identical generic message and sends no email for an unknown identifier", async () => {
@@ -188,7 +238,7 @@ describe("POST /api/auth/resend-verification", () => {
     const body = res.json<{ message: string }>();
     expect(body.message).toMatch(/if an account.*needs verification/i);
 
-    const email = await findVerificationEmail(user.email);
+    const email = await findVerificationEmail(user.email, 500);
     expect(email).toBeUndefined();
   });
 
@@ -200,10 +250,11 @@ describe("POST /api/auth/resend-verification", () => {
     const res = await resendVerification(user.email);
     expect(res.statusCode).toBe(200);
 
-    const listRes = await fetch(`${MAILPIT_API}/search?query=to:${encodeURIComponent(user.email)}`);
-    const { messages } = (await listRes.json()) as { messages: MailpitMessageSummary[] };
-    const verificationEmails = messages.filter((m) => m.Subject.includes("Verify your"));
-    expect(verificationEmails.length).toBe(1); // only the original registration email
+    // Give the original registration email a moment to actually land before
+    // asserting no second one appears.
+    await waitForVerificationEmailCount(user.email, 1);
+    await new Promise((resolve) => setTimeout(resolve, 300));
+    expect(await countVerificationEmails(user.email)).toBe(1); // only the original registration email
   });
 
   it("invalidates a previously issued unused token when a resend is requested", async () => {
