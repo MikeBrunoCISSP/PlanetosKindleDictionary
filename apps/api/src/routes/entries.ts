@@ -135,27 +135,29 @@ const entriesRoutes: FastifyPluginAsync<{ prisma: PrismaClient }> = async (fasti
               await markSeriesDirty(tx, series.id);
             }
 
-            await tx.seriesWord.create({
-              data: {
-                seriesId: series.id,
-                entryId: created.id,
-                normalizedWord: normalizeWord(body.headword),
-              },
-            });
+            // PERF-003: batched instead of one create() per inflection - two
+            // round trips total regardless of inflection count. Row order
+            // from createManyAndReturn is not guaranteed to match the input
+            // array, so each SeriesWord below reads {id, value} off its own
+            // returned row rather than indexing into body.inflections.
+            const inflectionRows =
+              body.inflections.length > 0
+                ? await tx.inflection.createManyAndReturn({
+                    data: body.inflections.map((value) => ({ entryId: created.id, value })),
+                  })
+                : [];
 
-            for (const value of body.inflections) {
-              const inflection = await tx.inflection.create({
-                data: { entryId: created.id, value },
-              });
-              await tx.seriesWord.create({
-                data: {
+            await tx.seriesWord.createMany({
+              data: [
+                { seriesId: series.id, entryId: created.id, normalizedWord: normalizeWord(body.headword) },
+                ...inflectionRows.map((row) => ({
                   seriesId: series.id,
                   entryId: created.id,
-                  inflectionId: inflection.id,
-                  normalizedWord: normalizeWord(value),
-                },
-              });
-            }
+                  inflectionId: row.id,
+                  normalizedWord: normalizeWord(row.value),
+                })),
+              ],
+            });
 
             await tx.revision.create({
               data: {

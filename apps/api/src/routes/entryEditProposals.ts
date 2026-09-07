@@ -85,20 +85,27 @@ async function applyEditProposalToEntry(
       data: { definitionHtml: proposal.proposedDefinitionHtml },
     });
 
-    for (const inflection of toRemove) {
-      await tx.inflection.delete({ where: { id: inflection.id } });
+    // PERF-003: batched instead of one delete()/create() per inflection.
+    // SeriesWord cleanup for removed inflections still relies on the
+    // existing onDelete: Cascade from SeriesWord.inflection - unchanged.
+    if (toRemove.length > 0) {
+      await tx.inflection.deleteMany({ where: { id: { in: toRemove.map((i) => i.id) } } });
     }
-    for (const inflection of toAdd) {
-      const created = await tx.inflection.create({
-        data: { entryId: entry.id, value: inflection.value },
+
+    if (toAdd.length > 0) {
+      // Row order from createManyAndReturn is not guaranteed to match the
+      // input array, so each SeriesWord below reads {id, value} off its
+      // own returned row rather than indexing into toAdd.
+      const addedRows = await tx.inflection.createManyAndReturn({
+        data: toAdd.map((i) => ({ entryId: entry.id, value: i.value })),
       });
-      await tx.seriesWord.create({
-        data: {
+      await tx.seriesWord.createMany({
+        data: addedRows.map((row) => ({
           seriesId: entry.seriesId,
           entryId: entry.id,
-          inflectionId: created.id,
-          normalizedWord: normalizeWord(inflection.value),
-        },
+          inflectionId: row.id,
+          normalizedWord: normalizeWord(row.value),
+        })),
       });
     }
   } catch (err: unknown) {
@@ -201,7 +208,9 @@ const entryEditProposalRoutes: FastifyPluginAsync<{ prisma: PrismaClient }> = as
                 proposedDefinitionHtml: definitionHtml,
                 submittedById: userId,
                 baseEntryUpdatedAt: entry.updatedAt,
-                inflections: { create: body.inflections.map((value) => ({ value })) },
+                // PERF-003: nested createMany batches into one statement;
+                // nested create issues one INSERT per array element.
+                inflections: { createMany: { data: body.inflections.map((value) => ({ value })) } },
               },
               include: { inflections: true },
             });

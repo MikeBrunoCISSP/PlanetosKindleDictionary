@@ -685,6 +685,46 @@ describe("POST /api/admin/entry-edit-proposals/:id/approve", () => {
     expect(queueIds).not.toContain(proposalId);
   });
 
+  it("PERF-003: approving a proposal that both adds and removes several inflections leaves exactly the proposed set", async () => {
+    const memberCookie = await setupMember();
+    const adminCookie = await setupAdmin();
+    const series = await createTestSeries("approve-batched");
+    const { id } = await createTestEntry(series.id, {
+      headword: "Wetlander",
+      inflections: ["Wetlanders", "Wetlander's", "Wetlanderish"],
+    });
+
+    const keptInflection = "Wetlanders";
+    const newInflections = ["Wetlandery", "Wetlanderfolk", "Wetlanderborn", "Wetlanderling"];
+
+    const proposalId = await submitProposal(memberCookie, id, {
+      definitionHtml: "<p>Batched edit.</p>",
+      inflections: [keptInflection, ...newInflections],
+    });
+
+    const res = await app.inject({
+      method: "POST",
+      url: `/api/admin/entry-edit-proposals/${proposalId}/approve`,
+      headers: { cookie: adminCookie },
+    });
+    expect(res.statusCode).toBe(200);
+
+    const entry = await prisma.entry.findUniqueOrThrow({ where: { id }, include: { inflections: true } });
+    expect(entry.inflections.map((i) => i.value).sort()).toEqual([keptInflection, ...newInflections].sort());
+
+    const seriesWords = await prisma.seriesWord.findMany({ where: { entryId: id } });
+    // The headword's own row plus one per surviving inflection - none left
+    // over for the two removed ("Wetlander's", "Wetlanderish").
+    expect(seriesWords).toHaveLength(1 + [keptInflection, ...newInflections].length);
+    for (const inflection of entry.inflections) {
+      const word = seriesWords.find((w) => w.inflectionId === inflection.id);
+      expect(word).toBeDefined();
+      expect(word?.normalizedWord).toBe(normalizeWord(inflection.value));
+    }
+    expect(seriesWords.some((w) => w.normalizedWord === normalizeWord("Wetlander's"))).toBe(false);
+    expect(seriesWords.some((w) => w.normalizedWord === normalizeWord("Wetlanderish"))).toBe(false);
+  });
+
   it("refuses approval when the underlying entry changed since submission (stale)", async () => {
     const memberCookie = await setupMember();
     const adminCookie = await setupAdmin();

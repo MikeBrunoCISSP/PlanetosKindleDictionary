@@ -1,6 +1,7 @@
 import { describe, it, expect, beforeAll, afterAll, afterEach } from "vitest";
 import type { FastifyInstance } from "fastify";
 import type { PrismaClient } from "@prisma/client";
+import { normalizeWord } from "@planetos/shared";
 import { buildApp, cleanUsers, cleanSeries } from "./helpers.js";
 
 const ADMIN_EMAIL = "entriesadmin@example.com";
@@ -110,6 +111,42 @@ describe("POST /api/series/:slug/entries", () => {
     const revisions = await prisma.revision.findMany({ where: { entryId: body.id } });
     expect(revisions).toHaveLength(1);
     expect(revisions[0]?.action).toBe("CREATE");
+  });
+
+  it("PERF-003: several inflections all create correctly-linked Inflection and SeriesWord rows", async () => {
+    const memberCookie = await setupMember();
+    const series = await createTestSeries("batched-inflections");
+    const inflectionValues = ["Aiel's", "Aiel-born", "Aiels", "Aiel-ish", "Aielness"];
+
+    const res = await app.inject({
+      method: "POST",
+      url: `/api/series/${series.slug}/entries`,
+      headers: { cookie: memberCookie },
+      payload: {
+        headword: "Aiel",
+        definitionHtml: "<p>A desert people.</p>",
+        inflections: inflectionValues,
+      },
+    });
+    expect(res.statusCode).toBe(201);
+    const entryId = res.json<{ id: string }>().id;
+
+    const inflectionRows = await prisma.inflection.findMany({ where: { entryId } });
+    expect(inflectionRows.map((i) => i.value).sort()).toEqual([...inflectionValues].sort());
+
+    const seriesWords = await prisma.seriesWord.findMany({ where: { entryId } });
+    // The headword's own row plus one per inflection.
+    expect(seriesWords).toHaveLength(inflectionValues.length + 1);
+
+    const headwordWord = seriesWords.find((w) => w.inflectionId === null);
+    expect(headwordWord?.normalizedWord).toBe(normalizeWord("Aiel"));
+
+    for (const inflection of inflectionRows) {
+      const word = seriesWords.find((w) => w.inflectionId === inflection.id);
+      expect(word).toBeDefined();
+      expect(word?.normalizedWord).toBe(normalizeWord(inflection.value));
+      expect(word?.seriesId).toBe(series.id);
+    }
   });
 
   it("SEC-003: rejects more than 50 inflections before any database write", async () => {
