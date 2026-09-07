@@ -80,6 +80,8 @@ model User {
   reviewedEntryEditProposals  EntryEditProposal[] @relation("EntryEditProposalReviewedBy")
   passwordResetTokens         PasswordResetToken[]
   emailVerificationTokens     EmailVerificationToken[]
+
+  @@index([approvalStatus, createdAt])
 }
 
 model PasswordResetToken {
@@ -192,6 +194,7 @@ model Entry {
 
   @@unique([seriesId, headword])
   @@index([seriesId, sortKey])
+  @@index([approvalStatus, createdAt])
 }
 
 model Inflection {

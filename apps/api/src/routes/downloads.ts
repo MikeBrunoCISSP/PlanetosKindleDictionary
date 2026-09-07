@@ -7,6 +7,12 @@ import { getDictionaryBuildQueue } from "../lib/queues.js";
 import { BUILD_JOB_RETRY_OPTIONS } from "../jobs/sweep.js";
 import { buildDictionaryFilename } from "../lib/filename.js";
 
+// PERF-002: this endpoint is fully public/anonymous and has no depletion-
+// during-paging concern (nothing removes rows from it while it's being
+// read), so a fixed hard cap satisfies "server-enforced maximum page size"
+// without inventing pagination API surface nobody consumes.
+const MAX_BUILD_HISTORY = 50;
+
 interface BuildListItemDto {
   id: string;
   status: "QUEUED" | "RUNNING" | "SUCCESS" | "FAILED";
@@ -111,6 +117,7 @@ const downloadsRoutes: FastifyPluginAsync<{ prisma: PrismaClient }> = async (fas
     const builds = await prisma.build.findMany({
       where: { seriesId: series.id },
       orderBy: { createdAt: "desc" },
+      take: MAX_BUILD_HISTORY,
       select: { id: true, status: true, createdAt: true, entryCount: true },
     });
 

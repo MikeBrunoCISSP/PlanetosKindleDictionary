@@ -7,13 +7,13 @@ import type {
   EntrySummaryDto,
   ForgotPasswordDto,
   LoginDto,
-  PendingQueueItemDto,
-  PendingUserDto,
+  PendingUsersPageDto,
   PublicEntryDto,
   RegisterDto,
   RejectEntryDto,
   ResendVerificationDto,
   ResetPasswordDto,
+  ReviewQueuePageDto,
   SearchResultsDto,
   SeriesDto,
   SeriesListItemDto,
@@ -151,9 +151,14 @@ export async function apiAdminUpdateUser(id: string, patch: UpdateUserDto): Prom
   return handleResponse<AdminUserDto>(res);
 }
 
-export async function apiGetPendingUsers(): Promise<PendingUserDto[]> {
-  const res = await fetch("/api/admin/users/pending", { credentials: "include" });
-  return handleResponse<PendingUserDto[]>(res);
+export async function apiGetPendingUsers(
+  params: { limit?: number; cursor?: string | undefined } = {}
+): Promise<PendingUsersPageDto> {
+  const qs = new URLSearchParams();
+  if (params.limit) qs.set("limit", String(params.limit));
+  if (params.cursor) qs.set("cursor", params.cursor);
+  const res = await fetch(`/api/admin/users/pending?${qs}`, { credentials: "include" });
+  return handleResponse<PendingUsersPageDto>(res);
 }
 
 export async function apiApproveRegistration(id: string): Promise<AdminUserDto> {
@@ -312,9 +317,14 @@ export async function apiSubmitEntryEditProposal(
   return handleResponse<{ id: string; status: "PENDING" | "APPROVED" }>(res);
 }
 
-export async function apiGetReviewQueue(): Promise<PendingQueueItemDto[]> {
-  const res = await fetch("/api/admin/review-queue", { credentials: "include" });
-  return handleResponse<PendingQueueItemDto[]>(res);
+export async function apiGetReviewQueue(
+  params: { limit?: number; cursor?: string | undefined } = {}
+): Promise<ReviewQueuePageDto> {
+  const qs = new URLSearchParams();
+  if (params.limit) qs.set("limit", String(params.limit));
+  if (params.cursor) qs.set("cursor", params.cursor);
+  const res = await fetch(`/api/admin/review-queue?${qs}`, { credentials: "include" });
+  return handleResponse<ReviewQueuePageDto>(res);
 }
 
 export async function apiGetEntryEditProposal(id: string): Promise<EntryEditProposalDto> {

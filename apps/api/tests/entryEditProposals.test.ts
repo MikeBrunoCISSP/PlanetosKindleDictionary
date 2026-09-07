@@ -343,7 +343,7 @@ describe("POST /api/entries/:id/edit-proposals", () => {
     const proposalId = submitRes.json<{ id: string }>().id;
 
     const queueRes = await app.inject({ method: "GET", url: "/api/admin/review-queue", headers: { cookie: adminCookie } });
-    const queueIds = queueRes.json<{ id: string }[]>().map((i) => i.id);
+    const queueIds = queueRes.json<{ items: { id: string }[] }>().items.map((i) => i.id);
     expect(queueIds).not.toContain(proposalId);
   });
 
@@ -470,7 +470,8 @@ describe("GET /api/admin/review-queue", () => {
 
     const res = await app.inject({ method: "GET", url: "/api/admin/review-queue", headers: { cookie: adminCookie } });
     expect(res.statusCode).toBe(200);
-    const items = res.json<{ type: string; id: string; createdAt: string }[]>();
+    const items = res.json<{ items: { type: string; id: string; createdAt: string }[]; nextCursor: string | null }>()
+      .items;
 
     const newEntryItem = items.find((i) => i.id === newEntryId);
     const editItem = items.find((i) => i.type === "EDIT" && "entryId" in i && (i as { entryId: string }).entryId === existingEntryId);
@@ -485,9 +486,124 @@ describe("GET /api/admin/review-queue", () => {
     await createTestEntry(series.id, { headword: "Alreadyapproved", approvalStatus: "APPROVED" });
 
     const res = await app.inject({ method: "GET", url: "/api/admin/review-queue", headers: { cookie: adminCookie } });
-    const items = res.json<{ id: string }[]>();
+    const items = res.json<{ items: { id: string }[] }>().items;
     const headwords = items.map((i) => (i as { headword?: string }).headword);
     expect(headwords).not.toContain("Alreadyapproved");
+  });
+
+  it("PERF-002: a page respects limit across the merged set, and nextCursor reflects exhaustion", async () => {
+    const memberCookie = await setupMember();
+    const adminCookie = await setupAdmin();
+    const series = await createTestSeries("paginated-queue");
+
+    const newEntryRes = await app.inject({
+      method: "POST",
+      url: `/api/series/${series.slug}/entries`,
+      headers: { cookie: memberCookie },
+      payload: { headword: "Pagedwordone", definitionHtml: "<p>First.</p>", inflections: [] },
+    });
+    const newEntryId = newEntryRes.json<{ id: string }>().id;
+
+    await new Promise((resolve) => setTimeout(resolve, 5));
+    const { id: existingEntryId } = await createTestEntry(series.id, { headword: "Pagedwordtwo" });
+    const proposalRes = await app.inject({
+      method: "POST",
+      url: `/api/entries/${existingEntryId}/edit-proposals`,
+      headers: { cookie: memberCookie },
+      payload: { definitionHtml: "<p>Proposed.</p>", inflections: [] },
+    });
+    const proposalId = proposalRes.json<{ id: string }>().id;
+
+    const full = await app.inject({ method: "GET", url: "/api/admin/review-queue?limit=200", headers: { cookie: adminCookie } });
+    const fullItems = full.json<{ items: { id: string }[] }>().items;
+    const firstIndex = fullItems.findIndex((i) => i.id === newEntryId);
+    const secondIndex = fullItems.findIndex((i) => i.id === proposalId);
+    expect(firstIndex).toBeGreaterThanOrEqual(0);
+    expect(secondIndex).toBeGreaterThan(firstIndex);
+
+    const pageSize = firstIndex + 1;
+    const page1 = await app.inject({
+      method: "GET",
+      url: `/api/admin/review-queue?limit=${pageSize}`,
+      headers: { cookie: adminCookie },
+    });
+    const body1 = page1.json<{ items: { id: string }[]; nextCursor: string | null }>();
+    expect(body1.items).toHaveLength(pageSize);
+    expect(body1.items.at(-1)?.id).toBe(newEntryId);
+    expect(body1.nextCursor).not.toBeNull();
+
+    const page2 = await app.inject({
+      method: "GET",
+      url: `/api/admin/review-queue?limit=200&cursor=${encodeURIComponent(body1.nextCursor!)}`,
+      headers: { cookie: adminCookie },
+    });
+    const body2 = page2.json<{ items: { id: string }[]; nextCursor: string | null }>();
+    expect(body2.items.some((i) => i.id === newEntryId)).toBe(false);
+    expect(body2.items.some((i) => i.id === proposalId)).toBe(true);
+  });
+
+  it("PERF-002: approving an item shown on page 1 does not cause page 2 to skip or duplicate a remaining item", async () => {
+    const memberCookie = await setupMember();
+    const adminCookie = await setupAdmin();
+    const series = await createTestSeries("paginated-queue-race");
+
+    const newEntryRes = await app.inject({
+      method: "POST",
+      url: `/api/series/${series.slug}/entries`,
+      headers: { cookie: memberCookie },
+      payload: { headword: "Racewordone", definitionHtml: "<p>First.</p>", inflections: [] },
+    });
+    const newEntryId = newEntryRes.json<{ id: string }>().id;
+
+    await new Promise((resolve) => setTimeout(resolve, 5));
+    const { id: existingEntryId } = await createTestEntry(series.id, { headword: "Racewordtwo" });
+    const proposalRes = await app.inject({
+      method: "POST",
+      url: `/api/entries/${existingEntryId}/edit-proposals`,
+      headers: { cookie: memberCookie },
+      payload: { definitionHtml: "<p>Proposed.</p>", inflections: [] },
+    });
+    const proposalId = proposalRes.json<{ id: string }>().id;
+
+    const full = await app.inject({ method: "GET", url: "/api/admin/review-queue?limit=200", headers: { cookie: adminCookie } });
+    const fullItems = full.json<{ items: { id: string }[] }>().items;
+    const firstIndex = fullItems.findIndex((i) => i.id === newEntryId);
+    const pageSize = firstIndex + 1;
+
+    const page1 = await app.inject({
+      method: "GET",
+      url: `/api/admin/review-queue?limit=${pageSize}`,
+      headers: { cookie: adminCookie },
+    });
+    const body1 = page1.json<{ items: { id: string }[]; nextCursor: string | null }>();
+    expect(body1.items.at(-1)?.id).toBe(newEntryId);
+
+    // Approve the new-entry item shown on page 1 - it leaves the merged
+    // PENDING set while the admin is still holding page 1's cursor.
+    await app.inject({
+      method: "POST",
+      url: `/api/admin/entries/${newEntryId}/approve`,
+      headers: { cookie: adminCookie },
+    });
+
+    const page2 = await app.inject({
+      method: "GET",
+      url: `/api/admin/review-queue?limit=200&cursor=${encodeURIComponent(body1.nextCursor!)}`,
+      headers: { cookie: adminCookie },
+    });
+    const body2 = page2.json<{ items: { id: string }[]; nextCursor: string | null }>();
+    expect(body2.items.some((i) => i.id === newEntryId)).toBe(false);
+    expect(body2.items.some((i) => i.id === proposalId)).toBe(true);
+  });
+
+  it("PERF-002: rejects a malformed cursor with 400", async () => {
+    const adminCookie = await setupAdmin();
+    const res = await app.inject({
+      method: "GET",
+      url: "/api/admin/review-queue?cursor=not-a-real-cursor",
+      headers: { cookie: adminCookie },
+    });
+    expect(res.statusCode).toBe(400);
   });
 });
 
@@ -565,7 +681,7 @@ describe("POST /api/admin/entry-edit-proposals/:id/approve", () => {
     expect(proposal.status).toBe("APPROVED");
 
     const queueRes = await app.inject({ method: "GET", url: "/api/admin/review-queue", headers: { cookie: adminCookie } });
-    const queueIds = queueRes.json<{ id: string }[]>().map((i) => i.id);
+    const queueIds = queueRes.json<{ items: { id: string }[] }>().items.map((i) => i.id);
     expect(queueIds).not.toContain(proposalId);
   });
 

@@ -1,5 +1,6 @@
 import type { FastifyPluginAsync } from "fastify";
 import { Prisma, PrismaClient } from "@prisma/client";
+import { z } from "zod";
 import {
   submitEntryEditProposalSchema,
   rejectEntrySchema,
@@ -13,7 +14,16 @@ import { makeRequireAuth } from "../plugins/requireAuth.js";
 import { WRITE_RATE_LIMIT } from "../plugins/rateLimit.js";
 import { Errors, isPrismaError } from "../lib/errors.js";
 import { markSeriesDirty } from "../lib/dirtySeries.js";
+import { encodeCursor, decodeCursor } from "../lib/cursor.js";
 import { toEntryDto, entryInclude } from "./entries.js";
+
+// PERF-002: this queue is actively depleted (approved/rejected) while an
+// admin pages through it, so offset pagination's skip=N would land on the
+// wrong row once earlier rows are removed. See openspec design.md.
+const reviewQueueQuerySchema = z.object({
+  limit: z.coerce.number().int().min(1).max(200).default(50),
+  cursor: z.string().optional(),
+});
 
 // Applies a proposal's proposed Definition/Inflections to its target entry,
 // re-checking word conflicts, and marks the proposal reviewed - shared by
@@ -226,19 +236,29 @@ const entryEditProposalRoutes: FastifyPluginAsync<{ prisma: PrismaClient }> = as
   fastify.get(
     "/api/admin/review-queue",
     { preHandler: requireAdmin },
-    async (_request, reply) => {
+    async (request, reply) => {
+      const query = reviewQueueQuerySchema.parse(request.query);
+      const cursor = query.cursor ? decodeCursor(query.cursor) : null;
+      const cursorWhere = cursor
+        ? { OR: [{ createdAt: { gt: cursor.createdAt } }, { createdAt: cursor.createdAt, id: { gt: cursor.id } }] }
+        : {};
+
       const [pendingEntries, pendingProposals] = await Promise.all([
         prisma.entry.findMany({
-          where: { approvalStatus: "PENDING" },
+          where: { approvalStatus: "PENDING", ...cursorWhere },
           select: { id: true, headword: true, createdAt: true },
+          orderBy: [{ createdAt: "asc" }, { id: "asc" }],
+          take: query.limit,
         }),
         prisma.entryEditProposal.findMany({
-          where: { status: "PENDING" },
+          where: { status: "PENDING", ...cursorWhere },
           select: { id: true, entryId: true, createdAt: true, entry: { select: { headword: true } } },
+          orderBy: [{ createdAt: "asc" }, { id: "asc" }],
+          take: query.limit,
         }),
       ]);
 
-      const items: PendingQueueItemDto[] = [
+      const merged: PendingQueueItemDto[] = [
         ...pendingEntries.map((entry) => ({
           type: "NEW_ENTRY" as const,
           id: entry.id,
@@ -252,9 +272,19 @@ const entryEditProposalRoutes: FastifyPluginAsync<{ prisma: PrismaClient }> = as
           headword: proposal.entry.headword,
           createdAt: proposal.createdAt.toISOString(),
         })),
-      ].sort((a, b) => a.createdAt.localeCompare(b.createdAt));
+      ].sort((a, b) => a.createdAt.localeCompare(b.createdAt) || a.id.localeCompare(b.id));
 
-      return reply.status(200).send(items);
+      const items = merged.slice(0, query.limit);
+      // Either source individually coming back full means it may have more
+      // beyond what was fetched, even if the merged+sliced page doesn't
+      // need all of it - err toward assuming more exists rather than
+      // silently truncating a real remainder.
+      const mayHaveMore =
+        merged.length > query.limit || pendingEntries.length === query.limit || pendingProposals.length === query.limit;
+      const lastItem = items.at(-1);
+      const nextCursor = mayHaveMore && lastItem ? encodeCursor({ createdAt: lastItem.createdAt, id: lastItem.id }) : null;
+
+      return reply.status(200).send({ items, nextCursor });
     }
   );
 

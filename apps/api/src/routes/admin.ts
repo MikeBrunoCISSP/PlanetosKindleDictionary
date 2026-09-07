@@ -5,6 +5,7 @@ import { updateUserSchema, type AdminUserDto, type PendingUserDto } from "@plane
 import { makeRequireAdmin } from "../plugins/requireAdmin.js";
 import { Errors } from "../lib/errors.js";
 import { sendAccountApprovedEmail } from "../lib/mailer.js";
+import { encodeCursor, decodeCursor } from "../lib/cursor.js";
 
 function toAdminUserDto(user: {
   id: string;
@@ -47,6 +48,15 @@ const listQuerySchema = z.object({
   limit: z.coerce.number().int().min(1).max(200).default(50),
 });
 
+// PERF-002: cursor rather than page/limit - this list is actively depleted
+// (approved/denied) while an admin pages through it, so offset pagination's
+// skip=N would land on the wrong row once earlier rows are removed. See
+// openspec design.md for the full reasoning.
+const pendingUsersQuerySchema = z.object({
+  limit: z.coerce.number().int().min(1).max(200).default(50),
+  cursor: z.string().optional(),
+});
+
 const adminRoutes: FastifyPluginAsync<{ prisma: PrismaClient }> = async (fastify, opts) => {
   const { prisma } = opts;
   const requireAdmin = makeRequireAdmin(prisma);
@@ -82,13 +92,30 @@ const adminRoutes: FastifyPluginAsync<{ prisma: PrismaClient }> = async (fastify
     "/api/admin/users/pending",
     { preHandler: requireAdmin },
     async (request, reply) => {
+      const query = pendingUsersQuerySchema.parse(request.query);
+      const cursor = query.cursor ? decodeCursor(query.cursor) : null;
+
       const users = await prisma.user.findMany({
-        where: { approvalStatus: "PENDING" },
+        where: {
+          approvalStatus: "PENDING",
+          ...(cursor
+            ? { OR: [{ createdAt: { gt: cursor.createdAt } }, { createdAt: cursor.createdAt, id: { gt: cursor.id } }] }
+            : {}),
+        },
         select: { id: true, username: true, email: true, reasonForJoining: true, createdAt: true },
-        orderBy: { createdAt: "asc" },
+        orderBy: [{ createdAt: "asc" }, { id: "asc" }],
+        take: query.limit,
       });
 
-      return reply.status(200).send(users.map(toPendingUserDto));
+      // A partial page proves the source is exhausted - no point in one
+      // more round-trip that would return empty.
+      const last = users.at(-1);
+      const nextCursor =
+        users.length === query.limit && last
+          ? encodeCursor({ createdAt: last.createdAt.toISOString(), id: last.id })
+          : null;
+
+      return reply.status(200).send({ items: users.map(toPendingUserDto), nextCursor });
     }
   );
 

@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { createFileRoute, redirect } from "@tanstack/react-router";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useQuery, useInfiniteQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { normalizeWord, type PendingQueueItemDto } from "@planetos/shared";
 import {
@@ -59,13 +59,19 @@ function ApprovalQueueTable() {
   const [rejectNote, setRejectNote] = useState("");
 
   const {
-    data: items,
+    data,
     isLoading,
     error,
-  } = useQuery({
+    fetchNextPage,
+    hasNextPage,
+    isFetchingNextPage,
+  } = useInfiniteQuery({
     queryKey: ["admin", "review-queue"],
-    queryFn: () => apiGetReviewQueue(),
+    queryFn: ({ pageParam }: { pageParam: string | undefined }) => apiGetReviewQueue({ cursor: pageParam }),
+    initialPageParam: undefined as string | undefined,
+    getNextPageParam: (lastPage) => lastPage.nextCursor ?? undefined,
   });
+  const items = data?.pages.flatMap((page) => page.items);
 
   const approveMutation = useMutation({
     mutationFn: (item: PendingQueueItemDto) =>
@@ -175,6 +181,19 @@ function ApprovalQueueTable() {
             })}
           </TableBody>
         </Table>
+      )}
+
+      {hasNextPage && (
+        <div className="mt-3">
+          <Button
+            size="sm"
+            variant="outline"
+            disabled={isFetchingNextPage}
+            onClick={() => void fetchNextPage()}
+          >
+            {isFetchingNextPage ? "Loading…" : "Load more"}
+          </Button>
+        </div>
       )}
 
       <EntryDetailsDialog

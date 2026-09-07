@@ -1,5 +1,5 @@
 import { createFileRoute, redirect } from "@tanstack/react-router";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useQuery, useInfiniteQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { toast } from "sonner";
 import type { AdminUserDto, PendingUserDto } from "@planetos/shared";
@@ -63,13 +63,19 @@ function PendingRegistrationsTable() {
   const [denyTarget, setDenyTarget] = useState<PendingUserDto | null>(null);
 
   const {
-    data: pendingUsers,
+    data,
     isLoading,
     error,
-  } = useQuery({
+    fetchNextPage,
+    hasNextPage,
+    isFetchingNextPage,
+  } = useInfiniteQuery({
     queryKey: ["admin", "users", "pending"],
-    queryFn: () => apiGetPendingUsers(),
+    queryFn: ({ pageParam }: { pageParam: string | undefined }) => apiGetPendingUsers({ cursor: pageParam }),
+    initialPageParam: undefined as string | undefined,
+    getNextPageParam: (lastPage) => lastPage.nextCursor ?? undefined,
   });
+  const pendingUsers = data?.pages.flatMap((page) => page.items);
 
   const approveMutation = useMutation({
     mutationFn: (id: string) => apiApproveRegistration(id),
@@ -165,6 +171,19 @@ function PendingRegistrationsTable() {
             })}
           </TableBody>
         </Table>
+      )}
+
+      {hasNextPage && (
+        <div className="mt-3">
+          <Button
+            size="sm"
+            variant="outline"
+            disabled={isFetchingNextPage}
+            onClick={() => void fetchNextPage()}
+          >
+            {isFetchingNextPage ? "Loading…" : "Load more"}
+          </Button>
+        </div>
       )}
 
       <Dialog

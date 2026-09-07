@@ -267,4 +267,24 @@ describe("GET /api/series/:slug/builds", () => {
     const res = await app.inject({ method: "GET", url: `/api/series/${SLUG_PREFIX}-nonexistent/builds` });
     expect(res.statusCode).toBe(404);
   });
+
+  it("PERF-002: caps build history at the most recent 50, newest first", async () => {
+    const series = await createTestSeries("builds-cap");
+    const base = Date.now() - 60_000;
+    for (let i = 0; i < 55; i++) {
+      await createSuccessBuild(series.id, `cap-${i}`, new Date(base + i * 1000));
+    }
+
+    const res = await app.inject({ method: "GET", url: `/api/series/${series.slug}/builds` });
+    expect(res.statusCode).toBe(200);
+    const body = res.json<{ createdAt: string }[]>();
+    expect(body).toHaveLength(50);
+
+    const timestamps = body.map((b) => new Date(b.createdAt).getTime());
+    const sorted = [...timestamps].sort((a, b) => b - a);
+    expect(timestamps).toEqual(sorted);
+    // The 5 oldest builds (i=0..4) fall outside the cap.
+    expect(timestamps[0]).toBe(base + 54 * 1000);
+    expect(timestamps.at(-1)).toBe(base + 5 * 1000);
+  });
 });

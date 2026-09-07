@@ -83,4 +83,6 @@ export const Errors = {
       "This verification link is invalid or has expired.",
       400
     ),
+  INVALID_CURSOR: () =>
+    new DomainError("INVALID_CURSOR", "This pagination cursor is invalid.", 400),
 } as const;

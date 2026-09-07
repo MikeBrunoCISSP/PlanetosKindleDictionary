@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { plainText } from "./validation.js";
+import { pagedSchema } from "./pagination.js";
 
 export interface PasswordRequirement {
   id: "minLength" | "uppercase" | "lowercase" | "digit";
@@ -90,6 +91,8 @@ export const pendingUserDtoSchema = z.object({
   createdAt: z.string().datetime(),
 });
 
+export const pendingUsersPageDtoSchema = pagedSchema(pendingUserDtoSchema);
+
 export const updateUserSchema = z
   .object({
     isActive: z.boolean(),
@@ -108,4 +111,5 @@ export type ResendVerificationDto = z.infer<typeof resendVerificationSchema>;
 export type UserDto = z.infer<typeof userDtoSchema>;
 export type AdminUserDto = z.infer<typeof adminUserSchema>;
 export type PendingUserDto = z.infer<typeof pendingUserDtoSchema>;
+export type PendingUsersPageDto = z.infer<typeof pendingUsersPageDtoSchema>;
 export type UpdateUserDto = z.infer<typeof updateUserSchema>;

@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeAll, afterAll, afterEach } from "vitest";
+import { describe, it, expect, beforeAll, afterAll, afterEach, vi } from "vitest";
 import type { PrismaClient } from "@prisma/client";
 import { cleanSeries, buildApp } from "./helpers.js";
 import { pruneOldBuilds } from "../src/jobs/prune.js";
@@ -100,6 +100,28 @@ describe("pruneOldBuilds", () => {
     const newestAfter = await prisma.build.findUniqueOrThrow({ where: { id: newest.id } });
     expect(newestAfter.epubKey).toBe(newest.epubKey);
     expect(await objectExists(newest.epubKey!)).toBe(true);
+  });
+
+  it("PERF-002: re-running immediately after a prune matches zero rows, not the whole history again", async () => {
+    const series = await createTestSeries("self-limiting");
+    const base = Date.now();
+    for (let i = 0; i < 12; i++) {
+      await createSuccessBuild(series.id, i, new Date(base + i * 1000));
+    }
+
+    await pruneOldBuilds(prisma, storage, series.id);
+    const afterFirstRun = await prisma.build.findMany({ where: { seriesId: series.id } });
+    expect(afterFirstRun.filter((b) => b.epubKey === null)).toHaveLength(2);
+
+    // The already-pruned rows (both keys null) must never match this query
+    // again - a spy on deleteObjects proves the second run's query matched
+    // zero rows (it returns early before calling deleteObjects at all),
+    // rather than re-fetching and re-processing the same 2 already-pruned
+    // rows a second time.
+    const deleteSpy = vi.spyOn(storage, "deleteObjects");
+    await pruneOldBuilds(prisma, storage, series.id);
+    expect(deleteSpy).not.toHaveBeenCalled();
+    deleteSpy.mockRestore();
   });
 
   it("does nothing when there are 10 or fewer SUCCESS builds", async () => {

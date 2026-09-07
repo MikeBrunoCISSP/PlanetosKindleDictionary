@@ -88,18 +88,115 @@ describe("GET /api/admin/users/pending", () => {
       headers: { cookie: adminCookie },
     });
     expect(res.statusCode).toBe(200);
-    const body = res.json<
-      { id: string; username: string; email: string; reasonForJoining: string | null; createdAt: string }[]
-    >();
+    const body = res.json<{
+      items: { id: string; username: string; email: string; reasonForJoining: string | null; createdAt: string }[];
+      nextCursor: string | null;
+    }>();
 
-    expect(body.some((u) => u.email === ADMIN_EMAIL)).toBe(false);
-    const first = body.find((u) => u.email === MEMBER_EMAIL);
-    const second = body.find((u) => u.email === MEMBER_EMAIL_2);
+    expect(body.items.some((u) => u.email === ADMIN_EMAIL)).toBe(false);
+    const first = body.items.find((u) => u.email === MEMBER_EMAIL);
+    const second = body.items.find((u) => u.email === MEMBER_EMAIL_2);
     expect(first).toBeDefined();
     expect(second).toBeDefined();
     expect(first?.username).toBe(MEMBER_USERNAME);
     expect(first?.reasonForJoining).toBe(REASON);
-    expect(body.indexOf(first!)).toBeLessThan(body.indexOf(second!));
+    expect(body.items.indexOf(first!)).toBeLessThan(body.items.indexOf(second!));
+  });
+
+  it("PERF-002: a page respects limit, and nextCursor is set only while more rows remain", async () => {
+    // The shared dev/test database may already have other, unrelated
+    // pending accounts - derive positions dynamically rather than assuming
+    // these two test fixtures are the very first pending rows.
+    const adminCookie = await setupAdmin();
+    await registerAndGetCookie(MEMBER_EMAIL, MEMBER_USERNAME);
+    await new Promise((resolve) => setTimeout(resolve, 5));
+    await registerAndGetCookie(MEMBER_EMAIL_2, MEMBER_USERNAME_2);
+
+    const full = await app.inject({
+      method: "GET",
+      url: "/api/admin/users/pending?limit=200",
+      headers: { cookie: adminCookie },
+    });
+    const fullItems = full.json<{ items: { email: string }[] }>().items;
+    const firstIndex = fullItems.findIndex((u) => u.email === MEMBER_EMAIL);
+    const secondIndex = fullItems.findIndex((u) => u.email === MEMBER_EMAIL_2);
+    expect(firstIndex).toBeGreaterThanOrEqual(0);
+    expect(secondIndex).toBeGreaterThan(firstIndex);
+
+    const pageSize = firstIndex + 1;
+    const page1 = await app.inject({
+      method: "GET",
+      url: `/api/admin/users/pending?limit=${pageSize}`,
+      headers: { cookie: adminCookie },
+    });
+    expect(page1.statusCode).toBe(200);
+    const body1 = page1.json<{ items: { email: string }[]; nextCursor: string | null }>();
+    expect(body1.items).toHaveLength(pageSize);
+    expect(body1.items.at(-1)?.email).toBe(MEMBER_EMAIL);
+    expect(body1.nextCursor).not.toBeNull();
+
+    const page2 = await app.inject({
+      method: "GET",
+      url: `/api/admin/users/pending?limit=200&cursor=${encodeURIComponent(body1.nextCursor!)}`,
+      headers: { cookie: adminCookie },
+    });
+    expect(page2.statusCode).toBe(200);
+    const body2 = page2.json<{ items: { email: string }[]; nextCursor: string | null }>();
+    expect(body2.items.some((u) => u.email === MEMBER_EMAIL)).toBe(false);
+    expect(body2.items.some((u) => u.email === MEMBER_EMAIL_2)).toBe(true);
+  });
+
+  it("PERF-002: approving an item shown on page 1 does not cause page 2 to skip or duplicate a remaining item", async () => {
+    const adminCookie = await setupAdmin();
+    await registerAndGetCookie(MEMBER_EMAIL, MEMBER_USERNAME);
+    await new Promise((resolve) => setTimeout(resolve, 5));
+    await registerAndGetCookie(MEMBER_EMAIL_2, MEMBER_USERNAME_2);
+
+    const full = await app.inject({
+      method: "GET",
+      url: "/api/admin/users/pending?limit=200",
+      headers: { cookie: adminCookie },
+    });
+    const fullItems = full.json<{ items: { id: string; email: string }[] }>().items;
+    const firstIndex = fullItems.findIndex((u) => u.email === MEMBER_EMAIL);
+    const memberId = fullItems[firstIndex]!.id;
+    const pageSize = firstIndex + 1;
+
+    const page1 = await app.inject({
+      method: "GET",
+      url: `/api/admin/users/pending?limit=${pageSize}`,
+      headers: { cookie: adminCookie },
+    });
+    const body1 = page1.json<{ items: { email: string }[]; nextCursor: string | null }>();
+    expect(body1.items.at(-1)?.email).toBe(MEMBER_EMAIL);
+
+    // Approve the account shown on page 1 - it leaves the PENDING set while
+    // the admin is still holding page 1's cursor, exactly the race an
+    // offset-based page/limit would mishandle.
+    await app.inject({
+      method: "POST",
+      url: `/api/admin/users/${memberId}/approve`,
+      headers: { cookie: adminCookie },
+    });
+
+    const page2 = await app.inject({
+      method: "GET",
+      url: `/api/admin/users/pending?limit=200&cursor=${encodeURIComponent(body1.nextCursor!)}`,
+      headers: { cookie: adminCookie },
+    });
+    const body2 = page2.json<{ items: { email: string }[]; nextCursor: string | null }>();
+    expect(body2.items.some((u) => u.email === MEMBER_EMAIL)).toBe(false);
+    expect(body2.items.some((u) => u.email === MEMBER_EMAIL_2)).toBe(true);
+  });
+
+  it("PERF-002: rejects a malformed cursor with 400", async () => {
+    const adminCookie = await setupAdmin();
+    const res = await app.inject({
+      method: "GET",
+      url: "/api/admin/users/pending?cursor=not-a-real-cursor",
+      headers: { cookie: adminCookie },
+    });
+    expect(res.statusCode).toBe(400);
   });
 });
 
@@ -148,7 +245,7 @@ describe("POST /api/admin/users/:id/approve", () => {
       url: "/api/admin/users/pending",
       headers: { cookie: adminCookie },
     });
-    expect(pendingRes.json<{ email: string }[]>().some((u) => u.email === MEMBER_EMAIL)).toBe(false);
+    expect(pendingRes.json<{ items: { email: string }[] }>().items.some((u) => u.email === MEMBER_EMAIL)).toBe(false);
 
     const listRes = await app.inject({
       method: "GET",
@@ -261,7 +358,7 @@ describe("POST /api/admin/users/:id/deny", () => {
       url: "/api/admin/users/pending",
       headers: { cookie: adminCookie },
     });
-    expect(pendingRes.json<{ email: string }[]>().some((u) => u.email === MEMBER_EMAIL)).toBe(false);
+    expect(pendingRes.json<{ items: { email: string }[] }>().items.some((u) => u.email === MEMBER_EMAIL)).toBe(false);
   });
 
   it("returns 409 when denying an already-approved user", async () => {

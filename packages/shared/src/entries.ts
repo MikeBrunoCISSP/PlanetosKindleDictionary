@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { plainText } from "./validation.js";
+import { pagedSchema } from "./pagination.js";
 
 export const DUPLICATE_WORD_MESSAGE = "The word already exists in the dictionary.";
 
@@ -126,6 +127,8 @@ export const pendingQueueItemDtoSchema = z.discriminatedUnion("type", [
   }),
 ]);
 
+export const reviewQueuePageDtoSchema = pagedSchema(pendingQueueItemDtoSchema);
+
 export type CreateEntryDto = z.infer<typeof createEntrySchema>;
 export type SubmitEntryEditProposalDto = z.infer<typeof submitEntryEditProposalSchema>;
 export type RejectEntryDto = z.infer<typeof rejectEntrySchema>;
@@ -135,3 +138,4 @@ export type EntryDto = z.infer<typeof entryDtoSchema>;
 export type PublicEntryDto = z.infer<typeof publicEntryDtoSchema>;
 export type EntryEditProposalDto = z.infer<typeof entryEditProposalDtoSchema>;
 export type PendingQueueItemDto = z.infer<typeof pendingQueueItemDtoSchema>;
+export type ReviewQueuePageDto = z.infer<typeof reviewQueuePageDtoSchema>;
