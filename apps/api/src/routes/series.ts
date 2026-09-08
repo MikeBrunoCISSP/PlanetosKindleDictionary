@@ -9,6 +9,7 @@ import {
 } from "@planetos/shared";
 import { makeRequireAdmin } from "../plugins/requireAdmin.js";
 import { Errors, isPrismaError } from "../lib/errors.js";
+import { scheduleStorageCleanup } from "../lib/storageCleanup.js";
 
 function slugify(title: string): string {
   return title
@@ -143,7 +144,10 @@ const seriesRoutes: FastifyPluginAsync<{ prisma: PrismaClient }> = async (fastif
   fastify.delete("/api/series/:slug", { preHandler: requireAdmin }, async (request, reply) => {
     const { slug } = request.params as { slug: string };
     try {
-      await prisma.series.delete({ where: { slug } });
+      await prisma.$transaction(async (tx) => {
+        const deleted = await tx.series.delete({ where: { slug }, select: { id: true } });
+        await scheduleStorageCleanup(tx, `builds/${deleted.id}/`, "SERIES_DELETED");
+      });
       return reply.status(204).send();
     } catch (err: unknown) {
       if (isPrismaError(err, "P2025")) throw Errors.NOT_FOUND();

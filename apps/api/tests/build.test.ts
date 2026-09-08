@@ -122,6 +122,40 @@ describe("processDictionaryBuild", () => {
     expect(updatedSeries.contentHash).toBeNull();
   });
 
+  it("PROD-007: a build that fails after a successful upload schedules storage cleanup for its own prefix", async () => {
+    const series = await createTestSeries("failure-after-upload");
+    await createEntry(series.id, "Wolf");
+
+    const partiallyFailingStorage = {
+      putObject: async (key: string, body: Buffer, contentType: string) => {
+        if (key.endsWith("dictionary.epub")) {
+          await storage.putObject(key, body, contentType);
+          return;
+        }
+        throw new Error("simulated failure on second upload");
+      },
+    };
+
+    await expect(processDictionaryBuild(prisma, partiallyFailingStorage, series.id)).rejects.toThrow(
+      "simulated failure on second upload"
+    );
+
+    const build = await prisma.build.findFirstOrThrow({ where: { seriesId: series.id } });
+    expect(build.status).toBe("FAILED");
+
+    const cleanupRow = await prisma.pendingStorageCleanup.findFirstOrThrow({
+      where: { prefix: `builds/${series.id}/${build.id}/` },
+    });
+    expect(cleanupRow.reason).toBe("BUILD_FAILED");
+
+    // The epub object this attempt did manage to upload really exists,
+    // proving the cleanup row is needed (not just a formality).
+    expect(await downloadObject(`builds/${series.id}/${build.id}/dictionary.epub`)).toBeInstanceOf(Buffer);
+
+    await storage.deleteObjects([`builds/${series.id}/${build.id}/dictionary.epub`]);
+    await prisma.pendingStorageCleanup.delete({ where: { id: cleanupRow.id } });
+  });
+
   it("only includes Published+Approved entries, excluding Pending, Rejected, and Deleted", async () => {
     const series = await createTestSeries("filter");
     await createEntry(series.id, "ApprovedWord");

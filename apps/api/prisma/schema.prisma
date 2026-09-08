@@ -59,6 +59,11 @@ enum EntryEditProposalStatus {
   REJECTED
 }
 
+enum StorageCleanupReason {
+  BUILD_FAILED
+  SERIES_DELETED
+}
+
 model User {
   id                          String              @id @default(cuid())
   email                       String              @unique
@@ -319,4 +324,22 @@ model EmailOutbox {
   createdAt        DateTime          @default(now())
 
   @@index([status, createdAt])
+}
+
+// Durable record that a set of object-storage artifacts under `prefix` is
+// unreachable and needs deleting (PROD-007). Written in the same
+// transaction as whatever action makes them unreachable (a build failing
+// after upload, or a series being deleted) - deliberately has no foreign
+// key to Series, since it must survive exactly the case where the series
+// is gone. Processed and removed by the hourly cleanup-storage sweep; see
+// apps/api/src/lib/storageCleanup.ts.
+model PendingStorageCleanup {
+  id        String                @id @default(cuid())
+  prefix    String
+  reason    StorageCleanupReason
+  createdAt DateTime              @default(now())
+  attempts  Int                   @default(0)
+  error     String?
+
+  @@index([createdAt])
 }

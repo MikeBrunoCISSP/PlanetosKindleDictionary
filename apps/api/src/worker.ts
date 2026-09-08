@@ -4,12 +4,13 @@ import { config, assertConfigValid } from "./config.js";
 import { Worker, type Job } from "bullmq";
 import { PrismaClient } from "@prisma/client";
 import { getDictionaryBuildQueue, getMaintenanceQueue, getEmailQueue, getConnection, closeQueues } from "./lib/queues.js";
-import { ensureBucketExists, putObject, deleteObjects } from "./lib/storage.js";
+import { ensureBucketExists, putObject, deleteObjects, listObjects } from "./lib/storage.js";
 import { runPreflight } from "./lib/health.js";
 import { processDictionaryBuild } from "./jobs/build.js";
 import { pruneOldBuilds } from "./jobs/prune.js";
 import { runSweep, runReconciliation } from "./jobs/sweep.js";
 import { processEmailOutbox, EMAIL_JOB_RETRY_OPTIONS } from "./lib/outbox.js";
+import { runStorageCleanupSweep } from "./lib/storageCleanup.js";
 
 // Fail fast on missing/invalid production configuration before the worker
 // registers with any queue (finding PROD-002). Validates only what the
@@ -74,6 +75,10 @@ const dictionaryBuildWorker = new Worker("dictionary-build", processDictionaryBu
 const maintenanceWorker = new Worker(
   "maintenance",
   async (job: Job) => {
+    if (job.name === "cleanup-storage") {
+      await runStorageCleanupSweep(prisma, { listObjects, deleteObjects });
+      return;
+    }
     const { seriesId } = job.data as { seriesId: string };
     await pruneOldBuilds(prisma, { deleteObjects }, seriesId);
   },
@@ -143,6 +148,16 @@ await dictionaryBuildQueue.upsertJobScheduler(
   "reconcile-all-series",
   { pattern: "0 3 * * *" },
   { name: "reconcile-all-series", data: {} }
+);
+
+// PROD-007: periodic sweep of pending object-storage cleanups (failed
+// builds' partial uploads, deleted series' orphaned artifacts). No latency
+// requirement - "try again next hour" is a complete retry strategy since
+// runStorageCleanupSweep leaves any failed row pending for the next run.
+await maintenanceQueue.upsertJobScheduler(
+  "cleanup-storage",
+  { pattern: "0 * * * *" },
+  { name: "cleanup-storage", data: {} }
 );
 
 dictionaryBuildWorker.on("failed", (job, err) => {

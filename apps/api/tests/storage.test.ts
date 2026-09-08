@@ -59,4 +59,13 @@ describe("storage", () => {
     const afterDelete = await listObjects(PREFIX);
     expect(afterDelete.map((o) => o.key)).not.toEqual(expect.arrayContaining(keys));
   });
+
+  it("PROD-007: deleteObjects handles more than 1000 keys without an S3 batch-limit error", async () => {
+    // Never-uploaded synthetic keys are sufficient: S3's DeleteObjects on a
+    // non-existent key is already a no-op success, so this only needs to
+    // prove deleteObjects chunks correctly rather than erroring past the
+    // API's 1000-key-per-request limit.
+    const keys = Array.from({ length: 1500 }, (_, i) => `${PREFIX}never-uploaded/${i}.txt`);
+    await expect(deleteObjects(keys)).resolves.not.toThrow();
+  });
 });

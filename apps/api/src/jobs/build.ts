@@ -1,6 +1,7 @@
 import type { PrismaClient } from "@prisma/client";
 import { buildDictionaryFiles, zipAsEpub, zipAsSourceArchive, computeContentHash } from "@planetos/kindle";
 import { loadSeriesInputs } from "./mapping.js";
+import { scheduleStorageCleanup } from "../lib/storageCleanup.js";
 
 export interface BuildStorage {
   putObject(key: string, body: Buffer, contentType: string): Promise<void>;
@@ -82,9 +83,16 @@ export async function processDictionaryBuild(
 
     return { buildId: build.id };
   } catch (err: unknown) {
-    await prisma.build.update({
-      where: { id: build.id },
-      data: { status: "FAILED", error: formatError(err), finishedAt: new Date() },
+    await prisma.$transaction(async (tx) => {
+      await tx.build.update({
+        where: { id: build.id },
+        data: { status: "FAILED", error: formatError(err), finishedAt: new Date() },
+      });
+      // Either upload could have partially succeeded before this failure -
+      // schedule cleanup for this attempt's own prefix regardless of which
+      // step failed (deleting objects that were never uploaded is a
+      // harmless no-op).
+      await scheduleStorageCleanup(tx, `builds/${seriesId}/${build.id}/`, "BUILD_FAILED");
     });
     throw err;
   }

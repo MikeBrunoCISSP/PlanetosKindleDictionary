@@ -2,6 +2,8 @@ import { describe, it, expect, beforeAll, afterAll, afterEach } from "vitest";
 import type { FastifyInstance } from "fastify";
 import type { PrismaClient } from "@prisma/client";
 import { buildApp, cleanUsers, cleanSeries } from "./helpers.js";
+import { runStorageCleanupSweep } from "../src/lib/storageCleanup.js";
+import * as storage from "../src/lib/storage.js";
 
 const ADMIN_EMAIL = "seriesadmin@example.com";
 const ADMIN_USERNAME = "SeriesAdminUser";
@@ -44,6 +46,7 @@ async function setupMember(): Promise<string> {
 
 beforeAll(async () => {
   ({ app, prisma } = await buildApp());
+  await storage.ensureBucketExists();
   await cleanUsers(prisma, [ADMIN_EMAIL, MEMBER_EMAIL]);
   await cleanSeries(prisma, SLUG_PREFIX);
 });
@@ -297,6 +300,59 @@ describe("DELETE /api/series/:slug", () => {
       headers: { cookie: memberCookie },
     });
     expect(res.statusCode).toBe(403);
+  });
+
+  it("PROD-007: deleting a series schedules storage cleanup for its builds prefix", async () => {
+    const adminCookie = await setupAdmin();
+    const created = await app.inject({
+      method: "POST",
+      url: "/api/series",
+      headers: { cookie: adminCookie },
+      payload: { title: "Test Series Delete Cleanup", description: "Cleanup scheduling" },
+    });
+    const { id: seriesId, slug } = created.json<{ id: string; slug: string }>();
+
+    const res = await app.inject({
+      method: "DELETE",
+      url: `/api/series/${slug}`,
+      headers: { cookie: adminCookie },
+    });
+    expect(res.statusCode).toBe(204);
+
+    const cleanupRow = await prisma.pendingStorageCleanup.findFirstOrThrow({
+      where: { prefix: `builds/${seriesId}/` },
+    });
+    expect(cleanupRow.reason).toBe("SERIES_DELETED");
+
+    await prisma.pendingStorageCleanup.delete({ where: { id: cleanupRow.id } });
+  });
+
+  it("PROD-007: deleting a series then running the cleanup sweep removes its objects from storage", async () => {
+    const adminCookie = await setupAdmin();
+    const created = await app.inject({
+      method: "POST",
+      url: "/api/series",
+      headers: { cookie: adminCookie },
+      payload: { title: "Test Series Delete Sweep", description: "Cleanup sweep" },
+    });
+    const { id: seriesId, slug } = created.json<{ id: string; slug: string }>();
+
+    const prefix = `builds/${seriesId}/`;
+    await storage.putObject(`${prefix}build-1/dictionary.epub`, Buffer.from("epub"), "application/epub+zip");
+    await storage.putObject(`${prefix}build-1/sources.zip`, Buffer.from("sources"), "application/zip");
+
+    const res = await app.inject({
+      method: "DELETE",
+      url: `/api/series/${slug}`,
+      headers: { cookie: adminCookie },
+    });
+    expect(res.statusCode).toBe(204);
+
+    expect(await storage.listObjects(prefix)).toHaveLength(2);
+
+    await runStorageCleanupSweep(prisma, storage);
+
+    expect(await storage.listObjects(prefix)).toHaveLength(0);
   });
 });
 

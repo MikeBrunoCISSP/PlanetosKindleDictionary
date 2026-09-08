@@ -19,7 +19,10 @@ vi.mock("../src/lib/queues.js", () => ({
     opts: { connection: {} },
     upsertJobScheduler: upsertJobSchedulerMock,
   })),
-  getMaintenanceQueue: vi.fn(() => ({ opts: { connection: {} } })),
+  getMaintenanceQueue: vi.fn(() => ({
+    opts: { connection: {} },
+    upsertJobScheduler: upsertJobSchedulerMock,
+  })),
   getEmailQueue: vi.fn(() => ({
     opts: { connection: {} },
     upsertJobScheduler: upsertJobSchedulerMock,
@@ -33,6 +36,7 @@ vi.mock("../src/lib/storage.js", () => ({
   ensureBucketExists: vi.fn(),
   putObject: vi.fn(),
   deleteObjects: vi.fn(),
+  listObjects: vi.fn(),
 }));
 
 vi.mock("../src/lib/health.js", () => ({

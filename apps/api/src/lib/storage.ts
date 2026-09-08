@@ -78,14 +78,19 @@ export async function listObjects(prefix: string): Promise<{ key: string; lastMo
   return results;
 }
 
+// S3's DeleteObjects API hard-caps at 1000 keys per request.
+const S3_DELETE_BATCH_LIMIT = 1000;
+
 export async function deleteObjects(keys: string[]): Promise<void> {
-  if (keys.length === 0) return;
-  await getClient().send(
-    new DeleteObjectsCommand({
-      Bucket: getBucket(),
-      Delete: { Objects: keys.map((key) => ({ Key: key })) },
-    })
-  );
+  for (let i = 0; i < keys.length; i += S3_DELETE_BATCH_LIMIT) {
+    const batch = keys.slice(i, i + S3_DELETE_BATCH_LIMIT);
+    await getClient().send(
+      new DeleteObjectsCommand({
+        Bucket: getBucket(),
+        Delete: { Objects: batch.map((key) => ({ Key: key })) },
+      })
+    );
+  }
 }
 
 /** Issues the HeadBucket call used both to probe and to ensure the bucket exists. */
