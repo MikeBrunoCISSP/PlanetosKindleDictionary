@@ -343,7 +343,12 @@ The front-end SHALL expose a single `/login` route that presents both a Sign In 
 #### Scenario: Password rule violations shown inline
 
 - **WHEN** the Register form's Password field has content that violates one or more complexity rules
-- **THEN** each violated rule is shown as unsatisfied in the password requirement checklist beneath the field, live as the user types, without requiring a submit attempt (see the Password Requirement Checklist requirement for the checklist's own behavior)
+- **THEN** each violated rule is shown as unsatisfied in the password requirement checklist beside the field, live as the user types, without requiring a submit attempt (see the Password Requirement Checklist requirement for the checklist's own behavior)
+
+#### Scenario: Confirm Password field appears directly below Password
+
+- **WHEN** the Register form is displayed
+- **THEN** the Confirm Password field is the next field immediately following the Password field, with no other field between them
 
 #### Scenario: Authenticated user visiting /login
 
@@ -357,7 +362,7 @@ The front-end SHALL expose a single `/login` route that presents both a Sign In 
 
 ### Requirement: Password Requirement Checklist
 
-The Register form SHALL display the password complexity rules as a bulleted checklist beneath the Password field, visible regardless of whether the field currently has content. Each rule SHALL be shown as its own list item; an item SHALL switch to a green checkmark the moment the current Password field value satisfies that rule, live as the user types, and SHALL revert to its unsatisfied appearance if a later edit no longer satisfies it. The Password field SHALL NOT additionally display the bundled rule-violation text message that a failed submit previously produced — the checklist is the sole feedback for password complexity.
+The Register form SHALL display the password complexity rules as a bulleted checklist beside the Password field, visible regardless of whether the field currently has content. Each rule SHALL be shown as its own list item; an item SHALL switch to a green checkmark the moment the current Password field value satisfies that rule, live as the user types, and SHALL revert to its unsatisfied appearance if a later edit no longer satisfies it. The Password field SHALL NOT additionally display the bundled rule-violation text message that a failed submit previously produced — the checklist is the sole feedback for password complexity.
 
 #### Scenario: Checklist visible before typing
 
