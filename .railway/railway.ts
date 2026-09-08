@@ -133,7 +133,7 @@ export default defineRailway(() => {
   });
 
   return {
-    name: "planetos-kindle-dictionary",
+    name: "ereader-dictionaries",
     resources: [db, cache, artifacts, app, worker],
   };
 });
