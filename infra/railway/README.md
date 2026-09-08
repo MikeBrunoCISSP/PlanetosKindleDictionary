@@ -30,17 +30,32 @@ works on every Railway plan. See [§5.1](#51-email-brevo) below, and
 
 ## 1. Before you start
 
-1. Create a Railway account and workspace at <https://railway.com>.
+1. Create a Railway account and workspace at <https://railway.com>. If you
+   sign up or log in with GitHub, Railway will prompt you to install its
+   GitHub App and choose which repositories it can access — make sure this
+   repo (`MikeBrunoCISSP/PlanetosKindleDictionary`) is included, either by
+   selecting it directly or by allowing access to all repositories. This is
+   what actually lets Railway pull code from GitHub in step 3 below; signing
+   in with GitHub on its own doesn't grant repo access by itself.
 2. Install the Railway command-line tool:
    ```bash
    bash <(curl -fsSL https://railway.com/install.sh)   # macOS / Linux / WSL
    npm i -g @railway/cli                                # any platform, Node ≥ 16
    railway login
    ```
+   `railway login` opens your browser to sign in — if you already created
+   your Railway account with GitHub in step 1, just sign in with GitHub here
+   too.
 3. Make sure this repository is pushed to GitHub
    (`MikeBrunoCISSP/PlanetosKindleDictionary`, branch `main`). Railway builds
    straight from your GitHub repo — you don't need to build or push a Docker
    image yourself.
+
+   **If you didn't grant repo access during signup**, or you're not sure,
+   you can check or fix it any time: Railway dashboard → your account/workspace
+   settings → **GitHub** → make sure this repo is listed under the connected
+   repositories. If it's missing, that page has a link back to GitHub's
+   permission screen to add it.
 
 ---
 
@@ -57,8 +72,12 @@ railway status --json                              # double-check it connected t
 
 `.railway/railway.ts` is a file that describes everything this project needs
 on Railway: the `app` and `worker` services, the database, Redis, the storage
-bucket, and how they're all wired together. Before creating anything, you can
-preview what will happen:
+bucket, and how they're all wired together. Both `app` and `worker` are
+already configured in that file to build directly from this GitHub repo and
+branch — you don't need to separately connect a repo to each service in the
+dashboard; as long as Railway has access to the repo (§1), applying this
+config points both services at it automatically. Before creating anything,
+you can preview what will happen:
 
 ```bash
 railway config plan          # shows what would be created/changed; expect "5 to add, 0 to change, 0 to destroy"
