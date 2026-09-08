@@ -44,7 +44,7 @@ export function AppHeader() {
           <AccountMenu me={me} />
         ) : (
           <Link to="/login" className="rounded-md px-2 py-2 text-sm font-medium hover:bg-accent">
-            Log In
+            Log In/Register
           </Link>
         )}
         <AppMenu me={me ?? null} />
