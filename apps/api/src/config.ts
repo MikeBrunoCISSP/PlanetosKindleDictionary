@@ -76,13 +76,22 @@ function parseUrl(value: string): URL | null {
 /** Which process is validating — each requires only what it actually uses. */
 export type Scope = "api" | "worker";
 
-/** Variables the background worker actually consumes (queues + storage + Prisma). */
+/**
+ * Variables the background worker actually consumes (queues + storage +
+ * Prisma + mail). Mail is required here too because the worker is what
+ * actually sends email - it processes the "email" queue's jobs
+ * (processEmailOutbox), not the API process.
+ */
 const WORKER_REQUIRED: ReadonlySet<string> = new Set([
   "DATABASE_URL",
   "REDIS_URL",
   "S3_BUCKET",
   "S3_ACCESS_KEY_ID",
   "S3_SECRET_ACCESS_KEY",
+  "MAIL_TRANSPORT",
+  "SMTP_URL",
+  "BREVO_API_KEY",
+  "MAIL_FROM_ADDRESS",
 ]);
 
 function requiredFor(name: string, scope: Scope): boolean {
@@ -133,8 +142,9 @@ export function validateEnv(env: RawEnv, scope: Scope = "api"): string[] {
   requireNonEmpty("S3_ACCESS_KEY_ID");
   requireNonEmpty("S3_SECRET_ACCESS_KEY");
 
-  // Mail — api scope only (the worker sends no mail). The required set
-  // depends on the selected transport.
+  // Mail — required for both scopes (the worker sends mail too, via the
+  // email outbox queue's job processor). The required set depends on the
+  // selected transport.
   if (requiredFor("MAIL_TRANSPORT", scope)) {
     const transport = env["MAIL_TRANSPORT"];
     if (!transport) {

@@ -192,7 +192,7 @@ describe("validateEnv (mail transport)", () => {
 });
 
 describe("validateEnv (worker scope)", () => {
-  it("requires only queues + storage + Prisma, not session/email/public-url", () => {
+  it("requires queues + storage + Prisma + mail, not session/public-url", () => {
     const issues = validateEnv(
       {
         NODE_ENV: "production",
@@ -201,7 +201,10 @@ describe("validateEnv (worker scope)", () => {
         S3_BUCKET: "dictionaries",
         S3_ACCESS_KEY_ID: "AKIAEXAMPLE",
         S3_SECRET_ACCESS_KEY: "abc123secret",
-        // no SESSION_SECRET / SETTINGS_ENCRYPTION_KEY / PUBLIC_BASE_URL / SMTP_URL
+        MAIL_TRANSPORT: "brevo-api",
+        BREVO_API_KEY: "xkeysib-realish-key",
+        MAIL_FROM_ADDRESS: "notify@mail.dict-app.io",
+        // no SESSION_SECRET / SETTINGS_ENCRYPTION_KEY / PUBLIC_BASE_URL
       },
       "worker"
     );
@@ -213,6 +216,41 @@ describe("validateEnv (worker scope)", () => {
     expect(issues.some((i) => i.startsWith("REDIS_URL"))).toBe(true);
     expect(issues.some((i) => i.startsWith("S3_BUCKET"))).toBe(true);
     expect(issues.some((i) => i.startsWith("SESSION_SECRET"))).toBe(false);
+  });
+
+  it("PROD (live bug): the worker requires MAIL_TRANSPORT, since it's the one that sends email", () => {
+    const issues = validateEnv(
+      {
+        NODE_ENV: "production",
+        DATABASE_URL: "postgresql://user:pass@db.internal:5432/app",
+        REDIS_URL: "redis://cache.internal:6379",
+        S3_BUCKET: "dictionaries",
+        S3_ACCESS_KEY_ID: "AKIAEXAMPLE",
+        S3_SECRET_ACCESS_KEY: "abc123secret",
+        // no mail config at all - this is the exact shape that silently
+        // deployed and broke email sending in production.
+      },
+      "worker"
+    );
+    expect(issues.some((i) => i.startsWith("MAIL_TRANSPORT"))).toBe(true);
+  });
+
+  it("also requires BREVO_API_KEY and MAIL_FROM_ADDRESS for the worker once a transport is chosen", () => {
+    const issues = validateEnv(
+      {
+        NODE_ENV: "production",
+        DATABASE_URL: "postgresql://user:pass@db.internal:5432/app",
+        REDIS_URL: "redis://cache.internal:6379",
+        S3_BUCKET: "dictionaries",
+        S3_ACCESS_KEY_ID: "AKIAEXAMPLE",
+        S3_SECRET_ACCESS_KEY: "abc123secret",
+        MAIL_TRANSPORT: "brevo-api",
+        // no BREVO_API_KEY / MAIL_FROM_ADDRESS
+      },
+      "worker"
+    );
+    expect(issues.some((i) => i.startsWith("BREVO_API_KEY"))).toBe(true);
+    expect(issues.some((i) => i.startsWith("MAIL_FROM_ADDRESS"))).toBe(true);
   });
 });
 

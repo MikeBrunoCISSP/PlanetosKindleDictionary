@@ -193,19 +193,23 @@ a paid plan just to send email.
 2. **Create an API key.** In the Brevo dashboard, go to *SMTP & API* → *API
    Keys* and generate one. Make sure it's an **API key**, not an SMTP key —
    they look similar but aren't interchangeable.
-3. **Set the values** on the `app` service:
+3. **Set the values on both `app` and `worker`** — the worker is what
+   actually sends mail (it processes the email queue), not the API, so both
+   need these:
 
    ```bash
-   printf '%s' 'xkeysib-…' | railway variable set BREVO_API_KEY --stdin --service app
-   railway variable set \
-     MAIL_FROM_ADDRESS='no-reply@mail.yourdomain.com' \
-     MAIL_FROM_NAME='eReader Dictionaries' \
-     --service app
+   for svc in app worker; do
+     printf '%s' 'xkeysib-…' | railway variable set BREVO_API_KEY --stdin --service "$svc"
+     railway variable set \
+       MAIL_FROM_ADDRESS='no-reply@mail.yourdomain.com' \
+       MAIL_FROM_NAME='eReader Dictionaries' \
+       --service "$svc"
+   done
    ```
 
-   `MAIL_FROM_ADDRESS` has to be on the domain you verified above — the app
-   refuses to start if it looks like a local/test address (`localhost`,
-   `.local`, `.test`, `.example`).
+   `MAIL_FROM_ADDRESS` has to be on the domain you verified above — both
+   services refuse to start if it looks like a local/test address
+   (`localhost`, `.local`, `.test`, `.example`).
 
 > **Using a paid Railway plan instead?** If you're on a Railway plan that
 > allows outbound email (SMTP), you can use that instead of the web API:
@@ -414,8 +418,8 @@ Everything else in this guide still applies.
 |---|---|---|
 | `SESSION_SECRET` | `app` | §5 |
 | `SETTINGS_ENCRYPTION_KEY` | `app`, `worker` | §5 |
-| `BREVO_API_KEY`, `MAIL_FROM_ADDRESS`, `MAIL_FROM_NAME` | `app` | §5.1 |
-| `SMTP_URL` | `app` | §5.1 — only needed if `MAIL_TRANSPORT=smtp` |
+| `BREVO_API_KEY`, `MAIL_FROM_ADDRESS`, `MAIL_FROM_NAME` | `app`, `worker` | §5.1 — the worker is what actually sends mail |
+| `SMTP_URL` | `app`, `worker` | §5.1 — only needed if `MAIL_TRANSPORT=smtp` |
 | `ADMIN_EMAIL`, `ADMIN_PASSWORD` | `app` | §5, §7 |
 | `S3_ENDPOINT`, `S3_BUCKET`, `S3_REGION`, `S3_ACCESS_KEY_ID`, `S3_SECRET_ACCESS_KEY` | `app`, `worker` | §6 |
 | `PUBLIC_BASE_URL` | `app` | Only needed to override the default if you set up a custom domain (§9) |

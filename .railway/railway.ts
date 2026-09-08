@@ -53,6 +53,19 @@ export default defineRailway(() => {
     S3_FORCE_PATH_STYLE: "false",
   };
 
+  // Transactional email via Brevo's HTTPS API - works on any Railway plan
+  // (SMTP is Pro-only). The operator sets BREVO_API_KEY and a
+  // MAIL_FROM_ADDRESS on a domain verified in Brevo (see the runbook).
+  // For the Pro-plan SMTP-relay alternative, set MAIL_TRANSPORT=smtp and
+  // SMTP_URL instead. Needed on BOTH app and worker - the worker is what
+  // actually sends mail (it processes the email outbox queue), not the API.
+  const mailVars = {
+    MAIL_TRANSPORT: "brevo-api",
+    BREVO_API_KEY: preserve(),
+    MAIL_FROM_ADDRESS: preserve(),
+    MAIL_FROM_NAME: preserve(),
+  };
+
   const app = service("app", {
     source: github(REPO, { branch: BRANCH }),
     build: {
@@ -94,15 +107,7 @@ export default defineRailway(() => {
       SESSION_SECRET: preserve(),
       // Also encrypts the admin-configured Turnstile secret at rest.
       SETTINGS_ENCRYPTION_KEY: preserve(),
-      // Transactional email via Brevo's HTTPS API - works on any Railway plan
-      // (SMTP is Pro-only). The operator sets BREVO_API_KEY and a
-      // MAIL_FROM_ADDRESS on a domain verified in Brevo (see the runbook).
-      // For the Pro-plan SMTP-relay alternative, set MAIL_TRANSPORT=smtp and
-      // SMTP_URL instead.
-      MAIL_TRANSPORT: "brevo-api",
-      BREVO_API_KEY: preserve(),
-      MAIL_FROM_ADDRESS: preserve(),
-      MAIL_FROM_NAME: preserve(),
+      ...mailVars,
       ADMIN_EMAIL: preserve(),
       ADMIN_PASSWORD: preserve(),
     },
@@ -134,6 +139,7 @@ export default defineRailway(() => {
       ...s3Vars,
       // The build job decrypts the Turnstile secret at rest.
       SETTINGS_ENCRYPTION_KEY: preserve(),
+      ...mailVars,
     },
   });
 
