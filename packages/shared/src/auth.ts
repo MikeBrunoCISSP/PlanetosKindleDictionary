@@ -4,23 +4,38 @@ import { pagedSchema } from "./pagination.js";
 
 export interface PasswordRequirement {
   id: "minLength" | "uppercase" | "lowercase" | "digit";
+  /** Full sentence - used as the Zod validation error message (e.g. reset-password's bare FormMessage, which has no checklist for context). */
   label: string;
+  /** Short fragment - used only by the register form's requirement checklist, which already gives it a table/list layout for context. */
+  shortLabel: string;
   test: (value: string) => boolean;
 }
 
 export const passwordRequirements: PasswordRequirement[] = [
-  { id: "minLength", label: "Password must be at least 8 characters", test: (v) => v.length >= 8 },
+  {
+    id: "minLength",
+    label: "Password must be at least 8 characters",
+    shortLabel: "8 characters",
+    test: (v) => v.length >= 8,
+  },
   {
     id: "uppercase",
     label: "Password must contain at least one uppercase letter (A–Z)",
+    shortLabel: "1 Uppercase",
     test: (v) => /[A-Z]/.test(v),
   },
   {
     id: "lowercase",
     label: "Password must contain at least one lowercase letter (a–z)",
+    shortLabel: "1 Lowercase",
     test: (v) => /[a-z]/.test(v),
   },
-  { id: "digit", label: "Password must contain at least one digit (0–9)", test: (v) => /[0-9]/.test(v) },
+  {
+    id: "digit",
+    label: "Password must contain at least one digit (0–9)",
+    shortLabel: "1 Digit (0-9)",
+    test: (v) => /[0-9]/.test(v),
+  },
 ];
 
 export const passwordSchema = z.string().superRefine((val, ctx) => {

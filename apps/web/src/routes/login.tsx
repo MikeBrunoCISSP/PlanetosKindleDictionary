@@ -5,7 +5,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { loginSchema, registerSchema, forgotPasswordSchema, passwordRequirements } from "@planetos/shared";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { CheckIcon, CircleIcon } from "lucide-react";
+import { CheckIcon, XIcon } from "lucide-react";
 import { Turnstile } from "@marsidev/react-turnstile";
 import { cn } from "@/lib/utils";
 import {
@@ -433,52 +433,56 @@ function RegisterForm() {
                 </FormItem>
               )}
             />
-            <FormField
-              control={form.control}
-              name="password"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Password</FormLabel>
-                  <FormControl>
-                    <Input type="password" autoComplete="new-password" {...field} />
-                  </FormControl>
-                  <ul className="grid gap-1">
-                    {passwordRequirements.map((requirement) => {
-                      const satisfied = requirement.test(password);
-                      return (
-                        <li
-                          key={requirement.id}
-                          className={cn(
-                            "flex items-center gap-1.5 text-sm",
-                            satisfied ? "text-green-600" : "text-muted-foreground"
-                          )}
-                        >
-                          {satisfied ? (
-                            <CheckIcon className="size-3.5 shrink-0" />
-                          ) : (
-                            <CircleIcon className="size-3.5 shrink-0" />
-                          )}
-                          {requirement.label}
-                        </li>
-                      );
-                    })}
-                  </ul>
-                </FormItem>
-              )}
-            />
-            <FormField
-              control={form.control}
-              name="confirmPassword"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Confirm Password</FormLabel>
-                  <FormControl>
-                    <Input type="password" autoComplete="new-password" {...field} />
-                  </FormControl>
-                  {passwordMismatch && <p className="text-destructive text-sm">Passwords do not match</p>}
-                </FormItem>
-              )}
-            />
+            <div className="grid gap-4 sm:grid-cols-2 sm:items-center">
+              <div className="grid gap-4">
+                <FormField
+                  control={form.control}
+                  name="password"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Password</FormLabel>
+                      <FormControl>
+                        <Input type="password" autoComplete="new-password" {...field} />
+                      </FormControl>
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="confirmPassword"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Confirm Password</FormLabel>
+                      <FormControl>
+                        <Input type="password" autoComplete="new-password" {...field} />
+                      </FormControl>
+                      {passwordMismatch && <p className="text-destructive text-sm">Passwords do not match</p>}
+                    </FormItem>
+                  )}
+                />
+              </div>
+              <ul className="grid gap-1">
+                {passwordRequirements.map((requirement) => {
+                  const satisfied = requirement.test(password);
+                  return (
+                    <li
+                      key={requirement.id}
+                      className={cn(
+                        "flex items-center gap-1.5 text-sm",
+                        satisfied ? "text-green-600" : "text-red-600"
+                      )}
+                    >
+                      {satisfied ? (
+                        <CheckIcon className="size-3.5 shrink-0" />
+                      ) : (
+                        <XIcon className="size-3.5 shrink-0" />
+                      )}
+                      {requirement.shortLabel}
+                    </li>
+                  );
+                })}
+              </ul>
+            </div>
             {turnstileRequired && turnstileConfig?.siteKey && (
               <Turnstile
                 siteKey={turnstileConfig.siteKey}
