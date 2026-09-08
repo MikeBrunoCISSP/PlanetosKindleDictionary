@@ -52,6 +52,12 @@ function getReadinessRedis(): Redis {
   return readinessRedis;
 }
 
+/** Closes the readiness-check Redis connection, if one was ever created (PROD-008). */
+export async function closeReadinessRedis(): Promise<void> {
+  await readinessRedis?.quit();
+  readinessRedis = undefined;
+}
+
 export interface ReadinessResult {
   ok: boolean;
   checks: { postgres: CheckResult; redis: CheckResult };

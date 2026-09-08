@@ -22,9 +22,9 @@ import searchRoutes from "./routes/search.js";
 import entryEditProposalRoutes from "./routes/entryEditProposals.js";
 import downloadsRoutes from "./routes/downloads.js";
 import { ensureBucketExists } from "./lib/storage.js";
-import { getDictionaryBuildQueue, getMaintenanceQueue, getEmailQueue } from "./lib/queues.js";
+import { getDictionaryBuildQueue, getMaintenanceQueue, getEmailQueue, closeQueues } from "./lib/queues.js";
 import { resolveWebDist } from "./lib/staticSite.js";
-import { checkReadiness } from "./lib/health.js";
+import { checkReadiness, closeReadinessRedis } from "./lib/health.js";
 
 // Fail fast on missing/invalid production configuration before anything is
 // constructed (finding PROD-002). No-op in NODE_ENV=development / test.
@@ -126,3 +126,49 @@ if (webDist) {
 await ensureBucketExists();
 
 await app.listen({ port: config.port, host: "0.0.0.0" });
+
+// Graceful shutdown (PROD-008): stop accepting new connections and drain
+// in-flight ones (app.close(), which also runs the session/rateLimit
+// plugins' onClose hooks) before disconnecting the queues, the /health
+// route's own readiness Redis connection, and Prisma - in that order,
+// since a route may still be using prisma while draining. Each step is
+// independently bounded so one stuck dependency can't hang the process
+// indefinitely.
+const SHUTDOWN_TIMEOUT_MS = 10_000;
+let shuttingDown = false;
+let shutdownHadError = false;
+
+async function withBound(label: string, work: Promise<unknown>): Promise<void> {
+  let settled = false;
+  const bound = new Promise<void>((resolve) => {
+    setTimeout(() => {
+      if (settled) return;
+      shutdownHadError = true;
+      app.log.warn(`[api] ${label} did not complete within ${SHUTDOWN_TIMEOUT_MS}ms, continuing shutdown anyway`);
+      resolve();
+    }, SHUTDOWN_TIMEOUT_MS).unref();
+  });
+  try {
+    await Promise.race([work.then(() => { settled = true; }), bound]);
+  } catch (err) {
+    settled = true;
+    shutdownHadError = true;
+    app.log.error(err, `[api] error during ${label}`);
+  }
+}
+
+async function shutdown(signal: string): Promise<void> {
+  if (shuttingDown) return;
+  shuttingDown = true;
+  app.log.info(`[api] received ${signal}, shutting down gracefully`);
+
+  await withBound("Fastify close", app.close());
+  await withBound("queue close", closeQueues());
+  await withBound("readiness Redis close", closeReadinessRedis());
+  await withBound("Prisma disconnect", prisma.$disconnect());
+
+  process.exit(shutdownHadError ? 1 : 0);
+}
+
+process.on("SIGTERM", () => void shutdown("SIGTERM"));
+process.on("SIGINT", () => void shutdown("SIGINT"));

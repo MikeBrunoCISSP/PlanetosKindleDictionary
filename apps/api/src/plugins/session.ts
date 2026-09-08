@@ -16,6 +16,10 @@ const sessionPlugin: FastifyPluginAsync = async (fastify) => {
   const redis = new Redis(config.redisUrl);
   const store = new RedisStore({ client: redis as never });
 
+  fastify.addHook("onClose", async () => {
+    await redis.quit();
+  });
+
   await fastify.register(fastifyCookie);
   await fastify.register(fastifySession, {
     secret: config.sessionSecret,

@@ -7,6 +7,10 @@ import { config } from "../config.js";
 const rateLimitPlugin: FastifyPluginAsync = async (fastify) => {
   const redis = new Redis(config.redisUrl);
 
+  fastify.addHook("onClose", async () => {
+    await redis.quit();
+  });
+
   await fastify.register(fastifyRateLimit, {
     global: false,
     redis: redis as never,
