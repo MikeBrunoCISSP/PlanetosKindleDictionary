@@ -44,6 +44,11 @@ const DEV_DEFAULTS = {
   S3_REGION: "us-east-1",
   S3_ACCESS_KEY_ID: "minioadmin",
   S3_SECRET_ACCESS_KEY: "minioadmin",
+  // MinIO (local dev) requires path-style URLs (bucket in the path); some
+  // managed S3-compatible providers (e.g. Railway's own bucket service)
+  // require virtual-hosted-style URLs (bucket in the hostname) instead -
+  // this isn't implied by whether an endpoint is set, so it's its own knob.
+  S3_FORCE_PATH_STYLE: "true",
   BUILD_CRON: "0 * * * *",
   PORT: "3000",
   TRUST_PROXY_HOPS: "1",
@@ -178,6 +183,10 @@ export function validateEnv(env: RawEnv, scope: Scope = "api"): string[] {
   if (env["S3_ENDPOINT"] !== undefined && parseUrl(env["S3_ENDPOINT"]) === null) {
     issues.push(`S3_ENDPOINT — must be a valid URL when set`);
   }
+  const forcePathStyle = env["S3_FORCE_PATH_STYLE"];
+  if (forcePathStyle !== undefined && forcePathStyle !== "true" && forcePathStyle !== "false") {
+    issues.push(`S3_FORCE_PATH_STYLE — must be "true" or "false" when set`);
+  }
 
   return issues;
 }
@@ -202,6 +211,7 @@ export interface Config {
     readonly region: string;
     readonly accessKeyId: string;
     readonly secretAccessKey: string;
+    readonly forcePathStyle: boolean;
   };
   readonly buildCron: string;
   readonly trustProxyHops: number;
@@ -252,6 +262,7 @@ export function parseEnv(env: RawEnv): Config {
       region: operational("S3_REGION"),
       accessKeyId: secret("S3_ACCESS_KEY_ID"),
       secretAccessKey: secret("S3_SECRET_ACCESS_KEY"),
+      forcePathStyle: operational("S3_FORCE_PATH_STYLE") !== "false",
     },
     buildCron: operational("BUILD_CRON"),
     trustProxyHops,

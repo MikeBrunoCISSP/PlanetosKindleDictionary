@@ -22,12 +22,15 @@ function getClient(): S3Client {
   if (client) return client;
 
   const endpoint = config.s3.endpoint;
-  // endpoint set => talking to MinIO (or another self-hosted S3-compatible
-  // service) locally, which requires path-style addressing; unset => real
-  // AWS S3 or a cloud provider using standard virtual-hosted addressing.
+  // Whether to use path-style (bucket in the URL path) vs virtual-hosted-style
+  // (bucket in the hostname) addressing is a property of the specific
+  // S3-compatible provider, not simply whether a custom endpoint is set -
+  // MinIO (local dev) needs path-style, but not every managed provider that
+  // requires a custom endpoint does. See config.s3.forcePathStyle /
+  // S3_FORCE_PATH_STYLE.
   client = new S3Client({
     ...(endpoint ? { endpoint } : {}),
-    forcePathStyle: Boolean(endpoint),
+    forcePathStyle: config.s3.forcePathStyle,
     region: config.s3.region,
     credentials: {
       accessKeyId: config.s3.accessKeyId,

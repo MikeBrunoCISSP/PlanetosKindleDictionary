@@ -118,6 +118,19 @@ describe("validateEnv (strict mode)", () => {
     const issues = validateEnv({ ...VALID_STRICT_ENV, TRUST_PROXY_HOPS: "0" });
     expect(issues.some((i) => i.startsWith("TRUST_PROXY_HOPS"))).toBe(false);
   });
+
+  it("rejects an S3_FORCE_PATH_STYLE that isn't exactly \"true\" or \"false\"", () => {
+    expect(
+      validateEnv({ ...VALID_STRICT_ENV, S3_FORCE_PATH_STYLE: "yes" }).some((i) =>
+        i.startsWith("S3_FORCE_PATH_STYLE")
+      )
+    ).toBe(true);
+  });
+
+  it("accepts S3_FORCE_PATH_STYLE=false", () => {
+    const issues = validateEnv({ ...VALID_STRICT_ENV, S3_FORCE_PATH_STYLE: "false" });
+    expect(issues.some((i) => i.startsWith("S3_FORCE_PATH_STYLE"))).toBe(false);
+  });
 });
 
 describe("validateEnv (mail transport)", () => {
@@ -221,9 +234,16 @@ describe("parseEnv", () => {
     expect(cfg.smtpUrl).toBe("smtp://localhost:1025");
     expect(cfg.s3.bucket).toBe("dictionaries");
     expect(cfg.s3.endpoint).toBe("http://localhost:9000");
+    expect(cfg.s3.forcePathStyle).toBe(true);
     expect(cfg.port).toBe(3000);
     expect(cfg.buildCron).toBe("0 * * * *");
     expect(cfg.isProduction).toBe(false);
+  });
+
+  it("defaults s3.forcePathStyle to true, and honors an explicit \"false\"", () => {
+    expect(parseEnv({ NODE_ENV: "development" }).s3.forcePathStyle).toBe(true);
+    expect(parseEnv({ ...VALID_STRICT_ENV, S3_FORCE_PATH_STYLE: "false" }).s3.forcePathStyle).toBe(false);
+    expect(parseEnv({ ...VALID_STRICT_ENV, S3_FORCE_PATH_STYLE: "true" }).s3.forcePathStyle).toBe(true);
   });
 
   it("takes values verbatim in strict mode and does not substitute defaults", () => {

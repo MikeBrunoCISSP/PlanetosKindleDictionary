@@ -46,6 +46,11 @@ export default defineRailway(() => {
     S3_REGION: preserve(),
     S3_ACCESS_KEY_ID: preserve(),
     S3_SECRET_ACCESS_KEY: preserve(),
+    // Railway's own managed bucket service reports "virtual-host" addressing
+    // (see `railway bucket credentials`), not the path-style MinIO needs -
+    // a fixed property of this provider, not something the operator chooses,
+    // so it's a literal rather than another preserve() to remember to set.
+    S3_FORCE_PATH_STYLE: "false",
   };
 
   const app = service("app", {
