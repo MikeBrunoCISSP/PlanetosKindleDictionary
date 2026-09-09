@@ -21,6 +21,7 @@ import turnstileRoutes from "./routes/turnstile.js";
 import searchRoutes from "./routes/search.js";
 import entryEditProposalRoutes from "./routes/entryEditProposals.js";
 import downloadsRoutes from "./routes/downloads.js";
+import contactRoutes from "./routes/contact.js";
 import { ensureBucketExists } from "./lib/storage.js";
 import { getDictionaryBuildQueue, getMaintenanceQueue, getEmailQueue, closeQueues } from "./lib/queues.js";
 import { resolveWebDist } from "./lib/staticSite.js";
@@ -62,6 +63,7 @@ await app.register(turnstileRoutes, { prisma });
 await app.register(searchRoutes, { prisma });
 await app.register(entryEditProposalRoutes, { prisma });
 await app.register(downloadsRoutes, { prisma });
+await app.register(contactRoutes, { prisma });
 
 // Bull Board at /admin/jobs - the "Hangfire dashboard" equivalent (SPEC.md
 // §7), admin-only. Registered inside its own encapsulated plugin so the

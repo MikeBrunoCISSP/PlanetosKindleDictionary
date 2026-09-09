@@ -56,6 +56,7 @@ The app reads four environment variables for this (see `.env.example` and
 | `BREVO_API_KEY` | The API key from step 2. |
 | `MAIL_FROM_ADDRESS` | The sender address — must be on the domain you verified in step 1. |
 | `MAIL_FROM_NAME` | The sender display name (defaults to `eReader Dictionaries` if unset). |
+| `CONTACT_RECIPIENT_EMAIL` | Where Contact form submissions are delivered — your own inbox, not a sender identity (see [§3a](#3a-forwarding-contact-form-submissions-to-your-personal-inbox)). |
 
 ### Local development / testing the real Brevo path
 
@@ -88,23 +89,51 @@ Mailpit-only local testing.
 ### Production (Railway)
 
 `.railway/railway.ts` already sets `MAIL_TRANSPORT: "brevo-api"` as a literal
-in the `app` service's config — you don't set that one yourself. You do need
-to set the other three as Railway variables (`BREVO_API_KEY`,
-`MAIL_FROM_ADDRESS`, `MAIL_FROM_NAME` are declared `preserve()` in the IaC, so
-`railway up`/`apply` never clears them once set):
+in both services' config — you don't set that one yourself. You do need to
+set the other three as Railway variables (`BREVO_API_KEY`, `MAIL_FROM_ADDRESS`,
+`MAIL_FROM_NAME` are declared `preserve()` in the IaC, so `railway up`/`apply`
+never clears them once set) **on both `app` and `worker`** — the worker is
+what actually sends mail (it processes the `email` queue's jobs), not the API
+process:
 
 ```bash
 printf '%s' 'xkeysib-your-real-key' | railway variable set BREVO_API_KEY --stdin --service app
+printf '%s' 'xkeysib-your-real-key' | railway variable set BREVO_API_KEY --stdin --service worker
 railway variable set \
   MAIL_FROM_ADDRESS='no-reply@mail.yourdomain.com' \
   MAIL_FROM_NAME='eReader Dictionaries' \
   --service app
+railway variable set \
+  MAIL_FROM_ADDRESS='no-reply@mail.yourdomain.com' \
+  MAIL_FROM_NAME='eReader Dictionaries' \
+  --service worker
 ```
-
-The worker service doesn't send mail and needs none of these variables.
 
 See `infra/railway/README.md` §5.1 for this in the context of the full
 deployment runbook.
+
+## 3a. Forwarding Contact form submissions to your personal inbox
+
+The Contact form (Help → Contact) sends each submission as a normal
+transactional email to a destination address you configure — **no Brevo
+dashboard changes are needed for this.** Transactional email APIs don't
+require the *recipient* address to be pre-verified, only the *sender* domain
+(already covered by step 1 above); Brevo will happily deliver to any inbox,
+including a personal Gmail/Outlook/etc. address.
+
+Set `CONTACT_RECIPIENT_EMAIL` to your personal address, **on both `app` and
+`worker`** (same reason as above — the worker is what actually sends it):
+
+```bash
+railway variable set CONTACT_RECIPIENT_EMAIL='you@example.com' --service app
+railway variable set CONTACT_RECIPIENT_EMAIL='you@example.com' --service worker
+```
+
+Unlike `MAIL_FROM_ADDRESS`, this value isn't checked against Brevo's sender
+domain restrictions — it's just where mail is delivered *to*, not a sending
+identity. Each message arrives with the subject prefixed
+`[eReader Dictionaries]` and its reply-to set to the visitor's own email
+address, so replying in your inbox client goes straight back to them.
 
 ## 4. What happens if something's misconfigured
 

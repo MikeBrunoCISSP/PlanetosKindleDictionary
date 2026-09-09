@@ -9,6 +9,7 @@ interface Message {
   to: string;
   subject: string;
   text: string;
+  replyTo?: string;
 }
 
 function fromHeader(): string {
@@ -26,6 +27,7 @@ async function sendViaSmtp(msg: Message): Promise<void> {
     to: msg.to,
     subject: msg.subject,
     text: msg.text,
+    ...(msg.replyTo ? { replyTo: msg.replyTo } : {}),
   });
 }
 
@@ -52,6 +54,7 @@ export async function sendViaBrevoApi(msg: Message, timeoutMs = BREVO_TIMEOUT_MS
       to: [{ email: msg.to }],
       subject: msg.subject,
       textContent: msg.text,
+      ...(msg.replyTo ? { replyTo: { email: msg.replyTo } } : {}),
     }),
     signal: AbortSignal.timeout(timeoutMs),
   });
@@ -102,5 +105,24 @@ export async function sendAccountApprovedEmail(to: string): Promise<void> {
     text: `Good news — your account has been approved by an administrator.
 
 You can now log in and start creating and editing dictionary entries.`,
+  });
+}
+
+export async function sendContactMessageEmail(payload: {
+  name: string;
+  email: string;
+  subject: string;
+  message: string;
+}): Promise<void> {
+  await sendEmail({
+    to: config.contactRecipientEmail,
+    subject: `[eReader Dictionaries] ${payload.subject}`,
+    text: `New contact form submission.
+
+Name: ${payload.name}
+Email: ${payload.email}
+
+${payload.message}`,
+    replyTo: payload.email,
   });
 }

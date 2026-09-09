@@ -3,6 +3,7 @@ import { PrismaClient } from "@prisma/client";
 import { Worker } from "bullmq";
 import { getEmailQueue } from "../src/lib/queues.js";
 import { processEmailOutbox } from "../src/lib/outbox.js";
+import { processContactMessage } from "../src/lib/contactMessages.js";
 import sessionPlugin from "../src/plugins/session.js";
 import errorHandlerPlugin from "../src/plugins/errorHandler.js";
 import rateLimitPlugin from "../src/plugins/rateLimit.js";
@@ -14,6 +15,7 @@ import turnstileRoutes from "../src/routes/turnstile.js";
 import searchRoutes from "../src/routes/search.js";
 import entryEditProposalRoutes from "../src/routes/entryEditProposals.js";
 import downloadsRoutes from "../src/routes/downloads.js";
+import contactRoutes from "../src/routes/contact.js";
 
 export interface BuildAppOptions {
   /** Opt in to trusting a proxy hop, e.g. `(_address, hop) => hop < 1`. Unset preserves today's no-trustProxy behavior. */
@@ -40,6 +42,7 @@ export async function buildApp(opts: BuildAppOptions = {}) {
   await app.register(searchRoutes, { prisma });
   await app.register(entryEditProposalRoutes, { prisma });
   await app.register(downloadsRoutes, { prisma });
+  await app.register(contactRoutes, { prisma });
 
   return { app, prisma };
 }
@@ -69,6 +72,11 @@ export function startEmailWorker(prisma: PrismaClient): Worker {
     "email",
     async (job) => {
       if (job.name === "reconcile-pending-emails") return;
+      if (job.name === "send-contact-message") {
+        const { contactMessageId } = job.data as { contactMessageId: string };
+        await processContactMessage(prisma, contactMessageId);
+        return;
+      }
       const { outboxId } = job.data as { outboxId: string };
       await processEmailOutbox(prisma, outboxId);
     },

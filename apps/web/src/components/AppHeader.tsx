@@ -89,7 +89,9 @@ function AppMenu({ me }: { me: UserDto | null }) {
   const isAdmin = me?.role === "ADMIN";
   const navigate = useNavigate();
   const queryClient = useQueryClient();
-  const [openSection, setOpenSection] = useState<"dictionary" | "entries" | "administration" | null>(null);
+  const [openSection, setOpenSection] = useState<"dictionary" | "entries" | "administration" | "help" | null>(
+    null
+  );
   const [commandOpen, setCommandOpen] = useState(false);
   const [deleteCommandOpen, setDeleteCommandOpen] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<SeriesListItemDto | null>(null);
@@ -113,7 +115,7 @@ function AppMenu({ me }: { me: UserDto | null }) {
     },
   });
 
-  function toggleSection(section: "dictionary" | "entries" | "administration") {
+  function toggleSection(section: "dictionary" | "entries" | "administration" | "help") {
     setOpenSection((prev) => (prev === section ? null : section));
   }
 
@@ -181,6 +183,26 @@ function AppMenu({ me }: { me: UserDto | null }) {
                 Download
               </DropdownMenuItem>
             </>
+          )}
+
+          {/* Help section - visible to every visitor, authenticated or not */}
+          <DropdownMenuSeparator />
+
+          <DropdownMenuItem
+            closeOnClick={false}
+            onClick={() => toggleSection("help")}
+            className="flex items-center justify-between font-medium"
+          >
+            Help
+            <ChevronDownIcon
+              className={cn("size-4 transition-transform", openSection === "help" && "rotate-180")}
+            />
+          </DropdownMenuItem>
+
+          {openSection === "help" && (
+            <DropdownMenuItem className="pl-6" onClick={() => { void navigate({ to: "/contact" }); }}>
+              Contact
+            </DropdownMenuItem>
           )}
 
           {/* Entries section - hidden entirely for an anonymous visitor */}

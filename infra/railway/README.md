@@ -211,6 +211,18 @@ a paid plan just to send email.
    services refuse to start if it looks like a local/test address
    (`localhost`, `.local`, `.test`, `.example`).
 
+4. **Set where Contact form messages get delivered.** The Help → Contact
+   form on the site sends each submission to a `CONTACT_RECIPIENT_EMAIL`
+   address you choose — your own personal inbox is fine, no Brevo dashboard
+   changes needed (unlike `MAIL_FROM_ADDRESS`, this is just a destination,
+   not a verified sending identity). Same as above, both services need it:
+
+   ```bash
+   for svc in app worker; do
+     railway variable set CONTACT_RECIPIENT_EMAIL='you@example.com' --service "$svc"
+   done
+   ```
+
 > **Using a paid Railway plan instead?** If you're on a Railway plan that
 > allows outbound email (SMTP), you can use that instead of the web API:
 > change `MAIL_TRANSPORT` to `"smtp"` in `.railway/railway.ts` and set
@@ -419,6 +431,7 @@ Everything else in this guide still applies.
 | `SESSION_SECRET` | `app` | §5 |
 | `SETTINGS_ENCRYPTION_KEY` | `app`, `worker` | §5 |
 | `BREVO_API_KEY`, `MAIL_FROM_ADDRESS`, `MAIL_FROM_NAME` | `app`, `worker` | §5.1 — the worker is what actually sends mail |
+| `CONTACT_RECIPIENT_EMAIL` | `app`, `worker` | §5.1 — where Contact form submissions are delivered |
 | `SMTP_URL` | `app`, `worker` | §5.1 — only needed if `MAIL_TRANSPORT=smtp` |
 | `ADMIN_EMAIL`, `ADMIN_PASSWORD` | `app` | §5, §7 |
 | `S3_ENDPOINT`, `S3_BUCKET`, `S3_REGION`, `S3_ACCESS_KEY_ID`, `S3_SECRET_ACCESS_KEY` | `app`, `worker` | §6 |

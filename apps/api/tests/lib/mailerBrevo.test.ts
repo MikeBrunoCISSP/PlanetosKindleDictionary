@@ -41,6 +41,31 @@ describe("sendViaBrevoApi", () => {
     expect(payload.textContent).toContain("https://dict.example.com/verify-email?token=abc");
   });
 
+  it("wraps replyTo as an object, per Brevo's API shape", async () => {
+    const fetchMock = stubFetch({ ok: true, status: 201 });
+
+    await sendViaBrevoApi({
+      to: "owner@example.org",
+      subject: "[eReader Dictionaries] Question",
+      text: "body",
+      replyTo: "visitor@example.org",
+    });
+
+    const [, init] = fetchMock.mock.calls[0]!;
+    const payload = JSON.parse(init.body as string);
+    expect(payload.replyTo).toEqual({ email: "visitor@example.org" });
+  });
+
+  it("omits replyTo entirely when not set", async () => {
+    const fetchMock = stubFetch({ ok: true, status: 201 });
+
+    await sendViaBrevoApi({ to: "x@example.org", subject: "s", text: "t" });
+
+    const [, init] = fetchMock.mock.calls[0]!;
+    const payload = JSON.parse(init.body as string);
+    expect(payload.replyTo).toBeUndefined();
+  });
+
   it("throws when Brevo responds with a non-2xx status", async () => {
     stubFetch({ ok: false, status: 401, body: '{"message":"Key not found"}' });
 

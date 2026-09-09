@@ -6,6 +6,7 @@ import { buildApp, cleanUsers, resetTurnstileSettings } from "./helpers.js";
 vi.mock("../src/lib/turnstile.js", () => ({
   isSecretKeyRecognized: vi.fn(),
   verify: vi.fn(),
+  requireTurnstileIfEnabled: vi.fn().mockResolvedValue(undefined),
 }));
 
 import { isSecretKeyRecognized } from "../src/lib/turnstile.js";

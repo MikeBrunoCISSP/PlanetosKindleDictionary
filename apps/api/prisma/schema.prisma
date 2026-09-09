@@ -326,6 +326,25 @@ model EmailOutbox {
   @@index([status, createdAt])
 }
 
+// Durable record of a Contact form submission. Unlike EmailOutbox, nothing
+// here is a single-use secret (name/email/subject/message are plain
+// visitor-supplied text), so no encryption - just a plain queued-delivery
+// record reusing EmailOutbox's own status semantics.
+model ContactMessage {
+  id        String            @id @default(cuid())
+  name      String
+  email     String
+  subject   String
+  message   String
+  status    EmailOutboxStatus @default(PENDING)
+  attempts  Int               @default(0)
+  error     String?
+  sentAt    DateTime?
+  createdAt DateTime          @default(now())
+
+  @@index([status, createdAt])
+}
+
 // Durable record that a set of object-storage artifacts under `prefix` is
 // unreachable and needs deleting (PROD-007). Written in the same
 // transaction as whatever action makes them unreachable (a build failing

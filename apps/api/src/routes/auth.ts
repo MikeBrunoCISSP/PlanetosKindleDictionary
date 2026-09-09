@@ -21,8 +21,7 @@ import {
   VERIFY_EMAIL_RATE_LIMIT,
   RESEND_VERIFICATION_RATE_LIMIT,
 } from "../plugins/rateLimit.js";
-import { decrypt } from "../lib/crypto.js";
-import { verify as verifyTurnstile } from "../lib/turnstile.js";
+import { requireTurnstileIfEnabled } from "../lib/turnstile.js";
 import { config } from "../config.js";
 import { getEmailQueue } from "../lib/queues.js";
 import { createOutboxEntry, EMAIL_JOB_RETRY_OPTIONS } from "../lib/outbox.js";
@@ -37,8 +36,6 @@ const verifyEmailSchema = z.object({
 function hashToken(token: string): string {
   return createHash("sha256").update(token).digest("hex");
 }
-
-const TURNSTILE_SETTINGS_ID = "singleton";
 
 function toUserDto(user: {
   id: string;
@@ -69,24 +66,7 @@ const authRoutes: FastifyPluginAsync<{ prisma: PrismaClient }> = async (fastify,
       const email = normalizeWord(body.email);
       const usernameNormalized = normalizeWord(body.username);
 
-      const settings = await prisma.turnstileSettings.findUnique({
-        where: { id: TURNSTILE_SETTINGS_ID },
-      });
-
-      if (settings?.enabled) {
-        if (!settings.secretKeyEncrypted) {
-          request.log.error("Turnstile is enabled but has no Secret Key configured.");
-          throw Errors.TURNSTILE_MISCONFIGURED();
-        }
-        if (!body.turnstileToken) {
-          throw Errors.TURNSTILE_VERIFICATION_FAILED();
-        }
-        const secretKey = decrypt(settings.secretKeyEncrypted);
-        const result = await verifyTurnstile(secretKey, body.turnstileToken, request.ip);
-        if (!result.success) {
-          throw Errors.TURNSTILE_VERIFICATION_FAILED();
-        }
-      }
+      await requireTurnstileIfEnabled(prisma, body.turnstileToken, request.ip);
 
       const existing = await prisma.user.findFirst({
         where: {

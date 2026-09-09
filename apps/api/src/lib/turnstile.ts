@@ -1,4 +1,9 @@
+import type { PrismaClient } from "@prisma/client";
+import { Errors } from "./errors.js";
+import { decrypt } from "./crypto.js";
+
 const SITEVERIFY_URL = "https://challenges.cloudflare.com/turnstile/v0/siteverify";
+const TURNSTILE_SETTINGS_ID = "singleton";
 
 interface SiteverifyResponse {
   success: boolean;
@@ -42,4 +47,34 @@ export async function isSecretKeyRecognized(secretKey: string): Promise<boolean>
     return false;
   }
   return !errorCodes.includes("invalid-input-secret") && !errorCodes.includes("missing-input-secret");
+}
+
+/**
+ * Shared gate for any route protected by Turnstile: no-op when the feature is
+ * disabled, otherwise requires and verifies `token`. Throws
+ * `TURNSTILE_MISCONFIGURED` (enabled but no Secret Key configured) or
+ * `TURNSTILE_VERIFICATION_FAILED` (missing/invalid token).
+ */
+export async function requireTurnstileIfEnabled(
+  prisma: PrismaClient,
+  token: string | undefined,
+  ip: string
+): Promise<void> {
+  const settings = await prisma.turnstileSettings.findUnique({
+    where: { id: TURNSTILE_SETTINGS_ID },
+  });
+
+  if (!settings?.enabled) return;
+
+  if (!settings.secretKeyEncrypted) {
+    throw Errors.TURNSTILE_MISCONFIGURED();
+  }
+  if (!token) {
+    throw Errors.TURNSTILE_VERIFICATION_FAILED();
+  }
+  const secretKey = decrypt(settings.secretKeyEncrypted);
+  const result = await verify(secretKey, token, ip);
+  if (!result.success) {
+    throw Errors.TURNSTILE_VERIFICATION_FAILED();
+  }
 }
