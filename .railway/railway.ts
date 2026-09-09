@@ -64,10 +64,19 @@ export default defineRailway(() => {
     BREVO_API_KEY: preserve(),
     MAIL_FROM_ADDRESS: preserve(),
     MAIL_FROM_NAME: preserve(),
+    // Destination inbox for Contact form submissions (openspec:
+    // support/contact-form) - not a sender identity, just where visitor
+    // messages get delivered. Needed on both services for the same reason
+    // as the rest of mailVars: the worker is what actually sends it.
+    CONTACT_RECIPIENT_EMAIL: preserve(),
   };
 
   const app = service("app", {
-    source: github(REPO, { branch: BRANCH }),
+    // Matches this service's actual current Railway configuration - not
+    // otherwise meaningful to the build (buildCommand still runs from the
+    // repo root); pinned here only so `config apply` doesn't propose
+    // clearing it as drift.
+    source: github(REPO, { branch: BRANCH, rootDirectory: "/.railway" }),
     build: {
       builder: "RAILPACK",
       buildCommand: BUILD_COMMAND,
