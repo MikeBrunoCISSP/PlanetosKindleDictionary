@@ -1,6 +1,7 @@
 {
   "name": "planetos",
   "private": true,
+  "packageManager": "pnpm@11.22.0",
   "scripts": {
     "build:packages": "pnpm --recursive --filter \"./packages/*\" build",
     "dev": "pnpm run build:packages && pnpm --parallel --filter \"./packages/*\" --filter \"./apps/*\" dev",
