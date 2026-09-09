@@ -72,11 +72,7 @@ export default defineRailway(() => {
   };
 
   const app = service("app", {
-    // Matches this service's actual current Railway configuration - not
-    // otherwise meaningful to the build (buildCommand still runs from the
-    // repo root); pinned here only so `config apply` doesn't propose
-    // clearing it as drift.
-    source: github(REPO, { branch: BRANCH, rootDirectory: "/.railway" }),
+    source: github(REPO, { branch: BRANCH }),
     build: {
       builder: "RAILPACK",
       buildCommand: BUILD_COMMAND,
