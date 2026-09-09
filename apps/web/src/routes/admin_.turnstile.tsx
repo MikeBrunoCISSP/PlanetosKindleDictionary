@@ -23,7 +23,7 @@ export const Route = createFileRoute("/admin_/turnstile")({
 
 function TurnstileAdminPage() {
   return (
-    <div className="p-4 sm:p-8 max-w-xl mx-auto">
+    <div className="p-4 sm:p-8 max-w-xl w-full mx-auto">
       <h1 className="text-2xl font-bold mb-6">Turnstile</h1>
       <TurnstileSettingsForm />
     </div>

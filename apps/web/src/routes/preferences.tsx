@@ -20,7 +20,7 @@ function PreferencesPage() {
   const { theme, setTheme } = useTheme();
 
   return (
-    <div className="container max-w-2xl mx-auto p-6 space-y-6">
+    <div className="container max-w-2xl w-full mx-auto p-6 space-y-6">
       <div>
         <h1 className="text-2xl font-semibold">Preferences</h1>
         <p className="text-muted-foreground text-sm mt-1">Customize your experience.</p>

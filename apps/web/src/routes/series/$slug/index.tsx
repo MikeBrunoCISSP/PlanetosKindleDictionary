@@ -18,7 +18,7 @@ function SeriesDetailPage() {
 
   if (error || !series) {
     return (
-      <div className="mx-auto max-w-2xl space-y-2 p-4 text-center sm:p-8">
+      <div className="mx-auto max-w-2xl w-full space-y-2 p-4 text-center sm:p-8">
         <h2 className="text-xl font-semibold">Dictionary not found</h2>
         <p className="text-muted-foreground">The dictionary "{slug}" does not exist.</p>
       </div>
@@ -26,7 +26,7 @@ function SeriesDetailPage() {
   }
 
   return (
-    <div className="mx-auto max-w-2xl space-y-6 p-4 sm:p-8">
+    <div className="mx-auto max-w-2xl w-full space-y-6 p-4 sm:p-8">
       <div className="space-y-2">
         <h1 className="text-3xl font-bold">{series.title}</h1>
         {series.description && <p className="text-muted-foreground">{series.description}</p>}

@@ -13,7 +13,7 @@ function DownloadsPage() {
   });
 
   return (
-    <div className="mx-auto max-w-2xl space-y-6 p-4 sm:p-8">
+    <div className="mx-auto max-w-2xl w-full space-y-6 p-4 sm:p-8">
       <h1 className="text-3xl font-bold">Download Dictionaries</h1>
 
       {isLoading && <p className="text-muted-foreground">Loading…</p>}

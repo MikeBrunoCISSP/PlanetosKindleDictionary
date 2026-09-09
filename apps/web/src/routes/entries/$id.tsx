@@ -40,7 +40,7 @@ function EntryDetailPage() {
   const canEdit = Boolean(me) && entry.approvalStatus === "APPROVED";
 
   return (
-    <div className="mx-auto max-w-2xl space-y-6 p-4 sm:p-8">
+    <div className="mx-auto max-w-3xl w-full space-y-6 p-4 sm:p-8">
       {mode === "edit" ? (
         <EntryEditForm entry={entry} onCancel={() => setMode("view")} onSubmitted={() => setMode("view")} />
       ) : (

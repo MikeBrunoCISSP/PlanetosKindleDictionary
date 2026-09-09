@@ -46,7 +46,7 @@ export const Route = createFileRoute("/admin")({
 
 function AdminPage() {
   return (
-    <div className="p-4 sm:p-8 max-w-5xl mx-auto">
+    <div className="p-4 sm:p-8 max-w-5xl w-full mx-auto">
       <h1 className="text-2xl font-bold mb-6">Admin Dashboard</h1>
       <h2 className="text-lg font-semibold mb-3">Pending Registrations</h2>
       <PendingRegistrationsTable />

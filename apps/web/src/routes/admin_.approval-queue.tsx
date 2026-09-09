@@ -43,7 +43,7 @@ export const Route = createFileRoute("/admin_/approval-queue")({
 
 function ApprovalQueuePage() {
   return (
-    <div className="p-4 sm:p-8 max-w-4xl mx-auto">
+    <div className="p-4 sm:p-8 max-w-4xl w-full mx-auto">
       <h1 className="text-2xl font-bold mb-6">Approval Queue</h1>
       <ApprovalQueueTable />
     </div>

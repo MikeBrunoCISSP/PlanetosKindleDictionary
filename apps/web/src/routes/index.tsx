@@ -61,7 +61,7 @@ function IndexPage() {
   }
 
   return (
-    <div className="mx-auto max-w-4xl space-y-6 p-4 sm:p-8">
+    <div className="mx-auto max-w-4xl w-full space-y-6 p-4 sm:p-8">
       <form onSubmit={handleSubmit} className="flex gap-2">
         <Input
           value={inputValue}

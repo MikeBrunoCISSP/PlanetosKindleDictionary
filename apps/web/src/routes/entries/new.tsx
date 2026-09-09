@@ -37,7 +37,7 @@ export const Route = createFileRoute("/entries/new")({
 
 function EntryNewPage() {
   return (
-    <div className="p-4 sm:p-8 max-w-2xl mx-auto">
+    <div className="p-4 sm:p-8 max-w-3xl w-full mx-auto">
       <h1 className="text-2xl font-bold mb-6">Add Entry</h1>
       <CreateEntryForm />
     </div>

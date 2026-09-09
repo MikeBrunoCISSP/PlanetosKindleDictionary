@@ -16,7 +16,7 @@ export const Route = createFileRoute("/entries/delete")({
 
 function EntryDeletePage() {
   return (
-    <div className="p-4 sm:p-8 max-w-2xl mx-auto">
+    <div className="p-4 sm:p-8 max-w-2xl w-full mx-auto">
       <h1 className="text-2xl font-bold mb-6">Delete Entry</h1>
       <p className="text-muted-foreground">Coming soon.</p>
     </div>
