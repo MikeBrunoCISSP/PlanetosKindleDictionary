@@ -12,6 +12,7 @@ const VALID_STRICT_ENV: Record<string, string | undefined> = {
   MAIL_TRANSPORT: "smtp",
   SMTP_URL: "smtp://mailer:secret@smtp.provider.net:587",
   MAIL_FROM_ADDRESS: "notify@mail.dict-app.io",
+  CONTACT_RECIPIENT_EMAIL: "owner@gmail.com",
   S3_BUCKET: "dictionaries",
   S3_ACCESS_KEY_ID: "AKIAEXAMPLE",
   S3_SECRET_ACCESS_KEY: "abc123secret",
@@ -181,6 +182,22 @@ describe("validateEnv (mail transport)", () => {
     expect(issues.some((i) => i.startsWith("PUBLIC_BASE_URL"))).toBe(false);
   });
 
+  it("requires CONTACT_RECIPIENT_EMAIL and rejects a malformed address", () => {
+    const { CONTACT_RECIPIENT_EMAIL: _omit, ...env } = VALID_STRICT_ENV;
+    expect(validateEnv(env).some((i) => i.startsWith("CONTACT_RECIPIENT_EMAIL"))).toBe(true);
+
+    const issues = validateEnv({ ...VALID_STRICT_ENV, CONTACT_RECIPIENT_EMAIL: "not-an-email" });
+    expect(issues.some((i) => i.startsWith("CONTACT_RECIPIENT_EMAIL"))).toBe(true);
+  });
+
+  it("accepts an ordinary personal domain for CONTACT_RECIPIENT_EMAIL that MAIL_FROM_ADDRESS's blocklist would reject", () => {
+    // Proves the blocklist (localhost/.local/.test/.example/example.com) was
+    // deliberately not reused here - this is a destination inbox, not a
+    // verified sending identity.
+    const issues = validateEnv({ ...VALID_STRICT_ENV, CONTACT_RECIPIENT_EMAIL: "me@example.com" });
+    expect(issues.some((i) => i.startsWith("CONTACT_RECIPIENT_EMAIL"))).toBe(false);
+  });
+
   it("parseEnv exposes the transport and sender", () => {
     const cfg = parseEnv(VALID_BREVO_ENV);
     expect(cfg.mailTransport).toBe("brevo-api");
@@ -204,6 +221,7 @@ describe("validateEnv (worker scope)", () => {
         MAIL_TRANSPORT: "brevo-api",
         BREVO_API_KEY: "xkeysib-realish-key",
         MAIL_FROM_ADDRESS: "notify@mail.dict-app.io",
+        CONTACT_RECIPIENT_EMAIL: "owner@gmail.com",
         // no SESSION_SECRET / SETTINGS_ENCRYPTION_KEY / PUBLIC_BASE_URL
       },
       "worker"
@@ -251,6 +269,25 @@ describe("validateEnv (worker scope)", () => {
     );
     expect(issues.some((i) => i.startsWith("BREVO_API_KEY"))).toBe(true);
     expect(issues.some((i) => i.startsWith("MAIL_FROM_ADDRESS"))).toBe(true);
+  });
+
+  it("also requires CONTACT_RECIPIENT_EMAIL for the worker, since it's the one that sends the contact email", () => {
+    const issues = validateEnv(
+      {
+        NODE_ENV: "production",
+        DATABASE_URL: "postgresql://user:pass@db.internal:5432/app",
+        REDIS_URL: "redis://cache.internal:6379",
+        S3_BUCKET: "dictionaries",
+        S3_ACCESS_KEY_ID: "AKIAEXAMPLE",
+        S3_SECRET_ACCESS_KEY: "abc123secret",
+        MAIL_TRANSPORT: "brevo-api",
+        BREVO_API_KEY: "xkeysib-realish-key",
+        MAIL_FROM_ADDRESS: "notify@mail.dict-app.io",
+        // no CONTACT_RECIPIENT_EMAIL
+      },
+      "worker"
+    );
+    expect(issues.some((i) => i.startsWith("CONTACT_RECIPIENT_EMAIL"))).toBe(true);
   });
 });
 

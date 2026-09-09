@@ -1,5 +1,6 @@
 import type {
   AdminUserDto,
+  ContactMessageDto,
   CreateEntryDto,
   CreateSeriesDto,
   EntryDto,
@@ -108,6 +109,16 @@ export async function apiResetPassword(data: ResetPasswordDto): Promise<void> {
     credentials: "include",
   });
   return handleResponse<void>(res);
+}
+
+export async function apiSubmitContactMessage(data: ContactMessageDto): Promise<{ id: string }> {
+  const res = await fetch("/api/contact", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(data),
+    credentials: "include",
+  });
+  return handleResponse<{ id: string }>(res);
 }
 
 export async function apiVerifyEmail(data: { token: string }): Promise<void> {

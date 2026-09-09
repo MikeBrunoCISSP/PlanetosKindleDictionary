@@ -10,6 +10,7 @@ import { processDictionaryBuild } from "./jobs/build.js";
 import { pruneOldBuilds } from "./jobs/prune.js";
 import { runSweep, runReconciliation } from "./jobs/sweep.js";
 import { processEmailOutbox, EMAIL_JOB_RETRY_OPTIONS } from "./lib/outbox.js";
+import { processContactMessage } from "./lib/contactMessages.js";
 import { runStorageCleanupSweep } from "./lib/storageCleanup.js";
 
 // Fail fast on missing/invalid production configuration before the worker
@@ -107,11 +108,28 @@ async function reconcilePendingEmails(): Promise<void> {
       { ...EMAIL_JOB_RETRY_OPTIONS, deduplication: { id, keepLastIfActive: true } }
     );
   }
+
+  const staleContactMessages = await prisma.contactMessage.findMany({
+    where: { status: "PENDING", createdAt: { lt: new Date(Date.now() - PENDING_RECONCILE_AGE_MS) } },
+    select: { id: true },
+  });
+  for (const { id } of staleContactMessages) {
+    await emailQueue.add(
+      "send-contact-message",
+      { contactMessageId: id },
+      { ...EMAIL_JOB_RETRY_OPTIONS, deduplication: { id, keepLastIfActive: true } }
+    );
+  }
 }
 
 async function processEmailQueueJob(job: Job): Promise<void> {
   if (job.name === "reconcile-pending-emails") {
     await reconcilePendingEmails();
+    return;
+  }
+  if (job.name === "send-contact-message") {
+    const { contactMessageId } = job.data as { contactMessageId: string };
+    await processContactMessage(prisma, contactMessageId);
     return;
   }
   const { outboxId } = job.data as { outboxId: string };

@@ -39,6 +39,7 @@ const DEV_DEFAULTS = {
   BREVO_API_KEY: "",
   MAIL_FROM_ADDRESS: "no-reply@localhost",
   MAIL_FROM_NAME: "eReader Dictionaries",
+  CONTACT_RECIPIENT_EMAIL: "contact@localhost",
   S3_ENDPOINT: "http://localhost:9000",
   S3_BUCKET: "dictionaries",
   S3_REGION: "us-east-1",
@@ -92,6 +93,7 @@ const WORKER_REQUIRED: ReadonlySet<string> = new Set([
   "SMTP_URL",
   "BREVO_API_KEY",
   "MAIL_FROM_ADDRESS",
+  "CONTACT_RECIPIENT_EMAIL",
 ]);
 
 function requiredFor(name: string, scope: Scope): boolean {
@@ -181,6 +183,18 @@ export function validateEnv(env: RawEnv, scope: Scope = "api"): string[] {
     }
   }
 
+  // Contact form recipient — a destination address, not a sender identity,
+  // so it's required + email-shaped like MAIL_FROM_ADDRESS but deliberately
+  // skips that field's "must be a real public sending domain" blocklist.
+  if (requiredFor("CONTACT_RECIPIENT_EMAIL", scope)) {
+    const recipient = env["CONTACT_RECIPIENT_EMAIL"];
+    if (!recipient) {
+      issues.push(`CONTACT_RECIPIENT_EMAIL — required`);
+    } else if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(recipient)) {
+      issues.push(`CONTACT_RECIPIENT_EMAIL — must be a valid email address`);
+    }
+  }
+
   // Format checks for optional-but-if-set values, regardless of scope.
   const port = env["PORT"];
   if (port !== undefined && !/^[1-9]\d*$/.test(port)) {
@@ -215,6 +229,7 @@ export interface Config {
   readonly brevoApiKey: string;
   readonly mailFromAddress: string;
   readonly mailFromName: string;
+  readonly contactRecipientEmail: string;
   readonly s3: {
     readonly endpoint: string | undefined;
     readonly bucket: string;
@@ -266,6 +281,7 @@ export function parseEnv(env: RawEnv): Config {
     brevoApiKey: secret("BREVO_API_KEY"),
     mailFromAddress: secret("MAIL_FROM_ADDRESS"),
     mailFromName: operational("MAIL_FROM_NAME"),
+    contactRecipientEmail: secret("CONTACT_RECIPIENT_EMAIL"),
     s3: {
       endpoint: env["S3_ENDPOINT"] ?? (strict ? undefined : DEV_DEFAULTS.S3_ENDPOINT),
       bucket: secret("S3_BUCKET"),

@@ -5,16 +5,17 @@ import { hash as hashPassword } from "@node-rs/argon2";
 import { buildApp, cleanUsers, resetTurnstileSettings } from "./helpers.js";
 import { encrypt } from "../src/lib/crypto.js";
 
-// Turnstile is disabled for every test in this file except the dedicated
-// "behind a trusted proxy" block below, so mocking it here has no effect on
-// the rest of the suite - `verify` is only ever called when Turnstile is
-// enabled (see apps/api/src/routes/auth.ts).
+// requireTurnstileIfEnabled defaults to a no-op resolve, so mocking it here
+// has no effect on the rest of the suite - it's only made to do anything in
+// the dedicated "behind a trusted proxy" block below (see
+// apps/api/src/routes/auth.ts, which calls it unconditionally on register).
 vi.mock("../src/lib/turnstile.js", () => ({
   verify: vi.fn(),
   isSecretKeyRecognized: vi.fn(),
+  requireTurnstileIfEnabled: vi.fn().mockResolvedValue(undefined),
 }));
 
-import { verify as verifyTurnstileMock } from "../src/lib/turnstile.js";
+import { requireTurnstileIfEnabled as requireTurnstileMock } from "../src/lib/turnstile.js";
 
 const MAILPIT_API = "http://localhost:8025/api/v1";
 
@@ -364,7 +365,7 @@ describe("POST /api/auth/register (behind a trusted proxy, Turnstile enabled)", 
 
   afterEach(async () => {
     await cleanUsers(proxiedPrisma, [TURNSTILE_EMAIL]);
-    vi.mocked(verifyTurnstileMock).mockClear();
+    vi.mocked(requireTurnstileMock).mockClear();
   });
 
   afterAll(async () => {
@@ -374,7 +375,7 @@ describe("POST /api/auth/register (behind a trusted proxy, Turnstile enabled)", 
   });
 
   it("sends the resolved client IP, not the proxy's, to Turnstile verification", async () => {
-    vi.mocked(verifyTurnstileMock).mockResolvedValue({ success: true, errorCodes: [] });
+    vi.mocked(requireTurnstileMock).mockResolvedValue(undefined);
 
     const res = await proxiedApp.inject({
       method: "POST",
@@ -391,6 +392,10 @@ describe("POST /api/auth/register (behind a trusted proxy, Turnstile enabled)", 
     });
 
     expect(res.statusCode).toBe(201);
-    expect(verifyTurnstileMock).toHaveBeenCalledWith(expect.any(String), "dummy-token", REAL_CLIENT_IP);
+    expect(requireTurnstileMock).toHaveBeenCalledWith(
+      expect.anything(),
+      "dummy-token",
+      REAL_CLIENT_IP
+    );
   });
 });
