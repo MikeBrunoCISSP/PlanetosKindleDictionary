@@ -117,6 +117,12 @@ function CreateEntryForm() {
   function addInflection() {
     const trimmed = inflectionDraft.trim();
     if (!trimmed) return;
+
+    if (/\s/.test(trimmed)) {
+      toast.error("Cannot contain spaces");
+      return;
+    }
+
     const normalized = normalizeWord(trimmed);
 
     const isDuplicate =
