@@ -22,7 +22,7 @@ describe("definitionHtmlSchema", () => {
 });
 
 describe("createEntrySchema", () => {
-  const valid = { headword: "Aes Sedai", definitionHtml: "<p>A channeler.</p>", inflections: [] as string[] };
+  const valid = { headword: "Channeler", definitionHtml: "<p>A channeler.</p>", inflections: [] as string[] };
 
   it("accepts a valid entry", () => {
     expect(createEntrySchema.safeParse(valid).success).toBe(true);
@@ -31,6 +31,25 @@ describe("createEntrySchema", () => {
   it("rejects a whitespace-only definition", () => {
     const result = createEntrySchema.safeParse({ ...valid, definitionHtml: "   " });
     expect(result.success).toBe(false);
+  });
+
+  it("rejects a Headword containing a space", () => {
+    const result = createEntrySchema.safeParse({ ...valid, headword: "Aes Sedai" });
+    expect(result.success).toBe(false);
+  });
+
+  it("rejects an Inflection containing a space", () => {
+    const result = createEntrySchema.safeParse({ ...valid, inflections: ["Aes Sedai's"] });
+    expect(result.success).toBe(false);
+  });
+
+  it("accepts a hyphenated, apostrophe-containing Headword and Inflection with no whitespace", () => {
+    const result = createEntrySchema.safeParse({
+      ...valid,
+      headword: "Aes-Sedai's",
+      inflections: ["Aes-Sedai"],
+    });
+    expect(result.success).toBe(true);
   });
 });
 
@@ -56,5 +75,15 @@ describe("submitEntryEditProposalSchema", () => {
       inflections: ["Ran", "ran"],
     });
     expect(result.success).toBe(false);
+  });
+
+  it("rejects an Inflection containing a space", () => {
+    const result = submitEntryEditProposalSchema.safeParse({ ...valid, inflections: ["Aes Sedai's"] });
+    expect(result.success).toBe(false);
+  });
+
+  it("accepts a hyphenated Inflection with no whitespace", () => {
+    const result = submitEntryEditProposalSchema.safeParse({ ...valid, inflections: ["Aes-Sedai"] });
+    expect(result.success).toBe(true);
   });
 });

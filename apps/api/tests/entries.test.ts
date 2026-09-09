@@ -85,9 +85,9 @@ describe("POST /api/series/:slug/entries", () => {
       url: `/api/series/${series.slug}/entries`,
       headers: { cookie: memberCookie },
       payload: {
-        headword: "Aes Sedai",
+        headword: "Channeler",
         definitionHtml: "<p>A channeler bound to the White Tower.</p>",
-        inflections: ["Aes Sedai's", "Aes-Sedai"],
+        inflections: ["Channeler's", "Channelers"],
       },
     });
 
@@ -102,11 +102,11 @@ describe("POST /api/series/:slug/entries", () => {
       submittedById: string | null;
       createdAt: string;
     }>();
-    expect(body.headword).toBe("Aes Sedai");
+    expect(body.headword).toBe("Channeler");
     expect(body.seriesId).toBe(series.id);
     expect(body.approvalStatus).toBe("PENDING");
     expect(body.submittedById).toBeTruthy();
-    expect(body.inflections.map((i) => i.value).sort()).toEqual(["Aes Sedai's", "Aes-Sedai"].sort());
+    expect(body.inflections.map((i) => i.value).sort()).toEqual(["Channeler's", "Channelers"].sort());
 
     const revisions = await prisma.revision.findMany({ where: { entryId: body.id } });
     expect(revisions).toHaveLength(1);
@@ -158,7 +158,7 @@ describe("POST /api/series/:slug/entries", () => {
       url: `/api/series/${series.slug}/entries`,
       headers: { cookie: memberCookie },
       payload: {
-        headword: "Overloaded Word",
+        headword: "OverloadedWord",
         definitionHtml: "<p>Definition</p>",
         inflections: Array.from({ length: 51 }, (_, i) => `Inflection${i}`),
       },
@@ -177,7 +177,7 @@ describe("POST /api/series/:slug/entries", () => {
     const res = await app.inject({
       method: "POST",
       url: `/api/series/${series.slug}/entries`,
-      payload: { headword: "Unauth Word", definitionHtml: "<p>Definition</p>", inflections: [] },
+      payload: { headword: "UnauthWord", definitionHtml: "<p>Definition</p>", inflections: [] },
     });
     expect(res.statusCode).toBe(401);
   });
@@ -189,7 +189,7 @@ describe("POST /api/series/:slug/entries", () => {
       method: "POST",
       url: `/api/series/${series.slug}/entries`,
       headers: { cookie: pendingCookie },
-      payload: { headword: "Pending Word", definitionHtml: "<p>Definition</p>", inflections: [] },
+      payload: { headword: "PendingWord", definitionHtml: "<p>Definition</p>", inflections: [] },
     });
     expect(res.statusCode).toBe(403);
   });
@@ -204,7 +204,7 @@ describe("POST /api/series/:slug/entries", () => {
       method: "POST",
       url: `/api/series/${series.slug}/entries`,
       headers: { cookie: adminCookie },
-      payload: { headword: "Admin Word", definitionHtml: "<p>Definition</p>", inflections: [] },
+      payload: { headword: "AdminWord", definitionHtml: "<p>Definition</p>", inflections: [] },
     });
     expect(res.statusCode).toBe(201);
   });
@@ -218,7 +218,7 @@ describe("POST /api/series/:slug/entries", () => {
       method: "POST",
       url: `/api/series/${series.slug}/entries`,
       headers: { cookie: adminCookie },
-      payload: { headword: "Admin Approved Word", definitionHtml: "<p>Definition</p>", inflections: [] },
+      payload: { headword: "AdminApprovedWord", definitionHtml: "<p>Definition</p>", inflections: [] },
     });
 
     expect(res.statusCode).toBe(201);
@@ -249,7 +249,7 @@ describe("POST /api/series/:slug/entries", () => {
       method: "POST",
       url: `/api/series/${series.slug}/entries`,
       headers: { cookie: memberCookie },
-      payload: { headword: "Member Word", definitionHtml: "<p>Definition</p>", inflections: [] },
+      payload: { headword: "MemberWord", definitionHtml: "<p>Definition</p>", inflections: [] },
     });
 
     expect(res.statusCode).toBe(201);
@@ -265,7 +265,7 @@ describe("POST /api/series/:slug/entries", () => {
       method: "POST",
       url: `/api/series/${SLUG_PREFIX}-nonexistent/entries`,
       headers: { cookie: memberCookie },
-      payload: { headword: "Ghost Word", definitionHtml: "<p>Definition</p>", inflections: [] },
+      payload: { headword: "GhostWord", definitionHtml: "<p>Definition</p>", inflections: [] },
     });
     expect(res.statusCode).toBe(404);
   });
@@ -289,7 +289,7 @@ describe("POST /api/series/:slug/entries", () => {
       method: "POST",
       url: `/api/series/${series.slug}/entries`,
       headers: { cookie: memberCookie },
-      payload: { headword: "Some Word", definitionHtml: "", inflections: [] },
+      payload: { headword: "SomeWord", definitionHtml: "", inflections: [] },
     });
     expect(res.statusCode).toBe(400);
   });
@@ -318,7 +318,7 @@ describe("POST /api/series/:slug/entries", () => {
       url: `/api/series/${series.slug}/entries`,
       headers: { cookie: memberCookie },
       payload: {
-        headword: "Sanitized Word",
+        headword: "SanitizedWord",
         definitionHtml: '<p>Safe</p><script>alert(1)</script><img src="x">',
         inflections: [],
       },
@@ -337,14 +337,14 @@ describe("POST /api/series/:slug/entries", () => {
       method: "POST",
       url: `/api/series/${series.slug}/entries`,
       headers: { cookie: memberCookie },
-      payload: { headword: "Mat Cauthon", definitionHtml: "<p>Definition</p>", inflections: [] },
+      payload: { headword: "MatCauthon", definitionHtml: "<p>Definition</p>", inflections: [] },
     });
 
     const res = await app.inject({
       method: "POST",
       url: `/api/series/${series.slug}/entries`,
       headers: { cookie: memberCookie },
-      payload: { headword: "  mat cauthon  ", definitionHtml: "<p>Another</p>", inflections: [] },
+      payload: { headword: "  matcauthon  ", definitionHtml: "<p>Another</p>", inflections: [] },
     });
     expect(res.statusCode).toBe(409);
   });
@@ -382,7 +382,7 @@ describe("POST /api/series/:slug/entries", () => {
       method: "POST",
       url: `/api/series/${series.slug}/entries`,
       headers: { cookie: memberCookie },
-      payload: { headword: "Someone Else", definitionHtml: "<p>Another</p>", inflections: ["Rand"] },
+      payload: { headword: "SomeoneElse", definitionHtml: "<p>Another</p>", inflections: ["Rand"] },
     });
     expect(res.statusCode).toBe(409);
   });
@@ -427,7 +427,7 @@ describe("POST /api/series/:slug/entries", () => {
       method: "POST",
       url: `/api/series/${seriesA.slug}/entries`,
       headers: { cookie: memberCookie },
-      payload: { headword: "Shared Word", definitionHtml: "<p>A</p>", inflections: [] },
+      payload: { headword: "SharedWord", definitionHtml: "<p>A</p>", inflections: [] },
     });
     expect(resA.statusCode).toBe(201);
 
@@ -435,7 +435,7 @@ describe("POST /api/series/:slug/entries", () => {
       method: "POST",
       url: `/api/series/${seriesB.slug}/entries`,
       headers: { cookie: memberCookie },
-      payload: { headword: "Shared Word", definitionHtml: "<p>B</p>", inflections: [] },
+      payload: { headword: "SharedWord", definitionHtml: "<p>B</p>", inflections: [] },
     });
     expect(resB.statusCode).toBe(201);
   });
@@ -444,7 +444,7 @@ describe("POST /api/series/:slug/entries", () => {
     const memberCookie = await setupMember();
     const series = await createTestSeries("race");
 
-    const payload = { headword: "Concurrent Word", definitionHtml: "<p>Definition</p>", inflections: [] };
+    const payload = { headword: "ConcurrentWord", definitionHtml: "<p>Definition</p>", inflections: [] };
     const [res1, res2] = await Promise.all([
       app.inject({
         method: "POST",
@@ -509,7 +509,7 @@ describe("POST /api/series/:slug/entries (WRITE_RATE_LIMIT wiring)", () => {
       method: "POST",
       url: `/api/series/${series.slug}/entries`,
       headers: { cookie },
-      payload: { headword: "Wired Word", definitionHtml: "<p>Definition</p>", inflections: [] },
+      payload: { headword: "WiredWord", definitionHtml: "<p>Definition</p>", inflections: [] },
     });
 
     expect(res.statusCode).toBe(201);
@@ -546,7 +546,7 @@ describe("GET /api/series/:slug/entries/words", () => {
       method: "POST",
       url: `/api/series/${series.slug}/entries`,
       headers: { cookie: memberCookie },
-      payload: { headword: "Words Word", definitionHtml: "<p>Detail</p>", inflections: ["Words Words"] },
+      payload: { headword: "WordsWord", definitionHtml: "<p>Detail</p>", inflections: ["WordsWords"] },
     });
 
     const res = await app.inject({
@@ -555,7 +555,7 @@ describe("GET /api/series/:slug/entries/words", () => {
       headers: { cookie: memberCookie },
     });
     expect(res.statusCode).toBe(200);
-    expect(res.json<string[]>().sort()).toEqual(["Words Word", "Words Words"].sort());
+    expect(res.json<string[]>().sort()).toEqual(["WordsWord", "WordsWords"].sort());
   });
 });
 
@@ -584,19 +584,19 @@ describe("GET /api/admin/entries/pending", () => {
       method: "POST",
       url: `/api/series/${series.slug}/entries`,
       headers: { cookie: memberCookie },
-      payload: { headword: "First Word", definitionHtml: "<p>1</p>", inflections: [] },
+      payload: { headword: "FirstWord", definitionHtml: "<p>1</p>", inflections: [] },
     });
     const second = await app.inject({
       method: "POST",
       url: `/api/series/${series.slug}/entries`,
       headers: { cookie: memberCookie },
-      payload: { headword: "Second Word", definitionHtml: "<p>2</p>", inflections: [] },
+      payload: { headword: "SecondWord", definitionHtml: "<p>2</p>", inflections: [] },
     });
     const third = await app.inject({
       method: "POST",
       url: `/api/series/${series.slug}/entries`,
       headers: { cookie: memberCookie },
-      payload: { headword: "Third Word", definitionHtml: "<p>3</p>", inflections: [] },
+      payload: { headword: "ThirdWord", definitionHtml: "<p>3</p>", inflections: [] },
     });
     const thirdId = third.json<{ id: string }>().id;
 
@@ -648,9 +648,9 @@ describe("GET /api/admin/entries/:id", () => {
       url: `/api/series/${series.slug}/entries`,
       headers: { cookie: memberCookie },
       payload: {
-        headword: "Detail Word",
+        headword: "DetailWord",
         definitionHtml: "<p>Detail</p>",
-        inflections: ["Detail Words"],
+        inflections: ["DetailWords"],
       },
     });
     const id = created.json<{ id: string }>().id;
@@ -662,8 +662,8 @@ describe("GET /api/admin/entries/:id", () => {
     });
     expect(res.statusCode).toBe(200);
     const body = res.json<{ headword: string; definitionHtml: string; inflections: { value: string }[] }>();
-    expect(body.headword).toBe("Detail Word");
-    expect(body.inflections.map((i) => i.value)).toEqual(["Detail Words"]);
+    expect(body.headword).toBe("DetailWord");
+    expect(body.inflections.map((i) => i.value)).toEqual(["DetailWords"]);
   });
 
   it("returns an empty inflections array when there are none", async () => {
@@ -674,7 +674,7 @@ describe("GET /api/admin/entries/:id", () => {
       method: "POST",
       url: `/api/series/${series.slug}/entries`,
       headers: { cookie: memberCookie },
-      payload: { headword: "No Inflections Word", definitionHtml: "<p>Detail</p>", inflections: [] },
+      payload: { headword: "NoInflectionsWord", definitionHtml: "<p>Detail</p>", inflections: [] },
     });
     const id = created.json<{ id: string }>().id;
 
@@ -712,7 +712,7 @@ describe("POST /api/admin/entries/:id/approve", () => {
       method: "POST",
       url: `/api/series/${series.slug}/entries`,
       headers: { cookie: memberCookie },
-      payload: { headword: "Approve Me", definitionHtml: "<p>Detail</p>", inflections: [] },
+      payload: { headword: "ApproveMe", definitionHtml: "<p>Detail</p>", inflections: [] },
     });
     const id = created.json<{ id: string }>().id;
 
@@ -737,7 +737,7 @@ describe("POST /api/admin/entries/:id/approve", () => {
       method: "POST",
       url: `/api/series/${series.slug}/entries`,
       headers: { cookie: memberCookie },
-      payload: { headword: "Approve Twice", definitionHtml: "<p>Detail</p>", inflections: [] },
+      payload: { headword: "ApproveTwice", definitionHtml: "<p>Detail</p>", inflections: [] },
     });
     const id = created.json<{ id: string }>().id;
 
@@ -789,7 +789,7 @@ describe("POST /api/admin/entries/:id/reject", () => {
       method: "POST",
       url: `/api/series/${series.slug}/entries`,
       headers: { cookie: memberCookie },
-      payload: { headword: "Reject Me", definitionHtml: "<p>Detail</p>", inflections: [] },
+      payload: { headword: "RejectMe", definitionHtml: "<p>Detail</p>", inflections: [] },
     });
     const id = created.json<{ id: string }>().id;
 
@@ -813,7 +813,7 @@ describe("POST /api/admin/entries/:id/reject", () => {
       method: "POST",
       url: `/api/series/${series.slug}/entries`,
       headers: { cookie: memberCookie },
-      payload: { headword: "Reject Me Silently", definitionHtml: "<p>Detail</p>", inflections: [] },
+      payload: { headword: "RejectMeSilently", definitionHtml: "<p>Detail</p>", inflections: [] },
     });
     const id = created.json<{ id: string }>().id;
 
@@ -836,7 +836,7 @@ describe("POST /api/admin/entries/:id/reject", () => {
       method: "POST",
       url: `/api/series/${series.slug}/entries`,
       headers: { cookie: memberCookie },
-      payload: { headword: "Reject Queue Word", definitionHtml: "<p>Detail</p>", inflections: [] },
+      payload: { headword: "RejectQueueWord", definitionHtml: "<p>Detail</p>", inflections: [] },
     });
     const id = created.json<{ id: string }>().id;
 
@@ -865,7 +865,7 @@ describe("PERF-001: dirty-marking on writes that change hash-relevant content", 
       method: "POST",
       url: `/api/series/${series.slug}/entries`,
       headers: { cookie: memberCookie },
-      payload: { headword: "Not Hashed Yet", definitionHtml: "<p>Detail</p>", inflections: [] },
+      payload: { headword: "NotHashedYet", definitionHtml: "<p>Detail</p>", inflections: [] },
     });
 
     const row = await prisma.series.findUniqueOrThrow({ where: { id: series.id } });
@@ -880,7 +880,7 @@ describe("PERF-001: dirty-marking on writes that change hash-relevant content", 
       method: "POST",
       url: `/api/series/${series.slug}/entries`,
       headers: { cookie: adminCookie },
-      payload: { headword: "Hashed Immediately", definitionHtml: "<p>Detail</p>", inflections: [] },
+      payload: { headword: "HashedImmediately", definitionHtml: "<p>Detail</p>", inflections: [] },
     });
 
     const row = await prisma.series.findUniqueOrThrow({ where: { id: series.id } });
@@ -895,7 +895,7 @@ describe("PERF-001: dirty-marking on writes that change hash-relevant content", 
       method: "POST",
       url: `/api/series/${series.slug}/entries`,
       headers: { cookie: memberCookie },
-      payload: { headword: "Approve Marks Dirty", definitionHtml: "<p>Detail</p>", inflections: [] },
+      payload: { headword: "ApproveMarksDirty", definitionHtml: "<p>Detail</p>", inflections: [] },
     });
     const id = created.json<{ id: string }>().id;
 
@@ -920,7 +920,7 @@ describe("PERF-001: dirty-marking on writes that change hash-relevant content", 
       method: "POST",
       url: `/api/series/${series.slug}/entries`,
       headers: { cookie: memberCookie },
-      payload: { headword: "Reject Never Dirties", definitionHtml: "<p>Detail</p>", inflections: [] },
+      payload: { headword: "RejectNeverDirties", definitionHtml: "<p>Detail</p>", inflections: [] },
     });
     const id = created.json<{ id: string }>().id;
 

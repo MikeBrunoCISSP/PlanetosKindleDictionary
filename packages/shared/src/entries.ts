@@ -1,8 +1,19 @@
 import { z } from "zod";
-import { plainText } from "./validation.js";
+import { plainText, type PlainTextOptions } from "./validation.js";
 import { pagedSchema } from "./pagination.js";
 
 export const DUPLICATE_WORD_MESSAGE = "The word already exists in the dictionary.";
+
+// Kindle's on-device word-lookup resolves only a single, whitespace-bounded
+// word under the reader's tap - a Headword or Inflection containing
+// whitespace could never be reached through that lookup (see
+// openspec: entries/submission, entries/editing). Scoped to this file
+// (rather than a plainText option) since only these two fields need it.
+function singleWordText(opts: PlainTextOptions) {
+  return plainText(opts).refine((value) => !/\s/.test(value), {
+    message: "Cannot contain spaces",
+  });
+}
 
 // SEC-003: bounds the number of sequential per-inflection database writes a
 // single request can trigger. Generous for a real dictionary entry (plurals,
@@ -18,10 +29,10 @@ export const definitionHtmlSchema = z
 
 export const createEntrySchema = z
   .object({
-    headword: plainText({ max: 200, minMessage: "Headword is required" }),
+    headword: singleWordText({ max: 200, minMessage: "Headword is required" }),
     definitionHtml: definitionHtmlSchema,
     inflections: z
-      .array(plainText({ max: 200, minMessage: "Inflection cannot be empty" }))
+      .array(singleWordText({ max: 200, minMessage: "Inflection cannot be empty" }))
       .max(MAX_INFLECTIONS, MAX_INFLECTIONS_MESSAGE)
       .default([]),
   })
@@ -39,7 +50,7 @@ export const submitEntryEditProposalSchema = z
   .object({
     definitionHtml: definitionHtmlSchema,
     inflections: z
-      .array(plainText({ max: 200, minMessage: "Inflection cannot be empty" }))
+      .array(singleWordText({ max: 200, minMessage: "Inflection cannot be empty" }))
       .max(MAX_INFLECTIONS, MAX_INFLECTIONS_MESSAGE)
       .default([]),
   })
