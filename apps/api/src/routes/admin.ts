@@ -1,9 +1,9 @@
 import type { FastifyPluginAsync } from "fastify";
 import { PrismaClient } from "@prisma/client";
 import { z } from "zod";
-import { updateUserSchema, type AdminUserDto, type PendingUserDto } from "@planetos/shared";
+import { updateUserSchema, denyRegistrationSchema, type AdminUserDto, type PendingUserDto } from "@planetos/shared";
 import { makeRequireAdmin } from "../plugins/requireAdmin.js";
-import { Errors } from "../lib/errors.js";
+import { Errors, isPrismaError } from "../lib/errors.js";
 import { sendAccountApprovedEmail } from "../lib/mailer.js";
 import { encodeCursor, decodeCursor } from "../lib/cursor.js";
 
@@ -160,12 +160,34 @@ const adminRoutes: FastifyPluginAsync<{ prisma: PrismaClient }> = async (fastify
     { preHandler: requireAdmin },
     async (request, reply) => {
       const { id } = request.params as { id: string };
+      const { block } = denyRegistrationSchema.parse(request.body ?? {});
 
-      const target = await prisma.user.findUnique({ where: { id }, select: { approvalStatus: true } });
+      const target = await prisma.user.findUnique({
+        where: { id },
+        select: { email: true, username: true, approvalStatus: true },
+      });
       if (!target) throw Errors.NOT_FOUND();
       if (target.approvalStatus !== "PENDING") throw Errors.ALREADY_REVIEWED();
 
-      await prisma.user.delete({ where: { id } });
+      await prisma.$transaction(async (tx) => {
+        await tx.user.delete({ where: { id } });
+
+        if (block) {
+          try {
+            await tx.blockedEmail.create({
+              data: {
+                email: target.email,
+                reason: `Blocked when denying registration (was: ${target.username})`,
+                blockedById: request.session.userId ?? null,
+              },
+            });
+          } catch (err: unknown) {
+            // Already blocked by a concurrent request - the end state (account
+            // deleted, email blocked) is already correct either way.
+            if (!isPrismaError(err, "P2002")) throw err;
+          }
+        }
+      });
 
       return reply.status(204).send();
     }

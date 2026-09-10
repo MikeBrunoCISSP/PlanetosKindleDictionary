@@ -40,6 +40,7 @@ const DEV_DEFAULTS = {
   MAIL_FROM_ADDRESS: "no-reply@localhost",
   MAIL_FROM_NAME: "eReader Dictionaries",
   CONTACT_RECIPIENT_EMAIL: "contact@localhost",
+  ADMIN_DIGEST_RECIPIENT_EMAIL: "admin-digest@localhost",
   S3_ENDPOINT: "http://localhost:9000",
   S3_BUCKET: "dictionaries",
   S3_REGION: "us-east-1",
@@ -51,6 +52,7 @@ const DEV_DEFAULTS = {
   // this isn't implied by whether an endpoint is set, so it's its own knob.
   S3_FORCE_PATH_STYLE: "true",
   BUILD_CRON: "0 * * * *",
+  ADMIN_DIGEST_CRON: "0 13 * * *",
   PORT: "3000",
   TRUST_PROXY_HOPS: "1",
 } as const;
@@ -94,6 +96,7 @@ const WORKER_REQUIRED: ReadonlySet<string> = new Set([
   "BREVO_API_KEY",
   "MAIL_FROM_ADDRESS",
   "CONTACT_RECIPIENT_EMAIL",
+  "ADMIN_DIGEST_RECIPIENT_EMAIL",
 ]);
 
 function requiredFor(name: string, scope: Scope): boolean {
@@ -195,6 +198,18 @@ export function validateEnv(env: RawEnv, scope: Scope = "api"): string[] {
     }
   }
 
+  // Admin digest recipient — same destination-address treatment as
+  // CONTACT_RECIPIENT_EMAIL, and deliberately independent of it (see
+  // openspec: notifications/admin-digest).
+  if (requiredFor("ADMIN_DIGEST_RECIPIENT_EMAIL", scope)) {
+    const recipient = env["ADMIN_DIGEST_RECIPIENT_EMAIL"];
+    if (!recipient) {
+      issues.push(`ADMIN_DIGEST_RECIPIENT_EMAIL — required`);
+    } else if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(recipient)) {
+      issues.push(`ADMIN_DIGEST_RECIPIENT_EMAIL — must be a valid email address`);
+    }
+  }
+
   // Format checks for optional-but-if-set values, regardless of scope.
   const port = env["PORT"];
   if (port !== undefined && !/^[1-9]\d*$/.test(port)) {
@@ -230,6 +245,7 @@ export interface Config {
   readonly mailFromAddress: string;
   readonly mailFromName: string;
   readonly contactRecipientEmail: string;
+  readonly adminDigestRecipientEmail: string;
   readonly s3: {
     readonly endpoint: string | undefined;
     readonly bucket: string;
@@ -239,6 +255,7 @@ export interface Config {
     readonly forcePathStyle: boolean;
   };
   readonly buildCron: string;
+  readonly adminDigestCron: string;
   readonly trustProxyHops: number;
 }
 
@@ -282,6 +299,7 @@ export function parseEnv(env: RawEnv): Config {
     mailFromAddress: secret("MAIL_FROM_ADDRESS"),
     mailFromName: operational("MAIL_FROM_NAME"),
     contactRecipientEmail: secret("CONTACT_RECIPIENT_EMAIL"),
+    adminDigestRecipientEmail: secret("ADMIN_DIGEST_RECIPIENT_EMAIL"),
     s3: {
       endpoint: env["S3_ENDPOINT"] ?? (strict ? undefined : DEV_DEFAULTS.S3_ENDPOINT),
       bucket: secret("S3_BUCKET"),
@@ -291,6 +309,7 @@ export function parseEnv(env: RawEnv): Config {
       forcePathStyle: operational("S3_FORCE_PATH_STYLE") !== "false",
     },
     buildCron: operational("BUILD_CRON"),
+    adminDigestCron: operational("ADMIN_DIGEST_CRON"),
     trustProxyHops,
   };
 }

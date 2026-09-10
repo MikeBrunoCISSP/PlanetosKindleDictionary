@@ -13,6 +13,7 @@ const VALID_STRICT_ENV: Record<string, string | undefined> = {
   SMTP_URL: "smtp://mailer:secret@smtp.provider.net:587",
   MAIL_FROM_ADDRESS: "notify@mail.dict-app.io",
   CONTACT_RECIPIENT_EMAIL: "owner@gmail.com",
+  ADMIN_DIGEST_RECIPIENT_EMAIL: "owner@gmail.com",
   S3_BUCKET: "dictionaries",
   S3_ACCESS_KEY_ID: "AKIAEXAMPLE",
   S3_SECRET_ACCESS_KEY: "abc123secret",
@@ -206,6 +207,32 @@ describe("validateEnv (mail transport)", () => {
     expect(cfg.mailFromName).toBe("eReader Dictionaries");
     expect(parseEnv({ NODE_ENV: "development" }).mailTransport).toBe("smtp");
   });
+
+  it("requires ADMIN_DIGEST_RECIPIENT_EMAIL and rejects a malformed address", () => {
+    const { ADMIN_DIGEST_RECIPIENT_EMAIL: _omit, ...env } = VALID_STRICT_ENV;
+    expect(validateEnv(env).some((i) => i.startsWith("ADMIN_DIGEST_RECIPIENT_EMAIL"))).toBe(true);
+
+    const issues = validateEnv({ ...VALID_STRICT_ENV, ADMIN_DIGEST_RECIPIENT_EMAIL: "not-an-email" });
+    expect(issues.some((i) => i.startsWith("ADMIN_DIGEST_RECIPIENT_EMAIL"))).toBe(true);
+  });
+
+  it("accepts an ordinary personal domain for ADMIN_DIGEST_RECIPIENT_EMAIL that MAIL_FROM_ADDRESS's blocklist would reject", () => {
+    // Same reasoning as CONTACT_RECIPIENT_EMAIL - this is a destination
+    // inbox, not a verified sending identity.
+    const issues = validateEnv({ ...VALID_STRICT_ENV, ADMIN_DIGEST_RECIPIENT_EMAIL: "me@example.com" });
+    expect(issues.some((i) => i.startsWith("ADMIN_DIGEST_RECIPIENT_EMAIL"))).toBe(false);
+  });
+
+  it("never flags ADMIN_DIGEST_CRON - it has no strict-mode requirement, same as BUILD_CRON", () => {
+    const { ADMIN_DIGEST_CRON: _omit, ...env } = VALID_STRICT_ENV as Record<string, string | undefined>;
+    expect(validateEnv(env).some((i) => i.startsWith("ADMIN_DIGEST_CRON"))).toBe(false);
+  });
+
+  it("parseEnv defaults ADMIN_DIGEST_CRON outside strict mode", () => {
+    expect(parseEnv({ NODE_ENV: "development" }).adminDigestCron).toBe("0 13 * * *");
+    expect(parseEnv({ NODE_ENV: "test" }).adminDigestCron).toBe("0 13 * * *");
+    expect(parseEnv({ NODE_ENV: "production", ADMIN_DIGEST_CRON: "0 9 * * *" }).adminDigestCron).toBe("0 9 * * *");
+  });
 });
 
 describe("validateEnv (worker scope)", () => {
@@ -222,6 +249,7 @@ describe("validateEnv (worker scope)", () => {
         BREVO_API_KEY: "xkeysib-realish-key",
         MAIL_FROM_ADDRESS: "notify@mail.dict-app.io",
         CONTACT_RECIPIENT_EMAIL: "owner@gmail.com",
+        ADMIN_DIGEST_RECIPIENT_EMAIL: "owner@gmail.com",
         // no SESSION_SECRET / SETTINGS_ENCRYPTION_KEY / PUBLIC_BASE_URL
       },
       "worker"
@@ -288,6 +316,26 @@ describe("validateEnv (worker scope)", () => {
       "worker"
     );
     expect(issues.some((i) => i.startsWith("CONTACT_RECIPIENT_EMAIL"))).toBe(true);
+  });
+
+  it("also requires ADMIN_DIGEST_RECIPIENT_EMAIL for the worker, since it's the one that sends the digest email", () => {
+    const issues = validateEnv(
+      {
+        NODE_ENV: "production",
+        DATABASE_URL: "postgresql://user:pass@db.internal:5432/app",
+        REDIS_URL: "redis://cache.internal:6379",
+        S3_BUCKET: "dictionaries",
+        S3_ACCESS_KEY_ID: "AKIAEXAMPLE",
+        S3_SECRET_ACCESS_KEY: "abc123secret",
+        MAIL_TRANSPORT: "brevo-api",
+        BREVO_API_KEY: "xkeysib-realish-key",
+        MAIL_FROM_ADDRESS: "notify@mail.dict-app.io",
+        CONTACT_RECIPIENT_EMAIL: "owner@gmail.com",
+        // no ADMIN_DIGEST_RECIPIENT_EMAIL
+      },
+      "worker"
+    );
+    expect(issues.some((i) => i.startsWith("ADMIN_DIGEST_RECIPIENT_EMAIL"))).toBe(true);
   });
 });
 

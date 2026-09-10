@@ -5,6 +5,9 @@
   "scripts": {
     "build:packages": "pnpm --recursive --filter \"./packages/*\" build",
     "dev": "pnpm run build:packages && pnpm --parallel --filter \"./packages/*\" --filter \"./apps/*\" dev",
+    "dev:up": "node dev-up.mjs",
+    "stop:app": "node stop-app.mjs",
+    "stop:containers": "node stop-containers.mjs",
     "build": "pnpm run build:packages && pnpm --recursive --filter \"./apps/*\" build",
     "build:railway": "pnpm run build:packages && pnpm --filter @planetos/api exec prisma generate && pnpm --filter @planetos/web build && pnpm --filter @planetos/api build",
     "typecheck": "pnpm run build:packages && pnpm --recursive typecheck && pnpm run typecheck:railway",

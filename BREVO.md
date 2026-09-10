@@ -57,6 +57,8 @@ The app reads four environment variables for this (see `.env.example` and
 | `MAIL_FROM_ADDRESS` | The sender address — must be on the domain you verified in step 1. |
 | `MAIL_FROM_NAME` | The sender display name (defaults to `eReader Dictionaries` if unset). |
 | `CONTACT_RECIPIENT_EMAIL` | Where Contact form submissions are delivered — your own inbox, not a sender identity (see [§3a](#3a-forwarding-contact-form-submissions-to-your-personal-inbox)). |
+| `ADMIN_DIGEST_RECIPIENT_EMAIL` | Where the daily admin digest is delivered — independent of `CONTACT_RECIPIENT_EMAIL` (see [§3b](#3b-sending-a-daily-admin-digest)). |
+| `ADMIN_DIGEST_CRON` | Cron schedule for the daily admin digest (see [§3b](#3b-sending-a-daily-admin-digest)). |
 
 ### Local development / testing the real Brevo path
 
@@ -134,6 +136,38 @@ domain restrictions — it's just where mail is delivered *to*, not a sending
 identity. Each message arrives with the subject prefixed
 `[eReader Dictionaries]` and its reply-to set to the visitor's own email
 address, so replying in your inbox client goes straight back to them.
+
+## 3b. Sending a daily admin digest
+
+The app can email you a daily summary of pending user registrations and
+pending edits (new entry submissions + edit proposals) waiting for review —
+useful so you don't have to remember to check the admin dashboard. It sends
+**nothing at all** on days with no pending work, so it never becomes noise.
+
+Same no-Brevo-changes situation as the Contact form above — it's just another
+transactional email to a destination you configure.
+
+Set `ADMIN_DIGEST_RECIPIENT_EMAIL` to your personal address, **on both `app`
+and `worker`** (the worker is what actually sends it):
+
+```bash
+railway variable set ADMIN_DIGEST_RECIPIENT_EMAIL='you@example.com' --service app
+railway variable set ADMIN_DIGEST_RECIPIENT_EMAIL='you@example.com' --service worker
+```
+
+This is deliberately a separate variable from `CONTACT_RECIPIENT_EMAIL`, so
+the digest can go to a different inbox if you ever want that.
+
+Optionally override when it sends by setting `ADMIN_DIGEST_CRON` (a standard
+5-field cron expression, evaluated in the worker's own timezone — UTC on
+Railway by default) on the `worker` service only, since only the worker
+registers the schedule:
+
+```bash
+railway variable set ADMIN_DIGEST_CRON='0 13 * * *' --service worker
+```
+
+If unset, it defaults to `0 13 * * *` (13:00 UTC).
 
 ## 4. What happens if something's misconfigured
 

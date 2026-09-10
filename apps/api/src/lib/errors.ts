@@ -85,4 +85,8 @@ export const Errors = {
     ),
   INVALID_CURSOR: () =>
     new DomainError("INVALID_CURSOR", "This pagination cursor is invalid.", 400),
+  EMAIL_BLOCKED: () =>
+    new DomainError("EMAIL_BLOCKED", "This email address is not permitted to register.", 403),
+  EMAIL_ALREADY_BLOCKED: () =>
+    new DomainError("EMAIL_ALREADY_BLOCKED", "This email address is already blocked.", 409),
 } as const;

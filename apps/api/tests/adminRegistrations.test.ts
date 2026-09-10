@@ -53,6 +53,7 @@ beforeAll(async () => {
 
 afterEach(async () => {
   await cleanUsers(prisma, [ADMIN_EMAIL, MEMBER_EMAIL, MEMBER_EMAIL_2]);
+  await prisma.blockedEmail.deleteMany({ where: { email: { in: [MEMBER_EMAIL, MEMBER_EMAIL_2] } } });
 });
 
 afterAll(async () => {
@@ -359,6 +360,36 @@ describe("POST /api/admin/users/:id/deny", () => {
       headers: { cookie: adminCookie },
     });
     expect(pendingRes.json<{ items: { email: string }[] }>().items.some((u) => u.email === MEMBER_EMAIL)).toBe(false);
+
+    const blocked = await prisma.blockedEmail.findUnique({ where: { email: MEMBER_EMAIL } });
+    expect(blocked).toBeNull();
+  });
+
+  it("denying with block: true deletes the account and blocks the email", async () => {
+    const adminCookie = await setupAdmin();
+    await registerAndGetCookie(MEMBER_EMAIL, MEMBER_USERNAME);
+    const target = await prisma.user.findUniqueOrThrow({ where: { email: MEMBER_EMAIL } });
+
+    const res = await app.inject({
+      method: "POST",
+      url: `/api/admin/users/${target.id}/deny`,
+      headers: { cookie: adminCookie },
+      payload: { block: true },
+    });
+    expect(res.statusCode).toBe(204);
+
+    const stillExists = await prisma.user.findUnique({ where: { id: target.id } });
+    expect(stillExists).toBeNull();
+
+    const blocked = await prisma.blockedEmail.findUniqueOrThrow({ where: { email: MEMBER_EMAIL } });
+    expect(blocked.reason).toContain(MEMBER_USERNAME);
+
+    const registerRes = await app.inject({
+      method: "POST",
+      url: "/api/auth/register",
+      payload: { email: MEMBER_EMAIL, username: MEMBER_USERNAME_2, reasonForJoining: REASON, password: PASSWORD },
+    });
+    expect(registerRes.statusCode).toBe(403);
   });
 
   it("returns 409 when denying an already-approved user", async () => {

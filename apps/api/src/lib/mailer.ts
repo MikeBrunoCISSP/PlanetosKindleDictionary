@@ -108,6 +108,22 @@ You can now log in and start creating and editing dictionary entries.`,
   });
 }
 
+export async function sendAdminDigestEmail(counts: {
+  pendingUsers: number;
+  pendingEdits: number;
+}): Promise<void> {
+  await sendEmail({
+    to: config.adminDigestRecipientEmail,
+    subject: "Pending review digest",
+    text: `There is work waiting for review on eReader Dictionaries.
+
+Pending user registrations: ${counts.pendingUsers}
+Pending edits (new entries + edit proposals): ${counts.pendingEdits}
+
+Review them here: ${config.publicBaseUrl}/admin`,
+  });
+}
+
 export async function sendContactMessageEmail(payload: {
   name: string;
   email: string;

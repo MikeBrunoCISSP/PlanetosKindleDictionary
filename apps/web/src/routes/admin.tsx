@@ -2,7 +2,7 @@ import { createFileRoute, redirect } from "@tanstack/react-router";
 import { useQuery, useInfiniteQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { toast } from "sonner";
-import type { AdminUserDto, PendingUserDto } from "@planetos/shared";
+import type { AdminUserDto, PendingUserDto, BlockedEmailDto } from "@planetos/shared";
 import {
   apiMe,
   apiAdminGetUsers,
@@ -10,6 +10,9 @@ import {
   apiGetPendingUsers,
   apiApproveRegistration,
   apiDenyRegistration,
+  apiGetBlockedEmails,
+  apiAddBlockedEmail,
+  apiRemoveBlockedEmail,
   ApiError,
 } from "@/lib/api";
 import {
@@ -22,6 +25,8 @@ import {
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import {
   Dialog,
   DialogContent,
@@ -52,6 +57,8 @@ function AdminPage() {
       <PendingRegistrationsTable />
       <h2 className="text-lg font-semibold mt-8 mb-3">Users</h2>
       <UserManagementTable />
+      <h2 className="text-lg font-semibold mt-8 mb-3">Blocked Emails</h2>
+      <BlockedEmailsTable />
     </div>
   );
 }
@@ -61,6 +68,7 @@ function PendingRegistrationsTable() {
   const [rowError, setRowError] = useState<Record<string, string>>({});
   const [reasonTarget, setReasonTarget] = useState<PendingUserDto | null>(null);
   const [denyTarget, setDenyTarget] = useState<PendingUserDto | null>(null);
+  const [blockEmail, setBlockEmail] = useState(false);
 
   const {
     data,
@@ -90,16 +98,19 @@ function PendingRegistrationsTable() {
   });
 
   const denyMutation = useMutation({
-    mutationFn: (id: string) => apiDenyRegistration(id),
+    mutationFn: ({ id, block }: { id: string; block: boolean }) => apiDenyRegistration(id, block),
     onSuccess: () => {
       toast.success("Registration denied.");
       void queryClient.invalidateQueries({ queryKey: ["admin", "users"] });
+      void queryClient.invalidateQueries({ queryKey: ["admin", "blocked-emails"] });
       setDenyTarget(null);
+      setBlockEmail(false);
     },
-    onError: (err, id) => {
+    onError: (err, variables) => {
       const msg = err instanceof ApiError ? err.message : "An error occurred";
-      setRowError((prev) => ({ ...prev, [id]: msg }));
+      setRowError((prev) => ({ ...prev, [variables.id]: msg }));
       setDenyTarget(null);
+      setBlockEmail(false);
     },
   });
 
@@ -133,7 +144,7 @@ function PendingRegistrationsTable() {
           <TableBody>
             {pendingUsers.map((user) => {
               const approveBusy = approveMutation.isPending && approveMutation.variables === user.id;
-              const denyBusy = denyMutation.isPending && denyMutation.variables === user.id;
+              const denyBusy = denyMutation.isPending && denyMutation.variables?.id === user.id;
               const busy = approveBusy || denyBusy;
               return (
                 <TableRow key={user.id}>
@@ -203,7 +214,10 @@ function PendingRegistrationsTable() {
       <Dialog
         open={denyTarget !== null}
         onOpenChange={(open) => {
-          if (!open) setDenyTarget(null);
+          if (!open) {
+            setDenyTarget(null);
+            setBlockEmail(false);
+          }
         }}
       >
         <DialogContent>
@@ -214,6 +228,14 @@ function PendingRegistrationsTable() {
               deleted.
             </DialogDescription>
           </DialogHeader>
+          <label className="flex items-center gap-2 text-sm">
+            <input
+              type="checkbox"
+              checked={blockEmail}
+              onChange={(event) => setBlockEmail(event.target.checked)}
+            />
+            Also block this email from registering again
+          </label>
           <DialogFooter>
             <Button variant="outline" onClick={() => setDenyTarget(null)}>
               Cancel
@@ -222,7 +244,7 @@ function PendingRegistrationsTable() {
               variant="destructive"
               disabled={denyMutation.isPending}
               onClick={() => {
-                if (denyTarget) denyMutation.mutate(denyTarget.id);
+                if (denyTarget) denyMutation.mutate({ id: denyTarget.id, block: blockEmail });
               }}
             >
               {denyMutation.isPending ? "Denying..." : "Deny"}
@@ -354,5 +376,123 @@ function UserManagementTable() {
         })}
       </TableBody>
     </Table>
+  );
+}
+
+function BlockedEmailsTable() {
+  const queryClient = useQueryClient();
+  const [rowError, setRowError] = useState<Record<string, string>>({});
+  const [formError, setFormError] = useState<string | null>(null);
+  const [email, setEmail] = useState("");
+  const [reason, setReason] = useState("");
+
+  const { data: blockedEmails, isLoading, error } = useQuery({
+    queryKey: ["admin", "blocked-emails"],
+    queryFn: () => apiGetBlockedEmails(),
+  });
+
+  const addMutation = useMutation({
+    mutationFn: () => apiAddBlockedEmail({ email, reason: reason || undefined }),
+    onSuccess: () => {
+      toast.success("Email blocked.");
+      setEmail("");
+      setReason("");
+      setFormError(null);
+      void queryClient.invalidateQueries({ queryKey: ["admin", "blocked-emails"] });
+    },
+    onError: (err) => {
+      setFormError(err instanceof ApiError ? err.message : "An error occurred");
+    },
+  });
+
+  const removeMutation = useMutation({
+    mutationFn: (id: string) => apiRemoveBlockedEmail(id),
+    onSuccess: () => {
+      toast.success("Email unblocked.");
+      void queryClient.invalidateQueries({ queryKey: ["admin", "blocked-emails"] });
+    },
+    onError: (err, id) => {
+      const msg = err instanceof ApiError ? err.message : "An error occurred";
+      setRowError((prev) => ({ ...prev, [id]: msg }));
+    },
+  });
+
+  return (
+    <div className="space-y-4">
+      <form
+        className="flex flex-wrap items-end gap-2"
+        onSubmit={(event) => {
+          event.preventDefault();
+          if (!email.trim()) return;
+          addMutation.mutate();
+        }}
+      >
+        <div className="space-y-1">
+          <Label htmlFor="block-email">Email</Label>
+          <Input
+            id="block-email"
+            type="email"
+            value={email}
+            onChange={(event) => setEmail(event.target.value)}
+            placeholder="someone@example.com"
+          />
+        </div>
+        <div className="space-y-1">
+          <Label htmlFor="block-reason">Reason (optional)</Label>
+          <Input
+            id="block-reason"
+            value={reason}
+            onChange={(event) => setReason(event.target.value)}
+            placeholder="Reason"
+          />
+        </div>
+        <Button type="submit" size="sm" variant="outline" disabled={addMutation.isPending}>
+          {addMutation.isPending ? "Blocking..." : "Block Email"}
+        </Button>
+      </form>
+      {formError && <p className="text-destructive text-sm">{formError}</p>}
+
+      {isLoading && <p className="text-muted-foreground">Loading blocked emails…</p>}
+      {error && <p className="text-destructive">Failed to load blocked emails.</p>}
+      {blockedEmails && blockedEmails.length === 0 && (
+        <p className="text-muted-foreground">No blocked emails.</p>
+      )}
+      {blockedEmails && blockedEmails.length > 0 && (
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead>Email</TableHead>
+              <TableHead>Reason</TableHead>
+              <TableHead>Blocked At</TableHead>
+              <TableHead>Actions</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {blockedEmails.map((entry: BlockedEmailDto) => (
+              <TableRow key={entry.id}>
+                <TableCell className="font-medium">{entry.email}</TableCell>
+                <TableCell>{entry.reason ?? "—"}</TableCell>
+                <TableCell>{new Date(entry.blockedAt).toLocaleString()}</TableCell>
+                <TableCell>
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      disabled={removeMutation.isPending && removeMutation.variables === entry.id}
+                      onClick={() => removeMutation.mutate(entry.id)}
+                    >
+                      Unblock
+                    </Button>
+                    {rowError[entry.id] && (
+                      <span className="text-destructive text-xs">{rowError[entry.id]}</span>
+                    )}
+                  </div>
+                </TableCell>
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
+      )}
+    </div>
   );
 }

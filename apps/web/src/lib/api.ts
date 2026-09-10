@@ -1,6 +1,8 @@
 import type {
   AdminUserDto,
+  BlockedEmailDto,
   ContactMessageDto,
+  CreateBlockedEmailDto,
   CreateEntryDto,
   CreateSeriesDto,
   EntryDto,
@@ -180,9 +182,34 @@ export async function apiApproveRegistration(id: string): Promise<AdminUserDto> 
   return handleResponse<AdminUserDto>(res);
 }
 
-export async function apiDenyRegistration(id: string): Promise<void> {
+export async function apiDenyRegistration(id: string, block = false): Promise<void> {
   const res = await fetch(`/api/admin/users/${id}/deny`, {
     method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ block }),
+    credentials: "include",
+  });
+  return handleResponse<void>(res);
+}
+
+export async function apiGetBlockedEmails(page = 1): Promise<BlockedEmailDto[]> {
+  const res = await fetch(`/api/admin/blocked-emails?page=${page}`, { credentials: "include" });
+  return handleResponse<BlockedEmailDto[]>(res);
+}
+
+export async function apiAddBlockedEmail(data: CreateBlockedEmailDto): Promise<BlockedEmailDto> {
+  const res = await fetch("/api/admin/blocked-emails", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(data),
+    credentials: "include",
+  });
+  return handleResponse<BlockedEmailDto>(res);
+}
+
+export async function apiRemoveBlockedEmail(id: string): Promise<void> {
+  const res = await fetch(`/api/admin/blocked-emails/${id}`, {
+    method: "DELETE",
     credentials: "include",
   });
   return handleResponse<void>(res);

@@ -15,6 +15,7 @@ import errorHandlerPlugin from "./plugins/errorHandler.js";
 import { makeRequireAdmin } from "./plugins/requireAdmin.js";
 import authRoutes from "./routes/auth.js";
 import adminRoutes from "./routes/admin.js";
+import adminBlockedEmailsRoutes from "./routes/adminBlockedEmails.js";
 import seriesRoutes from "./routes/series.js";
 import entriesRoutes from "./routes/entries.js";
 import turnstileRoutes from "./routes/turnstile.js";
@@ -57,6 +58,7 @@ await app.register(errorHandlerPlugin);
 
 await app.register(authRoutes, { prisma });
 await app.register(adminRoutes, { prisma });
+await app.register(adminBlockedEmailsRoutes, { prisma });
 await app.register(seriesRoutes, { prisma });
 await app.register(entriesRoutes, { prisma });
 await app.register(turnstileRoutes, { prisma });

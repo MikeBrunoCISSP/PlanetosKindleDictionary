@@ -85,6 +85,7 @@ model User {
   reviewedEntryEditProposals  EntryEditProposal[] @relation("EntryEditProposalReviewedBy")
   passwordResetTokens         PasswordResetToken[]
   emailVerificationTokens     EmailVerificationToken[]
+  blockedEmails               BlockedEmail[]
 
   @@index([approvalStatus, createdAt])
 }
@@ -361,4 +362,20 @@ model PendingStorageCleanup {
   error     String?
 
   @@index([createdAt])
+}
+
+// Permanently prevents a specific (normalized) email address from
+// registering - see openspec: admin/email-blocklist. Deliberately
+// standalone rather than a flag on User: a block frequently has no
+// corresponding User row at all (created via Deny, which deletes the
+// account, or added proactively before anyone ever registered).
+model BlockedEmail {
+  id          String   @id @default(cuid())
+  email       String   @unique
+  reason      String?
+  blockedAt   DateTime @default(now())
+  blockedById String?
+  blockedBy   User?    @relation(fields: [blockedById], references: [id], onDelete: SetNull)
+
+  @@index([blockedAt])
 }

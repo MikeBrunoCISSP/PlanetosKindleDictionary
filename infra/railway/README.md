@@ -223,6 +223,27 @@ a paid plan just to send email.
    done
    ```
 
+5. **Set where the daily admin digest gets delivered.** A scheduled job
+   emails a summary of pending user registrations and pending edits (new
+   entries + edit proposals) to `ADMIN_DIGEST_RECIPIENT_EMAIL` — nothing is
+   sent on days with no pending work. Independent of `CONTACT_RECIPIENT_EMAIL`
+   (they can be different addresses), and both services need it for the same
+   reason as above:
+
+   ```bash
+   for svc in app worker; do
+     railway variable set ADMIN_DIGEST_RECIPIENT_EMAIL='you@example.com' --service "$svc"
+   done
+   ```
+
+   Optionally override `ADMIN_DIGEST_CRON` (default `0 13 * * *`, i.e. 13:00
+   UTC) on the `worker` service only — it's the only one that registers the
+   schedule:
+
+   ```bash
+   railway variable set ADMIN_DIGEST_CRON='0 13 * * *' --service worker
+   ```
+
 > **Using a paid Railway plan instead?** If you're on a Railway plan that
 > allows outbound email (SMTP), you can use that instead of the web API:
 > change `MAIL_TRANSPORT` to `"smtp"` in `.railway/railway.ts` and set
@@ -432,6 +453,8 @@ Everything else in this guide still applies.
 | `SETTINGS_ENCRYPTION_KEY` | `app`, `worker` | §5 |
 | `BREVO_API_KEY`, `MAIL_FROM_ADDRESS`, `MAIL_FROM_NAME` | `app`, `worker` | §5.1 — the worker is what actually sends mail |
 | `CONTACT_RECIPIENT_EMAIL` | `app`, `worker` | §5.1 — where Contact form submissions are delivered |
+| `ADMIN_DIGEST_RECIPIENT_EMAIL` | `app`, `worker` | §5.1 — where the daily admin digest is delivered |
+| `ADMIN_DIGEST_CRON` | `worker` | §5.1 — optional; defaults to `0 13 * * *` |
 | `SMTP_URL` | `app`, `worker` | §5.1 — only needed if `MAIL_TRANSPORT=smtp` |
 | `ADMIN_EMAIL`, `ADMIN_PASSWORD` | `app` | §5, §7 |
 | `S3_ENDPOINT`, `S3_BUCKET`, `S3_REGION`, `S3_ACCESS_KEY_ID`, `S3_SECRET_ACCESS_KEY` | `app`, `worker` | §6 |

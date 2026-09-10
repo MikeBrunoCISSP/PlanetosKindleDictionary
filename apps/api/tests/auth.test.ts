@@ -42,6 +42,7 @@ beforeAll(async () => {
 
 afterEach(async () => {
   await cleanUsers(prisma, [TEST_EMAIL, TEST_EMAIL_2]);
+  await prisma.blockedEmail.deleteMany({ where: { email: { in: [TEST_EMAIL, TEST_EMAIL_2] } } });
 });
 
 afterAll(async () => {
@@ -132,6 +133,25 @@ describe("POST /api/auth/register", () => {
   it("returns 400 for invalid email", async () => {
     const res = await register("not-an-email", TEST_USERNAME);
     expect(res.statusCode).toBe(400);
+  });
+
+  it("returns 403 and creates no record for a blocked email", async () => {
+    await prisma.blockedEmail.create({ data: { email: TEST_EMAIL } });
+    const res = await register(TEST_EMAIL, TEST_USERNAME);
+    expect(res.statusCode).toBe(403);
+    const user = await prisma.user.findUnique({ where: { email: TEST_EMAIL } });
+    expect(user).toBeNull();
+  });
+
+  it("rejects a blocked email regardless of letter casing", async () => {
+    await prisma.blockedEmail.create({ data: { email: TEST_EMAIL } });
+    const res = await register(TEST_EMAIL.toUpperCase(), TEST_USERNAME);
+    expect(res.statusCode).toBe(403);
+  });
+
+  it("registers normally when the email is not blocked", async () => {
+    const res = await register(TEST_EMAIL, TEST_USERNAME);
+    expect(res.statusCode).toBe(201);
   });
 
   it("returns 400 for a missing reasonForJoining", async () => {

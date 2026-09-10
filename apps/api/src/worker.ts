@@ -11,6 +11,7 @@ import { pruneOldBuilds } from "./jobs/prune.js";
 import { runSweep, runReconciliation } from "./jobs/sweep.js";
 import { processEmailOutbox, EMAIL_JOB_RETRY_OPTIONS } from "./lib/outbox.js";
 import { processContactMessage } from "./lib/contactMessages.js";
+import { runAdminDigest } from "./lib/adminDigest.js";
 import { runStorageCleanupSweep } from "./lib/storageCleanup.js";
 
 // Fail fast on missing/invalid production configuration before the worker
@@ -127,6 +128,10 @@ async function processEmailQueueJob(job: Job): Promise<void> {
     await reconcilePendingEmails();
     return;
   }
+  if (job.name === "send-admin-digest") {
+    await runAdminDigest(prisma);
+    return;
+  }
   if (job.name === "send-contact-message") {
     const { contactMessageId } = job.data as { contactMessageId: string };
     await processContactMessage(prisma, contactMessageId);
@@ -148,6 +153,15 @@ await emailQueue.upsertJobScheduler(
   "reconcile-pending-emails",
   { pattern: "0 * * * *" },
   { name: "reconcile-pending-emails", data: {} }
+);
+
+// Idempotent by scheduler id, same as reconcile-pending-emails above.
+// Schedule is configurable (openspec: notifications/admin-digest) rather
+// than fixed like the hourly reconciliation above.
+await emailQueue.upsertJobScheduler(
+  "send-admin-digest",
+  { pattern: config.adminDigestCron },
+  { name: "send-admin-digest", data: {} }
 );
 
 // Idempotent by scheduler id - redeploying the worker never registers a

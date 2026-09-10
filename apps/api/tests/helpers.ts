@@ -9,6 +9,7 @@ import errorHandlerPlugin from "../src/plugins/errorHandler.js";
 import rateLimitPlugin from "../src/plugins/rateLimit.js";
 import authRoutes from "../src/routes/auth.js";
 import adminRoutes from "../src/routes/admin.js";
+import adminBlockedEmailsRoutes from "../src/routes/adminBlockedEmails.js";
 import seriesRoutes from "../src/routes/series.js";
 import entriesRoutes from "../src/routes/entries.js";
 import turnstileRoutes from "../src/routes/turnstile.js";
@@ -36,6 +37,7 @@ export async function buildApp(opts: BuildAppOptions = {}) {
   if (opts.rateLimit) await app.register(rateLimitPlugin);
   await app.register(authRoutes, { prisma });
   await app.register(adminRoutes, { prisma });
+  await app.register(adminBlockedEmailsRoutes, { prisma });
   await app.register(seriesRoutes, { prisma });
   await app.register(entriesRoutes, { prisma });
   await app.register(turnstileRoutes, { prisma });

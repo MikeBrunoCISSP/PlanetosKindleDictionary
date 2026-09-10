@@ -68,6 +68,9 @@ const authRoutes: FastifyPluginAsync<{ prisma: PrismaClient }> = async (fastify,
 
       await requireTurnstileIfEnabled(prisma, body.turnstileToken, request.ip);
 
+      const blocked = await prisma.blockedEmail.findUnique({ where: { email } });
+      if (blocked) throw Errors.EMAIL_BLOCKED();
+
       const existing = await prisma.user.findFirst({
         where: {
           OR: [{ email }, { usernameNormalized }],
