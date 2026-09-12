@@ -5,12 +5,20 @@ import { apiSearchEntries } from "@/lib/api";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
 
-export function SearchResults({ query, page }: { query: string; page: number }) {
+export function SearchResults({
+  query,
+  page,
+  seriesIds,
+}: {
+  query: string;
+  page: number;
+  seriesIds: string[];
+}) {
   const navigate = useNavigate();
 
   const { data, isLoading, error } = useQuery({
-    queryKey: ["search", query, page],
-    queryFn: () => apiSearchEntries(query, page),
+    queryKey: ["search", query, page, seriesIds],
+    queryFn: () => apiSearchEntries(query, page, seriesIds),
     enabled: query.length > 0,
   });
 

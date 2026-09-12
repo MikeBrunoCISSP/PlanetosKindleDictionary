@@ -83,9 +83,13 @@ describe("GET /api/admin/users/pending", () => {
     await new Promise((resolve) => setTimeout(resolve, 5));
     await registerAndGetCookie(MEMBER_EMAIL_2, MEMBER_USERNAME_2);
 
+    // The shared dev/test database may already have other, unrelated
+    // pending accounts (same rationale as the PERF-002 tests below) -
+    // request the max page size so these two fixtures aren't pushed past
+    // page 1's default limit by real accumulated data.
     const res = await app.inject({
       method: "GET",
-      url: "/api/admin/users/pending",
+      url: "/api/admin/users/pending?limit=200",
       headers: { cookie: adminCookie },
     });
     expect(res.statusCode).toBe(200);

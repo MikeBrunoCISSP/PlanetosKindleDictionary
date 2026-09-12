@@ -2,13 +2,16 @@ import { createFileRoute, useNavigate, Link } from "@tanstack/react-router";
 import { useEffect, useState, type FormEvent } from "react";
 import { z } from "zod";
 import { ArrowRightIcon } from "lucide-react";
+import { seriesIdsFilterSchema } from "@planetos/shared";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { SearchResults } from "@/components/SearchResults";
+import { DictionaryMultiSelect } from "@/components/DictionaryMultiSelect";
 
 const homeSearchSchema = z.object({
   q: z.string().trim().max(200).optional(),
   page: z.coerce.number().int().min(1).default(1),
+  seriesIds: seriesIdsFilterSchema,
 });
 
 export const Route = createFileRoute("/")({
@@ -17,7 +20,7 @@ export const Route = createFileRoute("/")({
 });
 
 function IndexPage() {
-  const { q, page } = Route.useSearch();
+  const { q, page, seriesIds } = Route.useSearch();
   const navigate = useNavigate();
   const [inputValue, setInputValue] = useState(q ?? "");
 
@@ -31,6 +34,13 @@ function IndexPage() {
     event.preventDefault();
     const trimmed = inputValue.trim();
     void navigate({ to: "/", search: (prev) => ({ ...prev, q: trimmed || undefined, page: 1 }) });
+  }
+
+  function handleSeriesIdsChange(ids: string[]) {
+    void navigate({
+      to: "/",
+      search: (prev) => ({ ...prev, seriesIds: ids.length > 0 ? ids : undefined, page: 1 }),
+    });
   }
 
   const hasQuery = Boolean(q && q.length > 0);
@@ -62,17 +72,20 @@ function IndexPage() {
 
   return (
     <div className="mx-auto max-w-4xl w-full space-y-6 p-4 sm:p-8">
-      <form onSubmit={handleSubmit} className="flex gap-2">
-        <Input
-          value={inputValue}
-          onChange={(event) => setInputValue(event.target.value)}
-          placeholder="Search dictionary entries…"
-        />
-        <Button type="submit" size="icon" aria-label="Search">
-          <ArrowRightIcon className="size-4" />
-        </Button>
-      </form>
-      <SearchResults query={q ?? ""} page={page} />
+      <div className="flex flex-wrap items-start gap-2">
+        <form onSubmit={handleSubmit} className="flex min-w-48 flex-1 gap-2">
+          <Input
+            value={inputValue}
+            onChange={(event) => setInputValue(event.target.value)}
+            placeholder="Search dictionary entries…"
+          />
+          <Button type="submit" size="icon" aria-label="Search">
+            <ArrowRightIcon className="size-4" />
+          </Button>
+        </form>
+        <DictionaryMultiSelect selectedIds={seriesIds ?? []} onChange={handleSeriesIdsChange} />
+      </div>
+      <SearchResults query={q ?? ""} page={page} seriesIds={seriesIds ?? []} />
     </div>
   );
 }

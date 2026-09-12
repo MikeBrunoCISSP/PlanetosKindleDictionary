@@ -246,14 +246,21 @@ export async function apiTestTurnstileConfig(): Promise<{ success: boolean }> {
   return handleResponse<{ success: boolean }>(res);
 }
 
-export async function apiSearchEntries(q: string, page = 1): Promise<SearchResultsDto> {
+export async function apiSearchEntries(
+  q: string,
+  page = 1,
+  seriesIds: string[] = []
+): Promise<SearchResultsDto> {
   const params = new URLSearchParams({ q, page: String(page) });
+  for (const id of seriesIds) params.append("seriesIds", id);
   const res = await fetch(`/api/search?${params.toString()}`, { credentials: "include" });
   return handleResponse<SearchResultsDto>(res);
 }
 
-export async function apiGetSeriesList(page = 1): Promise<SeriesListItemDto[]> {
-  const res = await fetch(`/api/series?page=${page}`, { credentials: "include" });
+export async function apiGetSeriesList(page = 1, limit?: number): Promise<SeriesListItemDto[]> {
+  const params = new URLSearchParams({ page: String(page) });
+  if (limit) params.set("limit", String(limit));
+  const res = await fetch(`/api/series?${params.toString()}`, { credentials: "include" });
   return handleResponse<SeriesListItemDto[]>(res);
 }
 

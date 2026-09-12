@@ -84,7 +84,7 @@ describe("GET /api/search", () => {
     const series = await createTestSeries("headword-match", "ASOIAF");
     await createTestEntry(series.id, { headword: "Valar Morghulis" });
 
-    const res = await app.inject({ method: "GET", url: "/api/search?q=MORGHU" });
+    const res = await app.inject({ method: "GET", url: `/api/search?q=MORGHU&seriesIds=${series.id}` });
     expect(res.statusCode).toBe(200);
     const body = res.json<{
       items: { headword: string; headwordMatched: boolean; seriesTitle: string }[];
@@ -99,7 +99,7 @@ describe("GET /api/search", () => {
     const series = await createTestSeries("inflection-match");
     await createTestEntry(series.id, { headword: "Run", inflections: ["Ran", "Running"] });
 
-    const res = await app.inject({ method: "GET", url: "/api/search?q=ran" });
+    const res = await app.inject({ method: "GET", url: `/api/search?q=ran&seriesIds=${series.id}` });
     expect(res.statusCode).toBe(200);
     const body = res.json<{
       items: { headword: string; headwordMatched: boolean; inflections: { value: string; matched: boolean }[] }[];
@@ -115,7 +115,7 @@ describe("GET /api/search", () => {
     const series = await createTestSeries("headword-with-inflections");
     await createTestEntry(series.id, { headword: "Wolf", inflections: ["Wolves"] });
 
-    const res = await app.inject({ method: "GET", url: "/api/search?q=wolf" });
+    const res = await app.inject({ method: "GET", url: `/api/search?q=wolf&seriesIds=${series.id}` });
     const body = res.json<{ items: { headwordMatched: boolean; inflections: { value: string; matched: boolean }[] }[] }>();
     expect(body.items[0]?.headwordMatched).toBe(true);
     expect(body.items[0]?.inflections).toEqual([{ value: "Wolves", matched: false }]);
@@ -128,7 +128,7 @@ describe("GET /api/search", () => {
       definitionHtml: "<p>A channeler bound to the White Tower.</p>",
     });
 
-    const res = await app.inject({ method: "GET", url: "/api/search?q=channeler" });
+    const res = await app.inject({ method: "GET", url: `/api/search?q=channeler&seriesIds=${series.id}` });
     expect(res.json<{ items: unknown[] }>().items).toHaveLength(0);
   });
 
@@ -137,7 +137,7 @@ describe("GET /api/search", () => {
     const longText = "a".repeat(300);
     await createTestEntry(series.id, { headword: "Longword", definitionHtml: `<p>${longText}</p>` });
 
-    const res = await app.inject({ method: "GET", url: "/api/search?q=longword" });
+    const res = await app.inject({ method: "GET", url: `/api/search?q=longword&seriesIds=${series.id}` });
     const body = res.json<{ items: { definitionExcerpt: string }[] }>();
     expect(body.items[0]?.definitionExcerpt).toBe("a".repeat(256) + "...");
   });
@@ -147,7 +147,7 @@ describe("GET /api/search", () => {
     await createTestEntry(series.id, { headword: "Dragonstone" });
     await createTestEntry(series.id, { headword: "Wildfire" });
 
-    const res = await app.inject({ method: "GET", url: "/api/search?q=dragon%20fire" });
+    const res = await app.inject({ method: "GET", url: `/api/search?q=dragon%20fire&seriesIds=${series.id}` });
     const headwords = res.json<{ items: { headword: string }[] }>().items.map((i) => i.headword);
     expect(headwords).toContain("Dragonstone");
     expect(headwords).toContain("Wildfire");
@@ -158,7 +158,7 @@ describe("GET /api/search", () => {
     await createTestEntry(series.id, { headword: "Wildfire" });
     await createTestEntry(series.id, { headword: "Dragonstone" });
 
-    const res = await app.inject({ method: "GET", url: "/api/search?q=dragon%20fire" });
+    const res = await app.inject({ method: "GET", url: `/api/search?q=dragon%20fire&seriesIds=${series.id}` });
     const headwords = res.json<{ items: { headword: string }[] }>().items.map((i) => i.headword);
     expect(headwords.indexOf("Dragonstone")).toBeLessThan(headwords.indexOf("Wildfire"));
   });
@@ -168,7 +168,7 @@ describe("GET /api/search", () => {
     await createTestEntry(series.id, { headword: "Dragonfire" });
     await createTestEntry(series.id, { headword: "Wildfire" });
 
-    const res = await app.inject({ method: "GET", url: "/api/search?q=dragon%20fire" });
+    const res = await app.inject({ method: "GET", url: `/api/search?q=dragon%20fire&seriesIds=${series.id}` });
     const headwords = res.json<{ items: { headword: string }[] }>().items.map((i) => i.headword);
     expect(headwords.filter((h) => h === "Dragonfire")).toHaveLength(1);
     expect(headwords.indexOf("Dragonfire")).toBeLessThan(headwords.indexOf("Wildfire"));
@@ -178,7 +178,7 @@ describe("GET /api/search", () => {
     const series = await createTestSeries("pending-excluded");
     await createTestEntry(series.id, { headword: "Pendingword", approvalStatus: "PENDING" });
 
-    const res = await app.inject({ method: "GET", url: "/api/search?q=pendingword" });
+    const res = await app.inject({ method: "GET", url: `/api/search?q=pendingword&seriesIds=${series.id}` });
     expect(res.json<{ items: unknown[] }>().items).toHaveLength(0);
   });
 
@@ -186,7 +186,7 @@ describe("GET /api/search", () => {
     const series = await createTestSeries("rejected-excluded");
     await createTestEntry(series.id, { headword: "Rejectedword", approvalStatus: "REJECTED" });
 
-    const res = await app.inject({ method: "GET", url: "/api/search?q=rejectedword" });
+    const res = await app.inject({ method: "GET", url: `/api/search?q=rejectedword&seriesIds=${series.id}` });
     expect(res.json<{ items: unknown[] }>().items).toHaveLength(0);
   });
 
@@ -194,7 +194,7 @@ describe("GET /api/search", () => {
     const series = await createTestSeries("deleted-excluded");
     await createTestEntry(series.id, { headword: "Deletedword", status: "DELETED" });
 
-    const res = await app.inject({ method: "GET", url: "/api/search?q=deletedword" });
+    const res = await app.inject({ method: "GET", url: `/api/search?q=deletedword&seriesIds=${series.id}` });
     expect(res.json<{ items: unknown[] }>().items).toHaveLength(0);
   });
 
@@ -204,14 +204,14 @@ describe("GET /api/search", () => {
       await createTestEntry(series.id, { headword: `Paginationword${String(i).padStart(3, "0")}` });
     }
 
-    const page1 = await app.inject({ method: "GET", url: "/api/search?q=paginationword" });
+    const page1 = await app.inject({ method: "GET", url: `/api/search?q=paginationword&seriesIds=${series.id}` });
     const body1 = page1.json<{ items: unknown[]; totalCount: number; totalPages: number; limit: number }>();
     expect(body1.items).toHaveLength(50);
     expect(body1.totalCount).toBe(62);
     expect(body1.totalPages).toBe(2);
     expect(body1.limit).toBe(50);
 
-    const page2 = await app.inject({ method: "GET", url: "/api/search?q=paginationword&page=2" });
+    const page2 = await app.inject({ method: "GET", url: `/api/search?q=paginationword&page=2&seriesIds=${series.id}` });
     const body2 = page2.json<{ items: unknown[] }>();
     expect(body2.items).toHaveLength(12);
   });
@@ -221,7 +221,10 @@ describe("GET /api/search", () => {
     await createTestEntry(series.id, { headword: "50% Off" });
     await createTestEntry(series.id, { headword: "Something Else" });
 
-    const res = await app.inject({ method: "GET", url: `/api/search?q=${encodeURIComponent("50%")}` });
+    const res = await app.inject({
+      method: "GET",
+      url: `/api/search?q=${encodeURIComponent("50%")}&seriesIds=${series.id}`,
+    });
     const headwords = res.json<{ items: { headword: string }[] }>().items.map((i) => i.headword);
     expect(headwords).toEqual(["50% Off"]);
   });
@@ -231,7 +234,7 @@ describe("GET /api/search", () => {
     await createTestEntry(series.id, { headword: "foo_bar" });
     await createTestEntry(series.id, { headword: "fooxbar" });
 
-    const res = await app.inject({ method: "GET", url: "/api/search?q=foo_bar" });
+    const res = await app.inject({ method: "GET", url: `/api/search?q=foo_bar&seriesIds=${series.id}` });
     const headwords = res.json<{ items: { headword: string }[] }>().items.map((i) => i.headword);
     expect(headwords).toEqual(["foo_bar"]);
   });
@@ -242,5 +245,56 @@ describe("GET /api/search", () => {
     const body = res.json<{ items: unknown[]; totalCount: number }>();
     expect(body.items).toEqual([]);
     expect(body.totalCount).toBe(0);
+  });
+
+  it("filters to a single selected dictionary (regression pin for the Fastify single-value-vs-array gotcha)", async () => {
+    const seriesA = await createTestSeries("filter-single-a", "Dictionary A");
+    const seriesB = await createTestSeries("filter-single-b", "Dictionary B");
+    await createTestEntry(seriesA.id, { headword: "Filterword" });
+    await createTestEntry(seriesB.id, { headword: "Filterword" });
+
+    const res = await app.inject({ method: "GET", url: `/api/search?q=filterword&seriesIds=${seriesA.id}` });
+    expect(res.statusCode).toBe(200);
+    const body = res.json<{ items: { seriesTitle: string }[] }>();
+    expect(body.items).toHaveLength(1);
+    expect(body.items[0]?.seriesTitle).toBe("Dictionary A");
+  });
+
+  it("filters to the union of multiple selected dictionaries, excluding an unselected one", async () => {
+    const seriesA = await createTestSeries("filter-multi-a", "Dictionary A");
+    const seriesB = await createTestSeries("filter-multi-b", "Dictionary B");
+    const seriesC = await createTestSeries("filter-multi-c", "Dictionary C");
+    await createTestEntry(seriesA.id, { headword: "Unionword" });
+    await createTestEntry(seriesB.id, { headword: "Unionword" });
+    await createTestEntry(seriesC.id, { headword: "Unionword" });
+
+    const res = await app.inject({
+      method: "GET",
+      url: `/api/search?q=unionword&seriesIds=${seriesA.id}&seriesIds=${seriesB.id}`,
+    });
+    expect(res.statusCode).toBe(200);
+    const titles = res.json<{ items: { seriesTitle: string }[] }>().items.map((i) => i.seriesTitle);
+    expect(titles.sort()).toEqual(["Dictionary A", "Dictionary B"]);
+  });
+
+  it("returns no results, not an error, for a seriesIds value that doesn't exist", async () => {
+    const series = await createTestSeries("filter-nonexistent");
+    await createTestEntry(series.id, { headword: "Ghostword" });
+
+    const res = await app.inject({ method: "GET", url: "/api/search?q=ghostword&seriesIds=does-not-exist" });
+    expect(res.statusCode).toBe(200);
+    expect(res.json<{ items: unknown[] }>().items).toEqual([]);
+  });
+
+  it("searches unfiltered across multiple dictionaries when seriesIds is omitted", async () => {
+    const seriesA = await createTestSeries("filter-omitted-a", "Dictionary A");
+    const seriesB = await createTestSeries("filter-omitted-b", "Dictionary B");
+    await createTestEntry(seriesA.id, { headword: "Omittedword" });
+    await createTestEntry(seriesB.id, { headword: "Omittedword" });
+
+    const res = await app.inject({ method: "GET", url: "/api/search?q=omittedword" });
+    expect(res.statusCode).toBe(200);
+    const titles = res.json<{ items: { seriesTitle: string }[] }>().items.map((i) => i.seriesTitle);
+    expect(titles.sort()).toEqual(["Dictionary A", "Dictionary B"]);
   });
 });

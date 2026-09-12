@@ -2,6 +2,7 @@ import type { FastifyPluginAsync } from "fastify";
 import { Prisma, PrismaClient } from "@prisma/client";
 import { z } from "zod";
 import type { SearchResultItemDto, SearchResultsDto } from "@planetos/shared";
+import { seriesIdsFilterSchema } from "@planetos/shared";
 import { definitionExcerpt } from "@planetos/shared/sanitize";
 import { SEARCH_RATE_LIMIT } from "../plugins/rateLimit.js";
 
@@ -11,6 +12,7 @@ const MAX_QUERY_WORDS = 10;
 const searchQuerySchema = z.object({
   q: z.string().trim().min(1, "Search query is required").max(200, "Search query is too long"),
   page: z.coerce.number().int().min(1).default(1),
+  seriesIds: seriesIdsFilterSchema,
 });
 
 function escapeLikePattern(value: string): string {
@@ -56,6 +58,19 @@ const searchRoutes: FastifyPluginAsync<{ prisma: PrismaClient }> = async (fastif
       ", "
     );
 
+    // Same parameterization pattern as wordArray above - each id becomes
+    // its own bound parameter, ARRAY[...]::text[] is fixed literal SQL we
+    // wrote, so this is exactly as injection-safe as the word-array usage.
+    // Prisma.empty when no filter is selected keeps the query byte-for-byte
+    // identical to the unfiltered case (openspec: search/dictionary-search).
+    const seriesFilterSql =
+      query.seriesIds && query.seriesIds.length > 0
+        ? Prisma.sql`AND s.id = ANY(ARRAY[${Prisma.join(
+            query.seriesIds.map((id) => Prisma.sql`${id}`),
+            ", "
+          )}]::text[])`
+        : Prisma.empty;
+
     const rows = await prisma.$queryRaw<RankedRow[]>`
       WITH matches AS (
         SELECT sw."entryId", MIN(q.idx) AS rank
@@ -71,6 +86,7 @@ const searchRoutes: FastifyPluginAsync<{ prisma: PrismaClient }> = async (fastif
       JOIN "Entry" e ON e.id = m."entryId"
       JOIN "Series" s ON s.id = e."seriesId"
       WHERE e."status" = 'PUBLISHED' AND e."approvalStatus" = 'APPROVED'
+      ${seriesFilterSql}
       ORDER BY m.rank ASC, e."sortKey" ASC, e.id ASC
       LIMIT ${PAGE_SIZE} OFFSET ${skip}
     `;

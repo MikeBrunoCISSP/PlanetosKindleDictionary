@@ -6,12 +6,17 @@ Defines the behavioral contract for user registration and session-based login, i
 
 ### Requirement: User Registration
 
-The system SHALL allow a visitor to create a new account by supplying a unique Username, a unique Email address, a Reason for Joining, and a password that meets complexity requirements, subject to Cloudflare Turnstile verification when Turnstile is enabled. Username and Email uniqueness SHALL both be enforced case-insensitively and atomically at the database level, so that concurrent registration requests for the same Username or Email result in exactly one success and a `409 Conflict` for all others. On success the system SHALL create the account with approval status `PENDING` and role `MEMBER` — the client SHALL NOT be able to specify or influence either, regardless of request body contents — send a verification email to the supplied address, and return the new user's profile. The system SHALL NOT establish an authenticated session at registration time; the account cannot be used to log in until its email address has been verified.
+The system SHALL allow a visitor to create a new account by supplying a unique Username, a unique Email address, a Reason for Joining, and a password that meets complexity requirements, subject to Cloudflare Turnstile verification when Turnstile is enabled. Before checking Username/Email uniqueness, the system SHALL reject a registration attempt whose Email address (compared case-insensitively) is on the administrator-managed blocked-emails list (see `admin/email-blocklist`), with `403 Forbidden`, without creating any record. Username and Email uniqueness SHALL both be enforced case-insensitively and atomically at the database level, so that concurrent registration requests for the same Username or Email result in exactly one success and a `409 Conflict` for all others. On success the system SHALL create the account with approval status `PENDING` and role `MEMBER` — the client SHALL NOT be able to specify or influence either, regardless of request body contents — send a verification email to the supplied address, and return the new user's profile. The system SHALL NOT establish an authenticated session at registration time; the account cannot be used to log in until its email address has been verified.
 
 #### Scenario: Successful registration
 
 - **WHEN** a POST request is sent to `/api/auth/register` with a valid `{ username, email, reasonForJoining, password }` body (and a valid Turnstile token, when Turnstile is enabled)
 - **THEN** the system creates a User record with approval status `PENDING` and role `MEMBER`, stores an Argon2id hash of the password, sends a verification email to the supplied address, does NOT open a session cookie, and returns `201` with `{ id, email, username, role, approvalStatus, createdAt }`
+
+#### Scenario: Registration blocked for a blocked email address
+
+- **WHEN** a POST request is sent to `/api/auth/register` with an Email address that matches an entry on the blocked-emails list (case-insensitively)
+- **THEN** the system returns `403 Forbidden` and does not create a record, regardless of whether the Username is otherwise available
 
 #### Scenario: Duplicate email rejected
 
