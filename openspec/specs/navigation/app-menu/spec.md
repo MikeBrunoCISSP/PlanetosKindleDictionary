@@ -211,6 +211,25 @@ The Entries shelf SHALL contain a "Delete" action item visible only to admins. I
 - **WHEN** a user with role `MEMBER` expands the Entries section
 - **THEN** no "Delete" action item is displayed in the shelf
 
+### Requirement: Import Action in Entries Shelf
+
+The Entries shelf SHALL contain an "Import" action item visible only to admins. It SHALL NOT be exposed to non-admin users through the shelf or through direct navigation to its destination. Activating it SHALL navigate the user to the bulk import page.
+
+#### Scenario: Admin sees the Import item
+
+- **WHEN** a user with role `ADMIN` expands the Entries section
+- **THEN** an "Import" action item is visible in the shelf, alongside "Add" and "Delete"
+
+#### Scenario: Non-admin cannot see the Import item
+
+- **WHEN** a user with role `MEMBER` expands the Entries section
+- **THEN** no "Import" action item is displayed in the shelf
+
+#### Scenario: Import navigates to the bulk import page
+
+- **WHEN** an admin expands the Entries section and clicks "Import"
+- **THEN** the menu closes and the browser navigates to the bulk import page
+
 ### Requirement: Administration Top-Level Section
 
 The menu SHALL include an "Administration" top-level section, following the same accordion behavior as the other top-level sections. Unlike other sections, the "Administration" section header itself — not just its shelf content — SHALL only be visible and expandable to users with role `ADMIN`; it SHALL NOT be rendered at all for non-admin users.

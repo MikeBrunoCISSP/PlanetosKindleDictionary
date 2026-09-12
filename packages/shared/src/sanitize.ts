@@ -25,6 +25,18 @@ export function sanitizeDefinitionHtml(html: string): string {
   });
 }
 
+// Escapes so a stray "<" or "&" in imported plain text can't be mistaken
+// for markup, then turns newlines into real line breaks - for plain-text
+// sources (e.g. a bulk-import file) that were never meant to carry HTML.
+// Escaping happens before the "<br>" tags are inserted so the tags
+// themselves aren't escaped too. Run the result through
+// sanitizeDefinitionHtml as well before storing it (defense-in-depth,
+// consistent with the single-entry write path).
+export function plainTextToSafeHtml(text: string): string {
+  const escaped = text.replace(/&/g, "&amp;").replace(/</g, "&lt;");
+  return escaped.replace(/\n/g, "<br>");
+}
+
 // sanitize-html re-escapes text nodes for safe HTML re-serialization (its
 // output is still HTML, not plain text) - decode the handful of entities it
 // can produce so callers get real plain text.

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { sanitizeDefinitionHtml, definitionExcerpt } from "../sanitize.js";
+import { sanitizeDefinitionHtml, definitionExcerpt, plainTextToSafeHtml } from "../sanitize.js";
 
 describe("sanitizeDefinitionHtml", () => {
   it("passes through allowed tags unchanged", () => {
@@ -82,5 +82,26 @@ describe("definitionExcerpt", () => {
   it("respects a custom maxLength", () => {
     const result = definitionExcerpt("<p>Hello World</p>", 5);
     expect(result).toBe("Hello...");
+  });
+});
+
+describe("plainTextToSafeHtml", () => {
+  it("turns a double newline into two line breaks", () => {
+    const result = plainTextToSafeHtml("First paragraph.\n\nSecond paragraph.");
+    expect(result).toBe("First paragraph.<br><br>Second paragraph.");
+  });
+
+  it("escapes a literal script tag in plain text instead of letting it open a tag", () => {
+    const result = plainTextToSafeHtml("Beware: <script>alert(1)</script>");
+    // Only "&" and "<" are escaped (design.md Decision 3) - a lone ">" can't
+    // open or close a tag on its own, so it's left as-is.
+    expect(result).toBe("Beware: &lt;script>alert(1)&lt;/script>");
+    expect(sanitizeDefinitionHtml(result)).not.toContain("<script>");
+  });
+
+  it("leaves a bare ampersand round-trippable through sanitizeDefinitionHtml", () => {
+    const result = plainTextToSafeHtml("Fish & chips");
+    expect(result).toBe("Fish &amp; chips");
+    expect(definitionExcerpt(sanitizeDefinitionHtml(result))).toBe("Fish & chips");
   });
 });

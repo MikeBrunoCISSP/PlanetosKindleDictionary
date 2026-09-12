@@ -237,6 +237,14 @@ function AppMenu({ me }: { me: UserDto | null }) {
                       Delete
                     </DropdownMenuItem>
                   )}
+                  {isAdmin && (
+                    <DropdownMenuItem
+                      className="pl-6"
+                      onClick={() => { void navigate({ to: "/entries/import" }); }}
+                    >
+                      Import
+                    </DropdownMenuItem>
+                  )}
                 </>
               )}
             </>

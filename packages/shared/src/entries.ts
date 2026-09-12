@@ -9,7 +9,7 @@ export const DUPLICATE_WORD_MESSAGE = "The word already exists in the dictionary
 // whitespace could never be reached through that lookup (see
 // openspec: entries/submission, entries/editing). Scoped to this file
 // (rather than a plainText option) since only these two fields need it.
-function singleWordText(opts: PlainTextOptions) {
+export function singleWordText(opts: PlainTextOptions) {
   return plainText(opts).refine((value) => !/\s/.test(value), {
     message: "Cannot contain spaces",
   });

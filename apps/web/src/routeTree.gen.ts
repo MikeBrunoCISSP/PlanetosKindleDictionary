@@ -21,6 +21,7 @@ import { Route as AdminApprovalQueueRouteImport } from './routes/admin_.approval
 import { Route as AdminTurnstileRouteImport } from './routes/admin_.turnstile'
 import { Route as EntriesIdRouteImport } from './routes/entries/$id'
 import { Route as EntriesDeleteRouteImport } from './routes/entries/delete'
+import { Route as EntriesImportRouteImport } from './routes/entries/import'
 import { Route as EntriesNewRouteImport } from './routes/entries/new'
 import { Route as SeriesNewRouteImport } from './routes/series/new'
 import { Route as SeriesSlugIndexRouteImport } from './routes/series/$slug/index'
@@ -86,6 +87,11 @@ const EntriesDeleteRoute = EntriesDeleteRouteImport.update({
   path: '/entries/delete',
   getParentRoute: () => rootRouteImport,
 } as any)
+const EntriesImportRoute = EntriesImportRouteImport.update({
+  id: '/entries/import',
+  path: '/entries/import',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const EntriesNewRoute = EntriesNewRouteImport.update({
   id: '/entries/new',
   path: '/entries/new',
@@ -120,6 +126,7 @@ export interface FileRoutesByFullPath {
   '/admin/turnstile': typeof AdminTurnstileRoute
   '/entries/$id': typeof EntriesIdRoute
   '/entries/delete': typeof EntriesDeleteRoute
+  '/entries/import': typeof EntriesImportRoute
   '/entries/new': typeof EntriesNewRoute
   '/series/new': typeof SeriesNewRoute
   '/series/$slug/edit': typeof SeriesSlugEditRoute
@@ -138,6 +145,7 @@ export interface FileRoutesByTo {
   '/admin/turnstile': typeof AdminTurnstileRoute
   '/entries/$id': typeof EntriesIdRoute
   '/entries/delete': typeof EntriesDeleteRoute
+  '/entries/import': typeof EntriesImportRoute
   '/entries/new': typeof EntriesNewRoute
   '/series/new': typeof SeriesNewRoute
   '/series/$slug/edit': typeof SeriesSlugEditRoute
@@ -157,6 +165,7 @@ export interface FileRoutesById {
   '/admin_/turnstile': typeof AdminTurnstileRoute
   '/entries/$id': typeof EntriesIdRoute
   '/entries/delete': typeof EntriesDeleteRoute
+  '/entries/import': typeof EntriesImportRoute
   '/entries/new': typeof EntriesNewRoute
   '/series/new': typeof SeriesNewRoute
   '/series/$slug/edit': typeof SeriesSlugEditRoute
@@ -177,6 +186,7 @@ export interface FileRouteTypes {
     | '/admin/turnstile'
     | '/entries/$id'
     | '/entries/delete'
+    | '/entries/import'
     | '/entries/new'
     | '/series/new'
     | '/series/$slug/edit'
@@ -195,6 +205,7 @@ export interface FileRouteTypes {
     | '/admin/turnstile'
     | '/entries/$id'
     | '/entries/delete'
+    | '/entries/import'
     | '/entries/new'
     | '/series/new'
     | '/series/$slug/edit'
@@ -213,6 +224,7 @@ export interface FileRouteTypes {
     | '/admin_/turnstile'
     | '/entries/$id'
     | '/entries/delete'
+    | '/entries/import'
     | '/entries/new'
     | '/series/new'
     | '/series/$slug/edit'
@@ -232,6 +244,7 @@ export interface RootRouteChildren {
   AdminTurnstileRoute: typeof AdminTurnstileRoute
   EntriesIdRoute: typeof EntriesIdRoute
   EntriesDeleteRoute: typeof EntriesDeleteRoute
+  EntriesImportRoute: typeof EntriesImportRoute
   EntriesNewRoute: typeof EntriesNewRoute
   SeriesNewRoute: typeof SeriesNewRoute
   SeriesSlugEditRoute: typeof SeriesSlugEditRoute
@@ -324,6 +337,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof EntriesDeleteRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/entries/import': {
+      id: '/entries/import'
+      path: '/entries/import'
+      fullPath: '/entries/import'
+      preLoaderRoute: typeof EntriesImportRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/entries/new': {
       id: '/entries/new'
       path: '/entries/new'
@@ -368,6 +388,7 @@ const rootRouteChildren: RootRouteChildren = {
   AdminTurnstileRoute: AdminTurnstileRoute,
   EntriesIdRoute: EntriesIdRoute,
   EntriesDeleteRoute: EntriesDeleteRoute,
+  EntriesImportRoute: EntriesImportRoute,
   EntriesNewRoute: EntriesNewRoute,
   SeriesNewRoute: SeriesNewRoute,
   SeriesSlugEditRoute: SeriesSlugEditRoute,

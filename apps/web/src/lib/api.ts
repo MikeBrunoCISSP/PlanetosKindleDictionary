@@ -9,6 +9,7 @@ import type {
   EntryEditProposalDto,
   EntrySummaryDto,
   ForgotPasswordDto,
+  ImportEntriesResultDto,
   LoginDto,
   PendingUsersPageDto,
   PublicEntryDto,
@@ -307,6 +308,19 @@ export async function apiCreateEntry(seriesSlug: string, data: CreateEntryDto): 
     credentials: "include",
   });
   return handleResponse<EntryDto>(res);
+}
+
+export async function apiImportEntries(
+  seriesSlug: string,
+  entries: Record<string, string>
+): Promise<ImportEntriesResultDto> {
+  const res = await fetch(`/api/series/${seriesSlug}/entries/import`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ entries }),
+    credentials: "include",
+  });
+  return handleResponse<ImportEntriesResultDto>(res);
 }
 
 export async function apiGetPendingEntries(): Promise<EntrySummaryDto[]> {

@@ -12,6 +12,7 @@ import adminRoutes from "../src/routes/admin.js";
 import adminBlockedEmailsRoutes from "../src/routes/adminBlockedEmails.js";
 import seriesRoutes from "../src/routes/series.js";
 import entriesRoutes from "../src/routes/entries.js";
+import entryImportsRoutes from "../src/routes/entryImports.js";
 import turnstileRoutes from "../src/routes/turnstile.js";
 import searchRoutes from "../src/routes/search.js";
 import entryEditProposalRoutes from "../src/routes/entryEditProposals.js";
@@ -40,6 +41,7 @@ export async function buildApp(opts: BuildAppOptions = {}) {
   await app.register(adminBlockedEmailsRoutes, { prisma });
   await app.register(seriesRoutes, { prisma });
   await app.register(entriesRoutes, { prisma });
+  await app.register(entryImportsRoutes, { prisma });
   await app.register(turnstileRoutes, { prisma });
   await app.register(searchRoutes, { prisma });
   await app.register(entryEditProposalRoutes, { prisma });
