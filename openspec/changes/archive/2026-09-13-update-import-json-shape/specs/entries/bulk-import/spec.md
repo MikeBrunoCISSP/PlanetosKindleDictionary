@@ -1,24 +1,11 @@
-# bulk-import Specification
+## REMOVED Requirements
 
-## Purpose
+### Requirement: Import File Must Be a Flat Object of String Values
 
-Lets an administrator bulk-create dictionary entries from a JSON file of headword-to-definition pairs, instead of adding entries one at a time, while skipping individual bad or duplicate rows rather than failing the whole file.
+**Reason**: Each headword's value is no longer a plain definition string — it now carries both a definition and that headword's inflections, which requires a nested object shape instead of a flat string.
+**Migration**: Convert each entry from `"Headword": "definition"` to `"Headword": { "Definition": "definition", "Inflections": [] }` (or with any inflected forms listed) before importing. Old flat-string import files are not accepted; there is no dual-format transition period.
 
-## Requirements
-
-### Requirement: Import Is Admin-Only
-
-The bulk import page and its API SHALL be accessible only to users with role `ADMIN`. A non-admin or unauthenticated request SHALL be rejected without performing any import.
-
-#### Scenario: Non-admin cannot reach the import page
-
-- **WHEN** a logged-in user with role `MEMBER` navigates directly to the import page's URL
-- **THEN** they are redirected away without seeing the import UI
-
-#### Scenario: Non-admin API request is rejected
-
-- **WHEN** a non-admin or unauthenticated request is made directly to the import API endpoint
-- **THEN** the request is rejected and no entries are created
+## ADDED Requirements
 
 ### Requirement: Import File Must Be a Flat Object of Definition/Inflections Entries
 
@@ -83,24 +70,7 @@ Before an entry is created, the system SHALL remove from a row's `Inflections` l
 - **WHEN** an uploaded file contains a row whose `Inflections` list, after invalid and duplicate values have been removed, still exceeds the per-entry inflection limit
 - **THEN** that entire row is skipped as malformed
 
-### Requirement: Import Button Requires a Dictionary and a Validated File
-
-The Import button SHALL be disabled until both a dictionary has been selected and the uploaded file has passed validation. It SHALL also be disabled while an import is in progress.
-
-#### Scenario: Import disabled with no dictionary selected
-
-- **WHEN** an admin has uploaded a valid file but has not selected a dictionary
-- **THEN** the Import button is disabled
-
-#### Scenario: Import disabled with no valid file
-
-- **WHEN** an admin has selected a dictionary but has not uploaded a file that passed validation
-- **THEN** the Import button is disabled
-
-#### Scenario: Import enabled once both conditions are met
-
-- **WHEN** an admin has selected a dictionary and uploaded a file that passed validation
-- **THEN** the Import button becomes enabled
+## MODIFIED Requirements
 
 ### Requirement: Each Headword Is Created Unless It Already Exists
 
@@ -144,24 +114,6 @@ A row that fails validation — an empty or whitespace-only headword, a headword
 
 - **WHEN** an uploaded file contains a row whose `Inflections` list, after cleanup, still exceeds the per-entry inflection limit
 - **THEN** that entire row is skipped and every other valid row in the file is still imported
-
-### Requirement: Newlines in Definitions Become Line Breaks
-
-A definition containing newline characters SHALL be stored such that each newline renders as a line break when the entry is viewed, not as literal newline text.
-
-#### Scenario: Multi-paragraph definition renders with line breaks
-
-- **WHEN** an uploaded definition contains one or more newline characters
-- **THEN** the created entry's definition renders each newline as a line break, not as literal text
-
-### Requirement: Imported Entries Are Immediately Approved
-
-An entry created by the import SHALL be immediately approved, consistent with an administrator's own single-entry submissions being immediately approved.
-
-#### Scenario: Imported entry is approved on creation
-
-- **WHEN** an admin successfully imports a headword
-- **THEN** the resulting entry's approval status is approved, with no separate review step required
 
 ### Requirement: Import Shows Progress and a Result Summary
 

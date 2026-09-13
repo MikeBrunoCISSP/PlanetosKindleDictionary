@@ -319,7 +319,7 @@ export async function apiCreateEntry(seriesSlug: string, data: CreateEntryDto): 
 
 export async function apiImportEntries(
   seriesSlug: string,
-  entries: Record<string, string>
+  entries: Record<string, { Definition: string; Inflections: string[] }>
 ): Promise<ImportEntriesResultDto> {
   const res = await fetch(`/api/series/${seriesSlug}/entries/import`, {
     method: "POST",

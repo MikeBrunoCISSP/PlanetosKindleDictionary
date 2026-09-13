@@ -35,6 +35,7 @@ export const importEntriesResultDtoSchema = z.object({
   skippedDuplicateHeadwords: z.array(z.string()),
   skippedInvalid: z.array(importSkippedItemDtoSchema),
   truncated: z.boolean(),
+  droppedInflectionCount: z.number().int(),
 });
 
 export type ImportEntriesRequestDto = z.infer<typeof importEntriesRequestSchema>;

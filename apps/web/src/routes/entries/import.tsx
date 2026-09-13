@@ -35,12 +35,17 @@ function EntryImportPage() {
     <div className="p-4 sm:p-8 max-w-3xl w-full mx-auto">
       <h1 className="text-2xl font-bold mb-2">Import Entries</h1>
       <p className="text-muted-foreground mb-6">
-        Create entries in bulk from a JSON file mapping headwords to definitions. Existing headwords are skipped,
-        not overwritten.
+        Create entries in bulk from a JSON file mapping headwords to definitions and inflections. Existing headwords
+        are skipped, not overwritten.
       </p>
       <ImportEntriesForm />
     </div>
   );
+}
+
+interface ImportEntryValue {
+  Definition: string;
+  Inflections: string[];
 }
 
 function ImportEntriesForm() {
@@ -48,7 +53,7 @@ function ImportEntriesForm() {
   const [dictionaryPickerOpen, setDictionaryPickerOpen] = useState(false);
   const [fileName, setFileName] = useState<string | null>(null);
   const [fileError, setFileError] = useState<string | null>(null);
-  const [parsedEntries, setParsedEntries] = useState<Record<string, string> | null>(null);
+  const [parsedEntries, setParsedEntries] = useState<Record<string, ImportEntryValue> | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const { data: seriesList = [] } = useQuery({
@@ -64,7 +69,12 @@ function ImportEntriesForm() {
       const parts = [`${result.createdCount} created`];
       if (result.skippedDuplicateCount > 0) parts.push(`${result.skippedDuplicateCount} skipped (already exists)`);
       if (result.skippedInvalidCount > 0) parts.push(`${result.skippedInvalidCount} skipped (invalid)`);
-      toast.success(parts.join(", ") + (result.truncated ? " - list truncated." : "."));
+      const message = parts.join(", ") + (result.truncated ? " - list truncated." : ".");
+      if (result.droppedInflectionCount > 0) {
+        toast.warning(message + " Not all inflections could be included.");
+      } else {
+        toast.success(message);
+      }
       setParsedEntries(null);
       setFileName(null);
       if (fileInputRef.current) fileInputRef.current.value = "";
@@ -112,12 +122,25 @@ function ImportEntriesForm() {
       setFileError(`An import file can contain at most ${MAX_IMPORT_ENTRIES.toLocaleString()} entries.`);
       return;
     }
-    if (!Object.values(entries).every((value) => typeof value === "string")) {
-      setFileError("Every value in the file must be a plain text definition (a string).");
+    function isShapeValid(value: unknown): boolean {
+      if (typeof value !== "object" || value === null || Array.isArray(value)) return false;
+      const { Definition, Inflections } = value as { Definition?: unknown; Inflections?: unknown };
+      if (typeof Definition !== "string") return false;
+      if (Inflections !== undefined && !Array.isArray(Inflections)) return false;
+      return true;
+    }
+    if (!Object.values(entries).every(isShapeValid)) {
+      setFileError('Every value in the file must be an object like { "Definition": "...", "Inflections": [...] }.');
       return;
     }
 
-    setParsedEntries(entries as Record<string, string>);
+    const normalizedEntries: Record<string, ImportEntryValue> = {};
+    for (const [headword, value] of Object.entries(entries)) {
+      const { Definition, Inflections } = value as { Definition: string; Inflections?: unknown[] };
+      normalizedEntries[headword] = { Definition, Inflections: (Inflections ?? []) as string[] };
+    }
+
+    setParsedEntries(normalizedEntries);
     setFileName(file.name);
   }
 
@@ -137,65 +160,73 @@ function ImportEntriesForm() {
         </Button>
       </div>
 
-      <div className="space-y-1">
+      <div className="space-y-4">
         <Label htmlFor="import-file">Import file (JSON)</Label>
-        <div className="flex flex-wrap items-start gap-5">
-          <div className="flex-1 min-w-[220px] space-y-2">
-            <div className="flex items-center gap-2">
-              <Button type="button" variant="secondary" onClick={() => fileInputRef.current?.click()}>
-                <UploadIcon /> Choose file
-              </Button>
-              <input
-                ref={fileInputRef}
-                id="import-file"
-                type="file"
-                accept=".json,application/json"
-                className="hidden"
-                onChange={(event) => void handleFileChange(event)}
-              />
-            </div>
-            {fileError && <p className="text-sm text-destructive">{fileError}</p>}
-            {!fileError && fileName && (
-              <p className="text-sm text-muted-foreground">
-                <span className="font-mono font-medium text-foreground">{fileName}</span>
-                {" — "}
-                {Object.keys(parsedEntries ?? {}).length.toLocaleString()} entries
-              </p>
-            )}
-          </div>
 
-          <div className="flex-1 min-w-[220px]">
-            <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-1.5">
-              Expected format
+        <div className="flex items-center gap-2">
+          <Button type="button" variant="secondary" onClick={() => fileInputRef.current?.click()}>
+            <UploadIcon /> Choose file
+          </Button>
+          <input
+            ref={fileInputRef}
+            id="import-file"
+            type="file"
+            accept=".json,application/json"
+            className="hidden"
+            onChange={(event) => void handleFileChange(event)}
+          />
+          {!fileError && fileName && (
+            <p className="text-sm text-muted-foreground">
+              <span className="font-mono font-medium text-foreground">{fileName}</span>
+              {" — "}
+              {Object.keys(parsedEntries ?? {}).length.toLocaleString()} entries
             </p>
-            <pre className="rounded-md border bg-muted px-3.5 py-3 font-mono text-xs leading-relaxed overflow-x-auto">
-              <code>
-                {"{\n"}
-                {"  "}
-                <span className="font-semibold">{'"Abelon"'}</span>
-                {": "}
-                <span className="text-muted-foreground">{'"Abelon was an archmaester of the Citadel."'}</span>
-                {",\n  "}
-                <span className="font-semibold">{'"Braavos"'}</span>
-                {": "}
-                <span className="text-muted-foreground">
-                  {'"The wealthiest of the Free Cities.'}
-                  <span className="font-semibold text-foreground">{"\\n\\n"}</span>
-                  {'Located in the Great Lagoon."'}
-                </span>
-                {"\n}"}
-              </code>
-            </pre>
-            <div className="flex gap-4 mt-1.5 text-xs text-muted-foreground">
-              <span>
-                <span className="inline-block size-2 rounded-sm bg-foreground mr-1.5 align-middle" />
-                headword
+          )}
+        </div>
+        {fileError && <p className="text-sm text-destructive">{fileError}</p>}
+
+        <div>
+          <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-1.5">
+            Expected format
+          </p>
+          <pre className="rounded-md border bg-muted px-3.5 py-3 font-mono text-xs leading-relaxed overflow-x-auto">
+            <code>
+              {"{\n  "}
+              <span className="font-semibold">{'"Abelon"'}</span>
+              {": {\n    "}
+              {'"Definition": '}
+              <span className="text-muted-foreground">{'"Abelon was an archmaester of the Citadel.",'}</span>
+              {"\n    "}
+              {'"Inflections": '}
+              <span className="text-foreground/70 italic">{"[]"}</span>
+              {"\n  },\n  "}
+              <span className="font-semibold">{'"Braavos"'}</span>
+              {": {\n    "}
+              {'"Definition": '}
+              <span className="text-muted-foreground">
+                {'"The wealthiest of the Free Cities.'}
+                <span className="font-semibold not-italic text-foreground">{"\\n\\n"}</span>
+                {'Located in the Great Lagoon.",'}
               </span>
-              <span>
-                <span className="inline-block size-2 rounded-sm bg-muted-foreground mr-1.5 align-middle" />
-                definition
-              </span>
-            </div>
+              {"\n    "}
+              {'"Inflections": '}
+              <span className="text-foreground/70 italic">{'["Braavosi", "Braavosian"]'}</span>
+              {"\n  }\n}"}
+            </code>
+          </pre>
+          <div className="flex gap-4 mt-1.5 text-xs text-muted-foreground">
+            <span>
+              <span className="inline-block size-2 rounded-sm bg-foreground mr-1.5 align-middle" />
+              headword
+            </span>
+            <span>
+              <span className="inline-block size-2 rounded-sm bg-muted-foreground mr-1.5 align-middle" />
+              definition
+            </span>
+            <span>
+              <span className="inline-block size-2 rounded-sm border border-foreground/70 mr-1.5 align-middle" />
+              inflections
+            </span>
           </div>
         </div>
       </div>
@@ -218,7 +249,9 @@ function ImportEntriesForm() {
       <p className="text-xs text-muted-foreground max-w-prose">
         Rows are skipped, not rejected outright: a headword that already exists (matched case-insensitively),
         contains spaces, or has an empty or oversized definition is left out of the import, and the rest of the file
-        is still processed. Newlines in a definition become line breaks.
+        is still processed. Newlines in a definition become line breaks. An individual inflection that's invalid,
+        duplicates its own headword, or repeats another inflection in the same row is left out rather than skipping
+        that row.
       </p>
 
       <CommandDialog open={dictionaryPickerOpen} onOpenChange={setDictionaryPickerOpen} title="Select Dictionary">

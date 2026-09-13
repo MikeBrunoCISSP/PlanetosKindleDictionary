@@ -7,6 +7,7 @@ import {
   normalizeWord,
   MAX_IMPORT_ENTRIES,
   IMPORT_RESULT_LIST_CAP,
+  MAX_INFLECTIONS,
   type ImportEntriesResultDto,
   type ImportSkippedItemDto,
 } from "@planetos/shared";
@@ -16,6 +17,29 @@ import { Errors, isPrismaError } from "../lib/errors.js";
 import { markSeriesDirty } from "../lib/dirtySeries.js";
 
 const importHeadwordSchema = singleWordText({ max: 200, minMessage: "Headword is required" });
+const importInflectionSchema = singleWordText({ max: 200, minMessage: "Inflection cannot be empty" });
+
+// Unlike createEntrySchema's .refine() (which rejects the whole submission
+// on a bad/duplicate inflection - see packages/shared/src/entries.ts), import
+// cleans the list up instead of failing the row: drop anything that isn't a
+// valid single word, matches the row's own headword, or repeats an
+// already-kept inflection (case-insensitive, first occurrence wins). This is
+// a deliberate divergence from manual entry creation, not drift - see
+// design.md Decision 1 (openspec: entries/bulk-import).
+function cleanInflections(rawInflections: string[], headword: string): string[] {
+  const normalizedHeadword = headword.trim().toLowerCase();
+  const seen = new Set<string>();
+  const cleaned: string[] = [];
+  for (const value of rawInflections) {
+    if (!importInflectionSchema.safeParse(value).success) continue;
+    const normalized = value.trim().toLowerCase();
+    if (normalized === normalizedHeadword) continue;
+    if (seen.has(normalized)) continue;
+    seen.add(normalized);
+    cleaned.push(value);
+  }
+  return cleaned;
+}
 
 // A real glossary file can plausibly exceed Fastify's default 1 MiB body
 // limit once JSON-stringified - raised only on this route, not globally.
@@ -40,6 +64,7 @@ const entryImportsRoutes: FastifyPluginAsync<{ prisma: PrismaClient }> = async (
       const createdHeadwords: string[] = [];
       const skippedDuplicateHeadwords: string[] = [];
       const skippedInvalid: ImportSkippedItemDto[] = [];
+      let droppedInflectionCount = 0;
 
       // Processed one at a time, on purpose - NOT Promise.all. Two reasons:
       //
@@ -59,10 +84,27 @@ const entryImportsRoutes: FastifyPluginAsync<{ prisma: PrismaClient }> = async (
       //    unique constraint the first one just committed - no separate
       //    in-memory tracking set needed.
       for (const [rawHeadword, rawValue] of entries) {
-        if (typeof rawValue !== "string") {
+        if (rawValue === null || typeof rawValue !== "object" || Array.isArray(rawValue)) {
+          skippedInvalid.push({ headword: rawHeadword, reason: "Value is not an object." });
+          continue;
+        }
+        const { Definition: rawDefinition, Inflections: rawInflections } = rawValue as {
+          Definition?: unknown;
+          Inflections?: unknown;
+        };
+
+        if (typeof rawDefinition !== "string") {
           skippedInvalid.push({ headword: rawHeadword, reason: "Definition is not a string." });
           continue;
         }
+        if (
+          rawInflections !== undefined &&
+          (!Array.isArray(rawInflections) || !rawInflections.every((value) => typeof value === "string"))
+        ) {
+          skippedInvalid.push({ headword: rawHeadword, reason: "Inflections is not an array of strings." });
+          continue;
+        }
+        const rawInflectionStrings = (rawInflections as string[] | undefined) ?? [];
 
         const headwordResult = importHeadwordSchema.safeParse(rawHeadword);
         if (!headwordResult.success) {
@@ -74,7 +116,7 @@ const entryImportsRoutes: FastifyPluginAsync<{ prisma: PrismaClient }> = async (
         }
         const headword = headwordResult.data;
 
-        const convertedHtml = sanitizeDefinitionHtml(plainTextToSafeHtml(rawValue));
+        const convertedHtml = sanitizeDefinitionHtml(plainTextToSafeHtml(rawDefinition));
         const definitionResult = definitionHtmlSchema.safeParse(convertedHtml);
         if (!definitionResult.success) {
           skippedInvalid.push({
@@ -85,6 +127,21 @@ const entryImportsRoutes: FastifyPluginAsync<{ prisma: PrismaClient }> = async (
         }
         const definitionHtml = definitionResult.data;
         const sortKey = normalizeWord(headword);
+
+        const inflections = cleanInflections(rawInflectionStrings, headword);
+        // Only counted once the row is confirmed created below - a row
+        // skipped entirely (too many inflections, or a P2002 duplicate)
+        // never "created and then cleaned" anything, so it must not
+        // contribute here (openspec: entries/bulk-import).
+        const rowDroppedInflectionCount = rawInflectionStrings.length - inflections.length;
+
+        if (inflections.length > MAX_INFLECTIONS) {
+          skippedInvalid.push({
+            headword,
+            reason: `An entry can have at most ${MAX_INFLECTIONS} inflections.`,
+          });
+          continue;
+        }
 
         try {
           await prisma.$transaction(
@@ -102,8 +159,25 @@ const entryImportsRoutes: FastifyPluginAsync<{ prisma: PrismaClient }> = async (
                 },
               });
 
-              await tx.seriesWord.create({
-                data: { seriesId: series.id, entryId: created.id, normalizedWord: sortKey },
+              // PERF-003: batched instead of one create() per inflection -
+              // matches apps/api/src/routes/entries.ts's exact pattern.
+              const inflectionRows =
+                inflections.length > 0
+                  ? await tx.inflection.createManyAndReturn({
+                      data: inflections.map((value) => ({ entryId: created.id, value })),
+                    })
+                  : [];
+
+              await tx.seriesWord.createMany({
+                data: [
+                  { seriesId: series.id, entryId: created.id, normalizedWord: sortKey },
+                  ...inflectionRows.map((row) => ({
+                    seriesId: series.id,
+                    entryId: created.id,
+                    inflectionId: row.id,
+                    normalizedWord: normalizeWord(row.value),
+                  })),
+                ],
               });
 
               await tx.revision.create({
@@ -114,7 +188,7 @@ const entryImportsRoutes: FastifyPluginAsync<{ prisma: PrismaClient }> = async (
                   snapshot: {
                     headword: created.headword,
                     definitionHtml: created.definitionHtml,
-                    inflections: [],
+                    inflections,
                     approvalStatus: created.approvalStatus,
                   },
                 },
@@ -125,6 +199,7 @@ const entryImportsRoutes: FastifyPluginAsync<{ prisma: PrismaClient }> = async (
             { isolationLevel: "Serializable" }
           );
           createdHeadwords.push(headword);
+          droppedInflectionCount += rowDroppedInflectionCount;
         } catch (err: unknown) {
           if (isPrismaError(err, "P2002")) {
             skippedDuplicateHeadwords.push(headword);
@@ -148,6 +223,7 @@ const entryImportsRoutes: FastifyPluginAsync<{ prisma: PrismaClient }> = async (
         skippedDuplicateHeadwords: skippedDuplicateHeadwords.slice(0, IMPORT_RESULT_LIST_CAP),
         skippedInvalid: skippedInvalid.slice(0, IMPORT_RESULT_LIST_CAP),
         truncated,
+        droppedInflectionCount,
       };
 
       return reply.status(200).send(result);
