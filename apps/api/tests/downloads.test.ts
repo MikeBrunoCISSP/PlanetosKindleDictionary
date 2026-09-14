@@ -236,6 +236,37 @@ describe("GET /api/downloads", () => {
     }
   });
 
+  it("omits a series whose latest successful build has zero entries", async () => {
+    const empty = await createTestSeries("empty-build");
+    await prisma.build.create({
+      data: { seriesId: empty.id, status: "SUCCESS", contentHash: "empty-hash", entryCount: 0 },
+    });
+
+    const res = await app.inject({ method: "GET", url: "/api/downloads" });
+    expect(res.statusCode).toBe(200);
+    const slugs = res.json<{ slug: string }[]>().map((s) => s.slug);
+    expect(slugs).not.toContain(empty.slug);
+  });
+
+  it("omits a series whose latest successful build is empty, even though an earlier build was not", async () => {
+    const becameEmpty = await createTestSeries("became-empty");
+    await createSuccessBuild(becameEmpty.id, "old-nonempty", new Date(Date.now() - 10_000));
+    await prisma.build.create({
+      data: {
+        seriesId: becameEmpty.id,
+        status: "SUCCESS",
+        contentHash: "became-empty-hash",
+        entryCount: 0,
+        createdAt: new Date(),
+      },
+    });
+
+    const res = await app.inject({ method: "GET", url: "/api/downloads" });
+    expect(res.statusCode).toBe(200);
+    const slugs = res.json<{ slug: string }[]>().map((s) => s.slug);
+    expect(slugs).not.toContain(becameEmpty.slug);
+  });
+
   it("requires no authentication", async () => {
     const res = await app.inject({ method: "GET", url: "/api/downloads" });
     expect(res.statusCode).toBe(200);

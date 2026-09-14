@@ -94,16 +94,28 @@ const downloadsRoutes: FastifyPluginAsync<{ prisma: PrismaClient }> = async (fas
   });
 
   // Public listing for the all-dictionaries download page - only series with
-  // at least one successful build (nothing to download otherwise), lean
-  // DTO (slug/title only, no build metadata - the actual filename is
-  // decided server-side at download time by the route above).
+  // at least one successful, non-empty build (nothing worth downloading
+  // otherwise), lean DTO (slug/title only, no build metadata - the actual
+  // filename is decided server-side at download time by the route above).
   fastify.get("/api/downloads", async (_request, reply) => {
     const series = await prisma.series.findMany({
       where: { builds: { some: { status: "SUCCESS" } } },
-      select: { slug: true, title: true },
+      select: {
+        slug: true,
+        title: true,
+        builds: {
+          where: { status: "SUCCESS" },
+          orderBy: { createdAt: "desc" },
+          take: 1,
+          select: { entryCount: true },
+        },
+      },
       orderBy: { title: "asc" },
     });
-    return reply.status(200).send(series);
+    const nonEmpty = series
+      .filter((s) => (s.builds[0]?.entryCount ?? 0) > 0)
+      .map(({ slug, title }) => ({ slug, title }));
+    return reply.status(200).send(nonEmpty);
   });
 
   // Public build history - lean DTO only (status/createdAt/entryCount);
