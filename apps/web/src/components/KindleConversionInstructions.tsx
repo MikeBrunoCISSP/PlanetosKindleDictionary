@@ -31,15 +31,32 @@ export function KindleConversionInstructions() {
         <ExternalLink href="https://www.youtube.com/@ArthurBrs777">Arthur Brs</ExternalLink> provides instructions.
       </p>
 
-      <div className="aspect-video w-full max-w-xl overflow-hidden rounded-md border">
-        <iframe
-          className="h-full w-full"
-          src="https://www.youtube.com/embed/b7xAchBBNjo"
-          title="Kindle dictionary conversion instructions by Arthur Brs"
-          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
-          allowFullScreen
+      <a
+        href="https://www.youtube.com/watch?v=b7xAchBBNjo"
+        target="_blank"
+        rel="noopener noreferrer"
+        className="group relative block aspect-video w-full max-w-xl overflow-hidden rounded-md border"
+      >
+        <img
+          src="https://img.youtube.com/vi/b7xAchBBNjo/maxresdefault.jpg"
+          alt="How to Add Custom Dictionaries to Kindle (Windows & Mac) 2026 Tutorial, by Arthur Brs"
+          className="h-full w-full object-cover"
         />
-      </div>
+        <div className="absolute inset-0 bg-black/10 transition-colors group-hover:bg-black/20" />
+        <div className="absolute inset-0 flex items-center justify-center">
+          <div className="flex h-14 w-20 items-center justify-center rounded-xl bg-red-600 shadow-lg transition-transform group-hover:scale-105">
+            <svg viewBox="0 0 24 24" className="h-7 w-7 fill-white">
+              <path d="M8 5v14l11-7z" />
+            </svg>
+          </div>
+        </div>
+        <div className="absolute bottom-3 right-3 flex items-center gap-1.5 rounded-full bg-black/70 px-3 py-1.5 text-white">
+          <svg viewBox="0 0 24 24" className="h-4 w-4 fill-red-600">
+            <path d="M21.6 7.2s-.2-1.5-.8-2.2c-.8-.8-1.7-.8-2.1-.9C15.9 4 12 4 12 4h0s-3.9 0-6.7.1c-.4.1-1.3.1-2.1.9-.6.7-.8 2.2-.8 2.2S2.2 9 2.2 10.7v1.6C2.2 14 2.4 15.8 2.4 15.8s.2 1.5.8 2.2c.8.9 1.9.9 2.3 1 1.7.2 7.1.2 7.1.2s3.9 0 6.7-.1c.4-.1 1.3-.1 2.1-.9.6-.7.8-2.2.8-2.2s.2-1.8.2-3.5v-1.6c0-1.7-.2-3.5-.2-3.5zM9.9 14.6V8.9l5.4 2.9-5.4 2.8z" />
+          </svg>
+          <span className="text-xs font-medium">Watch on YouTube</span>
+        </div>
+      </a>
 
       <SectionHeading>Detailed Instructions</SectionHeading>
 
