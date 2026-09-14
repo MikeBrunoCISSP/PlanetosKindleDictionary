@@ -1,6 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { apiGetDownloads } from "@/lib/api";
+import { KindleConversionInstructions } from "@/components/KindleConversionInstructions";
 
 export const Route = createFileRoute("/downloads")({
   component: DownloadsPage,
@@ -38,6 +39,8 @@ function DownloadsPage() {
           ))}
         </ul>
       )}
+
+      <KindleConversionInstructions />
     </div>
   );
 }
