@@ -13,9 +13,11 @@ import { Route as IndexRouteImport } from './routes/index'
 import { Route as AdminRouteImport } from './routes/admin'
 import { Route as ContactRouteImport } from './routes/contact'
 import { Route as DownloadsRouteImport } from './routes/downloads'
+import { Route as GetInvolvedRouteImport } from './routes/get-involved'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as PreferencesRouteImport } from './routes/preferences'
 import { Route as ResetPasswordRouteImport } from './routes/reset-password'
+import { Route as SearchRouteImport } from './routes/search'
 import { Route as VerifyEmailRouteImport } from './routes/verify-email'
 import { Route as AdminApprovalQueueRouteImport } from './routes/admin_.approval-queue'
 import { Route as AdminTurnstileRouteImport } from './routes/admin_.turnstile'
@@ -47,6 +49,11 @@ const DownloadsRoute = DownloadsRouteImport.update({
   path: '/downloads',
   getParentRoute: () => rootRouteImport,
 } as any)
+const GetInvolvedRoute = GetInvolvedRouteImport.update({
+  id: '/get-involved',
+  path: '/get-involved',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const LoginRoute = LoginRouteImport.update({
   id: '/login',
   path: '/login',
@@ -60,6 +67,11 @@ const PreferencesRoute = PreferencesRouteImport.update({
 const ResetPasswordRoute = ResetPasswordRouteImport.update({
   id: '/reset-password',
   path: '/reset-password',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const SearchRoute = SearchRouteImport.update({
+  id: '/search',
+  path: '/search',
   getParentRoute: () => rootRouteImport,
 } as any)
 const VerifyEmailRoute = VerifyEmailRouteImport.update({
@@ -118,9 +130,11 @@ export interface FileRoutesByFullPath {
   '/admin': typeof AdminRoute
   '/contact': typeof ContactRoute
   '/downloads': typeof DownloadsRoute
+  '/get-involved': typeof GetInvolvedRoute
   '/login': typeof LoginRoute
   '/preferences': typeof PreferencesRoute
   '/reset-password': typeof ResetPasswordRoute
+  '/search': typeof SearchRoute
   '/verify-email': typeof VerifyEmailRoute
   '/admin/approval-queue': typeof AdminApprovalQueueRoute
   '/admin/turnstile': typeof AdminTurnstileRoute
@@ -137,9 +151,11 @@ export interface FileRoutesByTo {
   '/admin': typeof AdminRoute
   '/contact': typeof ContactRoute
   '/downloads': typeof DownloadsRoute
+  '/get-involved': typeof GetInvolvedRoute
   '/login': typeof LoginRoute
   '/preferences': typeof PreferencesRoute
   '/reset-password': typeof ResetPasswordRoute
+  '/search': typeof SearchRoute
   '/verify-email': typeof VerifyEmailRoute
   '/admin/approval-queue': typeof AdminApprovalQueueRoute
   '/admin/turnstile': typeof AdminTurnstileRoute
@@ -157,9 +173,11 @@ export interface FileRoutesById {
   '/admin': typeof AdminRoute
   '/contact': typeof ContactRoute
   '/downloads': typeof DownloadsRoute
+  '/get-involved': typeof GetInvolvedRoute
   '/login': typeof LoginRoute
   '/preferences': typeof PreferencesRoute
   '/reset-password': typeof ResetPasswordRoute
+  '/search': typeof SearchRoute
   '/verify-email': typeof VerifyEmailRoute
   '/admin_/approval-queue': typeof AdminApprovalQueueRoute
   '/admin_/turnstile': typeof AdminTurnstileRoute
@@ -178,9 +196,11 @@ export interface FileRouteTypes {
     | '/admin'
     | '/contact'
     | '/downloads'
+    | '/get-involved'
     | '/login'
     | '/preferences'
     | '/reset-password'
+    | '/search'
     | '/verify-email'
     | '/admin/approval-queue'
     | '/admin/turnstile'
@@ -197,9 +217,11 @@ export interface FileRouteTypes {
     | '/admin'
     | '/contact'
     | '/downloads'
+    | '/get-involved'
     | '/login'
     | '/preferences'
     | '/reset-password'
+    | '/search'
     | '/verify-email'
     | '/admin/approval-queue'
     | '/admin/turnstile'
@@ -216,9 +238,11 @@ export interface FileRouteTypes {
     | '/admin'
     | '/contact'
     | '/downloads'
+    | '/get-involved'
     | '/login'
     | '/preferences'
     | '/reset-password'
+    | '/search'
     | '/verify-email'
     | '/admin_/approval-queue'
     | '/admin_/turnstile'
@@ -236,9 +260,11 @@ export interface RootRouteChildren {
   AdminRoute: typeof AdminRoute
   ContactRoute: typeof ContactRoute
   DownloadsRoute: typeof DownloadsRoute
+  GetInvolvedRoute: typeof GetInvolvedRoute
   LoginRoute: typeof LoginRoute
   PreferencesRoute: typeof PreferencesRoute
   ResetPasswordRoute: typeof ResetPasswordRoute
+  SearchRoute: typeof SearchRoute
   VerifyEmailRoute: typeof VerifyEmailRoute
   AdminApprovalQueueRoute: typeof AdminApprovalQueueRoute
   AdminTurnstileRoute: typeof AdminTurnstileRoute
@@ -281,6 +307,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof DownloadsRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/get-involved': {
+      id: '/get-involved'
+      path: '/get-involved'
+      fullPath: '/get-involved'
+      preLoaderRoute: typeof GetInvolvedRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/login': {
       id: '/login'
       path: '/login'
@@ -300,6 +333,13 @@ declare module '@tanstack/react-router' {
       path: '/reset-password'
       fullPath: '/reset-password'
       preLoaderRoute: typeof ResetPasswordRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/search': {
+      id: '/search'
+      path: '/search'
+      fullPath: '/search'
+      preLoaderRoute: typeof SearchRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/verify-email': {
@@ -380,9 +420,11 @@ const rootRouteChildren: RootRouteChildren = {
   AdminRoute: AdminRoute,
   ContactRoute: ContactRoute,
   DownloadsRoute: DownloadsRoute,
+  GetInvolvedRoute: GetInvolvedRoute,
   LoginRoute: LoginRoute,
   PreferencesRoute: PreferencesRoute,
   ResetPasswordRoute: ResetPasswordRoute,
+  SearchRoute: SearchRoute,
   VerifyEmailRoute: VerifyEmailRoute,
   AdminApprovalQueueRoute: AdminApprovalQueueRoute,
   AdminTurnstileRoute: AdminTurnstileRoute,

@@ -92,19 +92,19 @@ The system SHALL provide a single page, reachable and usable without logging in,
 - **WHEN** a dictionary's most recent successful build has an entry count of zero, even though an earlier successful build for the same dictionary had a non-zero entry count
 - **THEN** it does not appear in the all-dictionaries download page's list, since the listing reflects only the latest build
 
-### Requirement: Entry Points to the All-Dictionaries Download Page
+### Requirement: Homepage Also Serves the All-Dictionaries Download Page
 
-The system SHALL provide a "Download the latest dictionaries" hyperlink on the homepage, beneath the search box, that navigates to the all-dictionaries download page. This is in addition to the menu's own "Download" entry point (see the `navigation/app-menu` capability); both SHALL lead to the same page.
+The homepage (`/`) SHALL render the same content as the all-dictionaries download page (`/downloads`): the same list of dictionaries with the same download links, and the same Kindle-conversion instructions. Both `/` and `/downloads` SHALL remain independently reachable and SHALL NOT redirect to one another.
 
-#### Scenario: Homepage hyperlink navigates to the download page
+#### Scenario: Homepage shows the same dictionary list as /downloads
 
-- **WHEN** a visitor on the homepage clicks "Download the latest dictionaries"
-- **THEN** the browser navigates to the all-dictionaries download page
+- **WHEN** any visitor opens the homepage
+- **THEN** they see the same list of downloadable dictionaries, each with a download link, as they would at `/downloads`
 
-#### Scenario: Homepage hyperlink is visible without logging in
+#### Scenario: /downloads keeps working as its own URL
 
-- **WHEN** an unauthenticated visitor views the homepage
-- **THEN** the "Download the latest dictionaries" hyperlink is visible beneath the search box
+- **WHEN** any visitor navigates directly to `/downloads`
+- **THEN** the all-dictionaries download page renders there, without redirecting to `/`
 
 ### Requirement: Downloaded EPUB Filename Reflects Dictionary and Build Time
 

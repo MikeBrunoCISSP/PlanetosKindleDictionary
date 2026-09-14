@@ -67,7 +67,7 @@ function EditSeriesForm({ slug }: { slug: string }) {
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: ["series", "list"] });
       await queryClient.invalidateQueries({ queryKey: ["series", slug] });
-      await navigate({ to: "/" });
+      await navigate({ to: "/search" });
     },
     onError: (err) => {
       setApiError(err instanceof ApiError ? err.message : "An error occurred");

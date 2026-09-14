@@ -225,6 +225,12 @@ function AppMenu({ me }: { me: UserDto | null }) {
                 <>
                   <DropdownMenuItem
                     className="pl-6"
+                    onClick={() => { void navigate({ to: "/search" }); }}
+                  >
+                    Search
+                  </DropdownMenuItem>
+                  <DropdownMenuItem
+                    className="pl-6"
                     onClick={() => { void navigate({ to: "/entries/new" }); }}
                   >
                     Add

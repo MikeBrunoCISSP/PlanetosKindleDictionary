@@ -1,0 +1,91 @@
+import { createFileRoute, useNavigate, Link } from "@tanstack/react-router";
+import { useEffect, useState, type FormEvent } from "react";
+import { z } from "zod";
+import { ArrowRightIcon } from "lucide-react";
+import { seriesIdsFilterSchema } from "@planetos/shared";
+import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
+import { SearchResults } from "@/components/SearchResults";
+import { DictionaryMultiSelect } from "@/components/DictionaryMultiSelect";
+
+const searchPageSearchSchema = z.object({
+  q: z.string().trim().max(200).optional(),
+  page: z.coerce.number().int().min(1).default(1),
+  seriesIds: seriesIdsFilterSchema,
+});
+
+export const Route = createFileRoute("/search")({
+  validateSearch: searchPageSearchSchema,
+  component: SearchPage,
+});
+
+function SearchPage() {
+  const { q, page, seriesIds } = Route.useSearch();
+  const navigate = useNavigate();
+  const [inputValue, setInputValue] = useState(q ?? "");
+
+  // Keep local input state in sync when the URL changes externally
+  // (e.g. browser back/forward).
+  useEffect(() => {
+    setInputValue(q ?? "");
+  }, [q]);
+
+  function handleSubmit(event: FormEvent) {
+    event.preventDefault();
+    const trimmed = inputValue.trim();
+    void navigate({ to: "/search", search: (prev) => ({ ...prev, q: trimmed || undefined, page: 1 }) });
+  }
+
+  function handleSeriesIdsChange(ids: string[]) {
+    void navigate({
+      to: "/search",
+      search: (prev) => ({ ...prev, seriesIds: ids.length > 0 ? ids : undefined, page: 1 }),
+    });
+  }
+
+  const hasQuery = Boolean(q && q.length > 0);
+
+  if (!hasQuery) {
+    return (
+      <div className="flex min-h-svh items-center justify-center p-4">
+        <div className="w-full max-w-xl text-center space-y-6">
+          <h1 className="text-4xl font-bold">eReader Dictionaries</h1>
+          <form onSubmit={handleSubmit} className="flex gap-2">
+            <Input
+              autoFocus
+              value={inputValue}
+              onChange={(event) => setInputValue(event.target.value)}
+              placeholder="Search dictionary entries…"
+              className="h-12 text-lg"
+            />
+            <Button type="submit" size="icon" className="h-12 w-12" aria-label="Search">
+              <ArrowRightIcon className="size-5" />
+            </Button>
+          </form>
+          <Link to="/downloads" className="text-sm underline underline-offset-2 hover:no-underline">
+            Download the latest dictionaries
+          </Link>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="mx-auto max-w-4xl w-full space-y-6 p-4 sm:p-8">
+      <div className="flex flex-wrap items-start gap-2">
+        <form onSubmit={handleSubmit} className="flex min-w-48 flex-1 gap-2">
+          <Input
+            value={inputValue}
+            onChange={(event) => setInputValue(event.target.value)}
+            placeholder="Search dictionary entries…"
+          />
+          <Button type="submit" size="icon" aria-label="Search">
+            <ArrowRightIcon className="size-4" />
+          </Button>
+        </form>
+        <DictionaryMultiSelect selectedIds={seriesIds ?? []} onChange={handleSeriesIdsChange} />
+      </div>
+      <SearchResults query={q ?? ""} page={page} seriesIds={seriesIds ?? []} />
+    </div>
+  );
+}

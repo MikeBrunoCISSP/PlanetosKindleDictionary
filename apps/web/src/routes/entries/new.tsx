@@ -30,7 +30,7 @@ export const Route = createFileRoute("/entries/new")({
       staleTime: 30 * 1000,
     });
     if (!user) throw redirect({ to: "/login" });
-    if (user.role !== "ADMIN" && user.approvalStatus !== "APPROVED") throw redirect({ to: "/" });
+    if (user.role !== "ADMIN" && user.approvalStatus !== "APPROVED") throw redirect({ to: "/get-involved" });
   },
   component: EntryNewPage,
 });
@@ -94,7 +94,7 @@ function CreateEntryForm() {
       );
       await queryClient.invalidateQueries({ queryKey: ["admin", "entries", "pending"] });
       await queryClient.invalidateQueries({ queryKey: ["admin", "review-queue"] });
-      await navigate({ to: "/" });
+      await navigate({ to: "/search" });
     },
     onError: (err) => {
       if (err instanceof ApiError && err.status === 409) {

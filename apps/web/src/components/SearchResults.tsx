@@ -31,7 +31,7 @@ export function SearchResults({
   }
 
   function goToPage(newPage: number) {
-    void navigate({ to: "/", search: (prev) => ({ ...prev, q: query, page: newPage }) });
+    void navigate({ to: "/search", search: (prev) => ({ ...prev, q: query, page: newPage }) });
   }
 
   return (

@@ -49,7 +49,7 @@ function CreateSeriesForm() {
     mutationFn: apiCreateSeries,
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: ["series", "list"] });
-      await navigate({ to: "/" });
+      await navigate({ to: "/search" });
     },
     onError: (err) => {
       setApiError(err instanceof ApiError ? err.message : "An error occurred");

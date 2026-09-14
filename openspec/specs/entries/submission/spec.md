@@ -6,7 +6,7 @@ Lets any authenticated user propose a new dictionary entry (Headword, Definition
 
 ### Requirement: Add Entry Screen Access
 
-The system SHALL expose an Add Entry screen at `/entries/new` to any Approved user or administrator. Unauthenticated visitors SHALL be redirected to `/login`. A Pending user SHALL be redirected away from `/entries/new` rather than shown a non-functional form. The underlying entry-creation API operation SHALL independently reject requests from Pending, non-administrator users regardless of what the client UI allows.
+The system SHALL expose an Add Entry screen at `/entries/new` to any Approved user or administrator. Unauthenticated visitors SHALL be redirected to `/login`. A Pending user SHALL be redirected to the Create eligibility explainer page (see `navigation/top-menu-strip`) rather than shown a non-functional form. The underlying entry-creation API operation SHALL independently reject requests from Pending, non-administrator users regardless of what the client UI allows.
 
 #### Scenario: Authenticated member can access the screen
 - **WHEN** a logged-in user with approval status `APPROVED` and role `MEMBER` navigates to `/entries/new`
@@ -22,7 +22,7 @@ The system SHALL expose an Add Entry screen at `/entries/new` to any Approved us
 
 #### Scenario: Pending member is redirected away from the screen
 - **WHEN** a logged-in user with approval status `PENDING` and role `MEMBER` navigates to `/entries/new`
-- **THEN** they are redirected away and the Add Entry screen does not render
+- **THEN** they are redirected to the Create eligibility explainer page and the Add Entry screen does not render
 
 #### Scenario: API rejects entry creation from a Pending user
 - **WHEN** a request is sent directly to `POST /api/series/:slug/entries` by an authenticated user with approval status `PENDING` and role `MEMBER`
