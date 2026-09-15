@@ -64,13 +64,16 @@ export function DownloadsPageContent() {
               <MailIcon className="size-4" />
             </span>
             <div>
-              <p className="text-sm font-semibold">Request one</p>
+              <p className="text-sm font-semibold">
+                <Link
+                  to="/contact"
+                  className="text-teal-700 underline underline-offset-2 hover:no-underline dark:text-teal-400"
+                >
+                  Request a series
+                </Link>
+              </p>
               <p className="text-xs text-muted-foreground">
-                Don't see your series?{" "}
-                <span className="inline-flex items-center rounded-md border bg-muted px-1.5 py-0.5 text-[0.7rem] font-medium">
-                  Help → Contact
-                </span>{" "}
-                us.
+                Don't see your series? Contact us; we'll add it!
               </p>
             </div>
           </div>
