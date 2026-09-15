@@ -18,7 +18,7 @@ export function DownloadsPageContent() {
         <p className="mb-2 text-xs font-bold tracking-wide text-teal-700 uppercase dark:text-teal-400">
           Dictionaries built by the community
         </p>
-        <h1 className="mb-4 text-2xl font-extrabold text-balance">Never lose the meaning of a word again</h1>
+        <h1 className="mb-4 text-2xl font-extrabold text-balance">Put your phone away and read!</h1>
         <p className="mb-3 text-sm leading-relaxed text-muted-foreground">
           One of the best things about an eReader is having a dictionary at your fingertips: press and hold
           a word, and its definition pops up. But if you read fantasy or science fiction, you've probably

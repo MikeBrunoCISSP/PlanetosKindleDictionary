@@ -1,8 +1,9 @@
 import { describe, it, expect, beforeAll, beforeEach, afterAll, afterEach, vi } from "vitest";
 import type { FastifyInstance } from "fastify";
 import type { PrismaClient } from "@prisma/client";
+import type { Worker } from "bullmq";
 import { hash as hashPassword } from "@node-rs/argon2";
-import { buildApp, cleanUsers, resetTurnstileSettings } from "./helpers.js";
+import { buildApp, cleanUsers, resetTurnstileSettings, startEmailWorker } from "./helpers.js";
 import { encrypt } from "../src/lib/crypto.js";
 
 // requireTurnstileIfEnabled defaults to a no-op resolve, so mocking it here
@@ -34,9 +35,14 @@ const REASON = "I'd like to contribute definitions.";
 
 let app: FastifyInstance;
 let prisma: PrismaClient;
+let emailWorker: Worker;
 
 beforeAll(async () => {
   ({ app, prisma } = await buildApp());
+  // Registration only enqueues a job (PROD-006) - the "sends a real
+  // verification email" test below needs something actually draining the
+  // queue, the same way apps/api/src/worker.ts does in production.
+  emailWorker = startEmailWorker(prisma);
   await cleanUsers(prisma, [TEST_EMAIL, TEST_EMAIL_2]);
 });
 
@@ -46,9 +52,32 @@ afterEach(async () => {
 });
 
 afterAll(async () => {
+  await emailWorker.close();
   await app.close();
   await prisma.$disconnect();
 });
+
+// Delivery is asynchronous even with emailWorker actively draining the
+// queue, so poll briefly instead of checking once (see the identical
+// pattern/comment in emailVerification.test.ts).
+async function findVerificationEmail(
+  to: string,
+  timeoutMs = 10000
+): Promise<{ id: string; subject: string; text: string } | undefined> {
+  const start = Date.now();
+  do {
+    const listRes = await fetch(`${MAILPIT_API}/search?query=to:${encodeURIComponent(to)}`);
+    const { messages } = (await listRes.json()) as { messages: MailpitMessageSummary[] };
+    const summary = messages.find((m) => m.Subject.includes("Verify your"));
+    if (summary) {
+      const fullRes = await fetch(`${MAILPIT_API}/message/${summary.ID}`);
+      const full = (await fullRes.json()) as { Text: string };
+      return { id: summary.ID, subject: summary.Subject, text: full.Text };
+    }
+    await new Promise((resolve) => setTimeout(resolve, 100));
+  } while (Date.now() - start < timeoutMs);
+  return undefined;
+}
 
 function register(email: string, username: string, extra: Record<string, unknown> = {}) {
   return app.inject({
@@ -190,14 +219,10 @@ describe("POST /api/auth/register", () => {
     const res = await register(TEST_EMAIL, TEST_USERNAME);
     expect(res.statusCode).toBe(201);
 
-    const listRes = await fetch(`${MAILPIT_API}/search?query=to:${encodeURIComponent(TEST_EMAIL)}`);
-    const { messages } = (await listRes.json()) as { messages: MailpitMessageSummary[] };
-    expect(messages.length).toBeGreaterThan(0);
-    expect(messages[0]!.Subject).toContain("Verify your eReader Dictionaries email address");
-
-    const fullRes = await fetch(`${MAILPIT_API}/message/${messages[0]!.ID}`);
-    const full = (await fullRes.json()) as { Text: string };
-    expect(full.Text).toContain("/verify-email?token=");
+    const email = await findVerificationEmail(TEST_EMAIL);
+    expect(email).toBeDefined();
+    expect(email!.subject).toContain("Verify your eReader Dictionaries email address");
+    expect(email!.text).toContain("/verify-email?token=");
   });
 });
 
