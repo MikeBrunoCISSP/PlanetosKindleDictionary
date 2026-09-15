@@ -93,13 +93,18 @@ const downloadsRoutes: FastifyPluginAsync<{ prisma: PrismaClient }> = async (fas
     return reply.status(302).redirect(url);
   });
 
-  // Public listing for the all-dictionaries download page - only series with
-  // at least one successful, non-empty build (nothing worth downloading
-  // otherwise), lean DTO (slug/title only, no build metadata - the actual
-  // filename is decided server-side at download time by the route above).
+  // Public listing for the all-dictionaries download page - every series,
+  // whether or not it has built successfully yet, so visitors can discover
+  // (and be nudged to contribute to) dictionaries with nothing to download
+  // yet. lastModifiedAt is the latest successful build's completion time -
+  // the same field buildDictionaryFilename uses above - and is null
+  // whenever entryCount is 0, since a zero-entry build has nothing
+  // meaningful to report as "modified". Sorted populated-first (then
+  // alphabetical within each group) in application code rather than via
+  // Prisma orderBy, since "has a non-empty latest build" isn't a plain
+  // column to sort on without a raw/aggregate query.
   fastify.get("/api/downloads", async (_request, reply) => {
     const series = await prisma.series.findMany({
-      where: { builds: { some: { status: "SUCCESS" } } },
       select: {
         slug: true,
         title: true,
@@ -107,15 +112,25 @@ const downloadsRoutes: FastifyPluginAsync<{ prisma: PrismaClient }> = async (fas
           where: { status: "SUCCESS" },
           orderBy: { createdAt: "desc" },
           take: 1,
-          select: { entryCount: true },
+          select: { entryCount: true, createdAt: true },
         },
       },
-      orderBy: { title: "asc" },
     });
-    const nonEmpty = series
-      .filter((s) => (s.builds[0]?.entryCount ?? 0) > 0)
-      .map(({ slug, title }) => ({ slug, title }));
-    return reply.status(200).send(nonEmpty);
+    const dictionaries = series
+      .map(({ slug, title, builds }) => {
+        const entryCount = builds[0]?.entryCount ?? 0;
+        return {
+          slug,
+          title,
+          entryCount,
+          lastModifiedAt: entryCount > 0 && builds[0] ? builds[0].createdAt.toISOString() : null,
+        };
+      })
+      .sort((a, b) => {
+        if ((a.entryCount > 0) !== (b.entryCount > 0)) return a.entryCount > 0 ? -1 : 1;
+        return a.title.localeCompare(b.title);
+      });
+    return reply.status(200).send(dictionaries);
   });
 
   // Public build history - lean DTO only (status/createdAt/entryCount);

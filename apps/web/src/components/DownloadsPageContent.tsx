@@ -2,6 +2,8 @@ import { Link } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { DownloadIcon, UserIcon, MailIcon } from "lucide-react";
 import { apiGetDownloads } from "@/lib/api";
+import { formatLastModified } from "@/lib/formatLastModified";
+import { cn } from "@/lib/utils";
 import { KindleConversionInstructions } from "@/components/KindleConversionInstructions";
 
 export function DownloadsPageContent() {
@@ -85,19 +87,59 @@ export function DownloadsPageContent() {
       )}
 
       {dictionaries && dictionaries.length > 0 && (
-        <ul className="divide-y divide-border rounded-md border">
-          {dictionaries.map((dictionary) => (
-            <li key={dictionary.slug} className="flex items-center justify-between p-4">
-              <span className="font-medium">{dictionary.title}</span>
-              <a
-                href={`/api/series/${dictionary.slug}/download`}
-                className="underline underline-offset-2 hover:no-underline"
-              >
-                Download .epub
-              </a>
-            </li>
-          ))}
-        </ul>
+        <div className="rounded-md border">
+          <div className="hidden items-center gap-x-4 border-b p-4 text-xs font-semibold tracking-wide text-muted-foreground uppercase sm:flex">
+            <span className="min-w-0 flex-1">Dictionary</span>
+            <span className="w-16 shrink-0 text-right">Terms</span>
+            <span className="w-36 shrink-0 text-right">Last Modified</span>
+            <span className="w-28 shrink-0" />
+          </div>
+          <ul className="divide-y divide-border">
+            {dictionaries.map((dictionary) => {
+              const hasTerms = dictionary.entryCount > 0;
+              return (
+                <li key={dictionary.slug} className="flex flex-wrap items-center gap-x-4 gap-y-1 p-4">
+                  <span
+                    className={cn(
+                      "w-full font-medium sm:w-auto sm:min-w-0 sm:flex-1",
+                      !hasTerms && "font-normal text-muted-foreground"
+                    )}
+                  >
+                    {dictionary.title}
+                  </span>
+                  <span
+                    className={cn(
+                      "w-16 shrink-0 text-right text-sm tabular-nums",
+                      hasTerms ? "text-foreground" : "text-muted-foreground"
+                    )}
+                  >
+                    {hasTerms ? dictionary.entryCount.toLocaleString() : "—"}
+                  </span>
+                  <span className="w-36 shrink-0 text-right text-xs tabular-nums text-muted-foreground">
+                    {hasTerms && dictionary.lastModifiedAt ? formatLastModified(dictionary.lastModifiedAt) : "—"}
+                  </span>
+                  <span className="w-full text-left sm:w-28 sm:shrink-0 sm:text-right">
+                    {hasTerms ? (
+                      <a
+                        href={`/api/series/${dictionary.slug}/download`}
+                        className="text-sm underline underline-offset-2 hover:no-underline"
+                      >
+                        Download .epub
+                      </a>
+                    ) : (
+                      <Link
+                        to="/login"
+                        className="text-sm font-semibold underline underline-offset-2 hover:no-underline"
+                      >
+                        Contribute Now!
+                      </Link>
+                    )}
+                  </span>
+                </li>
+              );
+            })}
+          </ul>
+        </div>
       )}
 
       <KindleConversionInstructions />

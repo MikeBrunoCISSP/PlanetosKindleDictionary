@@ -200,9 +200,14 @@ describe("GET /api/series/:slug/download and /download/source", () => {
 });
 
 describe("GET /api/downloads", () => {
-  it("includes a series with a SUCCESS build, ordered by title, and omits series with no successful build", async () => {
+  type DownloadsListItem = { slug: string; title: string; entryCount: number; lastModifiedAt: string | null };
+
+  it("includes every series regardless of build status, sorted populated-first and alphabetical within each group", async () => {
     const zebra = await createTestSeries("zebra");
     await createSuccessBuild(zebra.id, "only", new Date());
+
+    const aardvark = await createTestSeries("aardvark");
+    await createSuccessBuild(aardvark.id, "only", new Date());
 
     const noBuild = await createTestSeries("no-build-yet");
     void noBuild;
@@ -212,31 +217,53 @@ describe("GET /api/downloads", () => {
       data: { seriesId: onlyFailed.id, status: "FAILED", contentHash: "x", entryCount: 0, error: "boom" },
     });
 
-    const aardvark = await createTestSeries("aardvark");
-    await createSuccessBuild(aardvark.id, "only", new Date());
-
     const res = await app.inject({ method: "GET", url: "/api/downloads" });
     expect(res.statusCode).toBe(200);
-    const body = res.json<{ slug: string; title: string }[]>();
+    const body = res.json<DownloadsListItem[]>();
 
     const slugs = body.map((s) => s.slug);
     expect(slugs).toContain(zebra.slug);
     expect(slugs).toContain(aardvark.slug);
-    expect(slugs).not.toContain(noBuild.slug);
-    expect(slugs).not.toContain(onlyFailed.slug);
+    expect(slugs).toContain(noBuild.slug);
+    expect(slugs).toContain(onlyFailed.slug);
 
-    const aardvarkIndex = body.findIndex((s) => s.slug === aardvark.slug);
-    const zebraIndex = body.findIndex((s) => s.slug === zebra.slug);
-    expect(aardvarkIndex).toBeLessThan(zebraIndex);
+    const indexOf = (slug: string) => body.findIndex((s) => s.slug === slug);
+    // Alphabetical within the populated group.
+    expect(indexOf(aardvark.slug)).toBeLessThan(indexOf(zebra.slug));
+    // Alphabetical within the empty group ("no-build-yet" < "only-failed").
+    expect(indexOf(noBuild.slug)).toBeLessThan(indexOf(onlyFailed.slug));
+    // Every populated dictionary precedes every empty one.
+    expect(indexOf(aardvark.slug)).toBeLessThan(indexOf(noBuild.slug));
+    expect(indexOf(aardvark.slug)).toBeLessThan(indexOf(onlyFailed.slug));
+    expect(indexOf(zebra.slug)).toBeLessThan(indexOf(noBuild.slug));
+    expect(indexOf(zebra.slug)).toBeLessThan(indexOf(onlyFailed.slug));
 
     for (const item of body) {
-      expect(item).toHaveProperty("slug");
-      expect(item).toHaveProperty("title");
-      expect(Object.keys(item).sort()).toEqual(["slug", "title"]);
+      expect(Object.keys(item).sort()).toEqual(["entryCount", "lastModifiedAt", "slug", "title"]);
     }
   });
 
-  it("omits a series whose latest successful build has zero entries", async () => {
+  it("reports a non-null ISO lastModifiedAt for a series with a non-empty successful build", async () => {
+    const populated = await createTestSeries("populated");
+    const build = await createSuccessBuild(populated.id, "only", new Date());
+
+    const res = await app.inject({ method: "GET", url: "/api/downloads" });
+    expect(res.statusCode).toBe(200);
+    const item = res.json<DownloadsListItem[]>().find((s) => s.slug === populated.slug);
+    expect(item?.entryCount).toBe(1);
+    expect(item?.lastModifiedAt).toBe(build.createdAt.toISOString());
+  });
+
+  it("includes a series with no successful build, with entryCount 0 and lastModifiedAt null", async () => {
+    const noBuild = await createTestSeries("no-build-yet-2");
+
+    const res = await app.inject({ method: "GET", url: "/api/downloads" });
+    expect(res.statusCode).toBe(200);
+    const item = res.json<DownloadsListItem[]>().find((s) => s.slug === noBuild.slug);
+    expect(item).toMatchObject({ entryCount: 0, lastModifiedAt: null });
+  });
+
+  it("includes a series whose latest successful build has zero entries, with entryCount 0 and lastModifiedAt null", async () => {
     const empty = await createTestSeries("empty-build");
     await prisma.build.create({
       data: { seriesId: empty.id, status: "SUCCESS", contentHash: "empty-hash", entryCount: 0 },
@@ -244,11 +271,11 @@ describe("GET /api/downloads", () => {
 
     const res = await app.inject({ method: "GET", url: "/api/downloads" });
     expect(res.statusCode).toBe(200);
-    const slugs = res.json<{ slug: string }[]>().map((s) => s.slug);
-    expect(slugs).not.toContain(empty.slug);
+    const item = res.json<DownloadsListItem[]>().find((s) => s.slug === empty.slug);
+    expect(item).toMatchObject({ entryCount: 0, lastModifiedAt: null });
   });
 
-  it("omits a series whose latest successful build is empty, even though an earlier build was not", async () => {
+  it("includes a series whose latest build is empty with entryCount 0 and lastModifiedAt null, even though an earlier build was not", async () => {
     const becameEmpty = await createTestSeries("became-empty");
     await createSuccessBuild(becameEmpty.id, "old-nonempty", new Date(Date.now() - 10_000));
     await prisma.build.create({
@@ -263,8 +290,8 @@ describe("GET /api/downloads", () => {
 
     const res = await app.inject({ method: "GET", url: "/api/downloads" });
     expect(res.statusCode).toBe(200);
-    const slugs = res.json<{ slug: string }[]>().map((s) => s.slug);
-    expect(slugs).not.toContain(becameEmpty.slug);
+    const item = res.json<DownloadsListItem[]>().find((s) => s.slug === becameEmpty.slug);
+    expect(item).toMatchObject({ entryCount: 0, lastModifiedAt: null });
   });
 
   it("requires no authentication", async () => {

@@ -264,9 +264,11 @@ export async function apiGetSeriesList(page = 1, limit?: number): Promise<Series
   return handleResponse<SeriesListItemDto[]>(res);
 }
 
-export async function apiGetDownloads(): Promise<{ slug: string; title: string }[]> {
+export async function apiGetDownloads(): Promise<
+  { slug: string; title: string; entryCount: number; lastModifiedAt: string | null }[]
+> {
   const res = await fetch("/api/downloads", { credentials: "include" });
-  return handleResponse<{ slug: string; title: string }[]>(res);
+  return handleResponse<{ slug: string; title: string; entryCount: number; lastModifiedAt: string | null }[]>(res);
 }
 
 export async function apiGetSeries(slug: string): Promise<SeriesDto> {
