@@ -127,6 +127,42 @@ describe("POST /api/entries/:id/edit-proposals", () => {
     expect(entry.definitionHtml).toBe("<p>A test definition.</p>");
   });
 
+  it("turns a paragraph break in a proposed definition into a line break", async () => {
+    const memberCookie = await setupMember();
+    const series = await createTestSeries("plaintext-newline");
+    const { id } = await createTestEntry(series.id, { headword: "Newlineword" });
+
+    const res = await app.inject({
+      method: "POST",
+      url: `/api/entries/${id}/edit-proposals`,
+      headers: { cookie: memberCookie },
+      payload: { definitionHtml: "First paragraph.\n\nSecond paragraph.", inflections: [] },
+    });
+    expect(res.statusCode).toBe(201);
+
+    const proposal = await prisma.entryEditProposal.findFirstOrThrow({ where: { entryId: id } });
+    expect(proposal.proposedDefinitionHtml).toBe("First paragraph.<br /><br />Second paragraph.");
+  });
+
+  it("turns a tab in a proposed definition into visible spacing", async () => {
+    const memberCookie = await setupMember();
+    const series = await createTestSeries("plaintext-tab");
+    const { id } = await createTestEntry(series.id, { headword: "Tabword" });
+
+    const res = await app.inject({
+      method: "POST",
+      url: `/api/entries/${id}/edit-proposals`,
+      headers: { cookie: memberCookie },
+      payload: { definitionHtml: "Word:\tDefinition", inflections: [] },
+    });
+    expect(res.statusCode).toBe(201);
+
+    const proposal = await prisma.entryEditProposal.findFirstOrThrow({ where: { entryId: id } });
+    // sanitizeDefinitionHtml decodes the "&nbsp;" entities plainTextToSafeHtml
+    // inserted into real non-breaking-space (U+00A0) characters on write.
+    expect(proposal.proposedDefinitionHtml).toBe("Word:    Definition");
+  });
+
   it("SEC-003: rejects more than 50 inflections before any database write", async () => {
     const memberCookie = await setupMember();
     const series = await createTestSeries("too-many-inflections");
@@ -312,7 +348,7 @@ describe("POST /api/entries/:id/edit-proposals", () => {
     expect(body.status).toBe("APPROVED");
 
     const entry = await prisma.entry.findUniqueOrThrow({ where: { id }, include: { inflections: true } });
-    expect(entry.definitionHtml).toBe("<p>Admin-applied text.</p>");
+    expect(entry.definitionHtml).toBe("&lt;p&gt;Admin-applied text.&lt;/p&gt;");
     expect(entry.inflections.map((i) => i.value)).toEqual(["New"]);
 
     const proposal = await prisma.entryEditProposal.findUniqueOrThrow({ where: { id: body.id } });
@@ -325,8 +361,42 @@ describe("POST /api/entries/:id/edit-proposals", () => {
     expect(updateRevision).toBeDefined();
     expect(updateRevision?.authorId).toBe(admin.id);
     const snapshot = updateRevision?.snapshot as { definitionHtml?: string; inflections?: string[] } | null;
-    expect(snapshot?.definitionHtml).toBe("<p>Admin-applied text.</p>");
+    expect(snapshot?.definitionHtml).toBe("&lt;p&gt;Admin-applied text.&lt;/p&gt;");
     expect(snapshot?.inflections).toEqual(["New"]);
+  });
+
+  it("turns a paragraph break into a line break when an admin's edit applies immediately", async () => {
+    const adminCookie = await setupAdmin();
+    const series = await createTestSeries("admin-plaintext-newline");
+    const { id } = await createTestEntry(series.id, { headword: "Adminnewlineword" });
+
+    const res = await app.inject({
+      method: "POST",
+      url: `/api/entries/${id}/edit-proposals`,
+      headers: { cookie: adminCookie },
+      payload: { definitionHtml: "First paragraph.\n\nSecond paragraph.", inflections: [] },
+    });
+    expect(res.statusCode).toBe(201);
+
+    const entry = await prisma.entry.findUniqueOrThrow({ where: { id } });
+    expect(entry.definitionHtml).toBe("First paragraph.<br /><br />Second paragraph.");
+  });
+
+  it("turns a tab into visible spacing when an admin's edit applies immediately", async () => {
+    const adminCookie = await setupAdmin();
+    const series = await createTestSeries("admin-plaintext-tab");
+    const { id } = await createTestEntry(series.id, { headword: "Admintabword" });
+
+    const res = await app.inject({
+      method: "POST",
+      url: `/api/entries/${id}/edit-proposals`,
+      headers: { cookie: adminCookie },
+      payload: { definitionHtml: "Word:\tDefinition", inflections: [] },
+    });
+    expect(res.statusCode).toBe(201);
+
+    const entry = await prisma.entry.findUniqueOrThrow({ where: { id } });
+    expect(entry.definitionHtml).toBe("Word:    Definition");
   });
 
   it("never queues an admin's self-approved edit in the review queue", async () => {
@@ -374,7 +444,7 @@ describe("POST /api/entries/:id/edit-proposals", () => {
 
     const memberProposal = await prisma.entryEditProposal.findUniqueOrThrow({ where: { id: memberProposalId } });
     expect(memberProposal.status).toBe("PENDING");
-    expect(memberProposal.proposedDefinitionHtml).toBe("<p>Member's proposal.</p>");
+    expect(memberProposal.proposedDefinitionHtml).toBe("&lt;p&gt;Member's proposal.&lt;/p&gt;");
   });
 
   it("allows exactly one success under concurrent submissions from two administrators for the same entry", async () => {
@@ -635,7 +705,7 @@ describe("GET /api/admin/entry-edit-proposals/:id", () => {
     expect(body.current.headword).toBe("Detailword");
     expect(body.current.definitionHtml).toBe("<p>A test definition.</p>");
     expect(body.current.inflections.map((i) => i.value)).toEqual(["Original"]);
-    expect(body.proposed.definitionHtml).toBe("<p>Proposed text.</p>");
+    expect(body.proposed.definitionHtml).toBe("&lt;p&gt;Proposed text.&lt;/p&gt;");
     expect(body.proposed.inflections).toEqual(["Original", "New"]);
   });
 });
@@ -674,7 +744,7 @@ describe("POST /api/admin/entry-edit-proposals/:id/approve", () => {
     expect(res.statusCode).toBe(200);
 
     const entry = await prisma.entry.findUniqueOrThrow({ where: { id }, include: { inflections: true } });
-    expect(entry.definitionHtml).toBe("<p>Approved text.</p>");
+    expect(entry.definitionHtml).toBe("&lt;p&gt;Approved text.&lt;/p&gt;");
     expect(entry.inflections.map((i) => i.value)).toEqual(["New"]);
 
     const proposal = await prisma.entryEditProposal.findUniqueOrThrow({ where: { id: proposalId } });

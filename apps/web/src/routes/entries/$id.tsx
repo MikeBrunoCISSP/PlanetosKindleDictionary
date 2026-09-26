@@ -1,4 +1,4 @@
-import { useRef, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import { createFileRoute } from "@tanstack/react-router";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -13,6 +13,7 @@ import {
   type PublicEntryDto,
 } from "@planetos/shared";
 import { apiGetEntryPublic, apiGetSeriesWords, apiSubmitEntryEditProposal, ApiError } from "@/lib/api";
+import { definitionHtmlToPlainText } from "@/lib/definitionPlainText";
 import { useMe } from "@/lib/useMe";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -115,6 +116,17 @@ function EntryEditForm({
   ]);
   const existingNormalized = new Set(existingWords.map(normalizeWord).filter((word) => !ownWords.has(word)));
 
+  // The stored definitionHtml may contain real <br>/&nbsp; markup generated
+  // from a previous plain-text submission - reverse it back to plain text
+  // for the textarea, so the control never shows or resubmits raw markup
+  // as literal text (design.md Decision 4). Captured once, at mount, same
+  // as baselineRef below - not expected to react to entry.definitionHtml
+  // changing later during the same edit session.
+  const initialDefinitionPlainText = useMemo(
+    () => definitionHtmlToPlainText(entry.definitionHtml),
+    [entry.definitionHtml]
+  );
+
   const {
     register,
     handleSubmit,
@@ -124,7 +136,7 @@ function EntryEditForm({
   } = useForm<SubmitEntryEditProposalDto>({
     resolver: zodResolver(submitEntryEditProposalSchema),
     defaultValues: {
-      definitionHtml: entry.definitionHtml,
+      definitionHtml: initialDefinitionPlainText,
       inflections: entry.inflections.map((inflection) => inflection.value),
     },
     mode: "onChange",
@@ -138,7 +150,7 @@ function EntryEditForm({
   // own formState.isDirty, which compares raw string equality against
   // defaultValues and can't tell "retyped the same text" from a real edit.
   const baselineRef = useRef({
-    definition: normalizeWord(entry.definitionHtml),
+    definition: normalizeWord(initialDefinitionPlainText),
     inflections: entry.inflections.map((inflection) => normalizeWord(inflection.value)).sort(),
   });
 

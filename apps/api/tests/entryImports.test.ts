@@ -232,6 +232,40 @@ describe("POST /api/series/:slug/entries/import", () => {
     expect(entry.definitionHtml).toBe("First paragraph.<br /><br />Second paragraph.");
   });
 
+  it("treats a Windows-style line ending the same as a double newline", async () => {
+    const adminCookie = await setupAdmin();
+    const series = await createTestSeries("crlf");
+
+    const res = await app.inject({
+      method: "POST",
+      url: `/api/series/${series.slug}/entries/import`,
+      headers: { cookie: adminCookie },
+      payload: { entries: { Braavos: entryValue("First paragraph.\r\nSecond paragraph.") } },
+    });
+
+    expect(res.statusCode).toBe(200);
+    const entry = await prisma.entry.findFirstOrThrow({ where: { seriesId: series.id, headword: "Braavos" } });
+    expect(entry.definitionHtml).toBe("First paragraph.<br /><br />Second paragraph.");
+  });
+
+  it("converts a tab character into visible spacing", async () => {
+    const adminCookie = await setupAdmin();
+    const series = await createTestSeries("tabs");
+
+    const res = await app.inject({
+      method: "POST",
+      url: `/api/series/${series.slug}/entries/import`,
+      headers: { cookie: adminCookie },
+      payload: { entries: { Braavos: entryValue("Word:\tDefinition") } },
+    });
+
+    expect(res.statusCode).toBe(200);
+    const entry = await prisma.entry.findFirstOrThrow({ where: { seriesId: series.id, headword: "Braavos" } });
+    // sanitizeDefinitionHtml decodes the "&nbsp;" entities plainTextToSafeHtml
+    // inserted into real non-breaking-space (U+00A0) characters on write.
+    expect(entry.definitionHtml).toBe("Word:    Definition");
+  });
+
   describe("Inflections", () => {
     it("creates an entry with its inflections, which appear on the resulting entry", async () => {
       const adminCookie = await setupAdmin();

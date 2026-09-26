@@ -8,7 +8,7 @@ import {
   type EntryEditProposalDto,
   type PendingQueueItemDto,
 } from "@planetos/shared";
-import { sanitizeDefinitionHtml } from "@planetos/shared/sanitize";
+import { plainTextToSafeHtml, sanitizeDefinitionHtml } from "@planetos/shared/sanitize";
 import { makeRequireAdmin } from "../plugins/requireAdmin.js";
 import { makeRequireAuth } from "../plugins/requireAuth.js";
 import { WRITE_RATE_LIMIT } from "../plugins/rateLimit.js";
@@ -171,7 +171,7 @@ const entryEditProposalRoutes: FastifyPluginAsync<{ prisma: PrismaClient }> = as
         throw Errors.NOT_FOUND();
       }
 
-      const definitionHtml = sanitizeDefinitionHtml(body.definitionHtml);
+      const definitionHtml = sanitizeDefinitionHtml(plainTextToSafeHtml(body.definitionHtml));
       const headwordNormalized = normalizeWord(entry.headword);
       const currentNormalized = new Set(entry.inflections.map((i) => normalizeWord(i.value)));
 

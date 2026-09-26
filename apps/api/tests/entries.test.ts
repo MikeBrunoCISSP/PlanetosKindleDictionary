@@ -310,7 +310,7 @@ describe("POST /api/series/:slug/entries", () => {
     expect(res.statusCode).toBe(400);
   });
 
-  it("sanitizes disallowed markup out of the definition instead of rejecting it", async () => {
+  it("treats markup-like text in the definition as literal plain text, not HTML", async () => {
     const memberCookie = await setupMember();
     const series = await createTestSeries("sanitize-def");
     const res = await app.inject({
@@ -325,9 +325,105 @@ describe("POST /api/series/:slug/entries", () => {
     });
     expect(res.statusCode).toBe(201);
     const body = res.json<{ definitionHtml: string }>();
-    expect(body.definitionHtml).not.toContain("<script>");
-    expect(body.definitionHtml).not.toContain("<img");
-    expect(body.definitionHtml).toContain("Safe");
+    // The Definition field is treated as plain text (design.md Decision 1),
+    // so "<" is escaped before it can ever be parsed as a real tag - no real
+    // <script>/<img>/<p> element ever reaches storage, and the text renders
+    // as literal visible characters instead.
+    expect(body.definitionHtml).toBe(
+      '&lt;p&gt;Safe&lt;/p&gt;&lt;script&gt;alert(1)&lt;/script&gt;&lt;img src="x"&gt;'
+    );
+  });
+
+  it("turns a paragraph break in the definition into a line break", async () => {
+    const memberCookie = await setupMember();
+    const series = await createTestSeries("plain-text-newline");
+    const res = await app.inject({
+      method: "POST",
+      url: `/api/series/${series.slug}/entries`,
+      headers: { cookie: memberCookie },
+      payload: {
+        headword: "NewlineWord",
+        definitionHtml: "First paragraph.\n\nSecond paragraph.",
+        inflections: [],
+      },
+    });
+    expect(res.statusCode).toBe(201);
+    const body = res.json<{ definitionHtml: string }>();
+    expect(body.definitionHtml).toBe("First paragraph.<br /><br />Second paragraph.");
+  });
+
+  it("treats a Windows-style line ending the same as a double newline", async () => {
+    const memberCookie = await setupMember();
+    const series = await createTestSeries("plain-text-crlf");
+    const res = await app.inject({
+      method: "POST",
+      url: `/api/series/${series.slug}/entries`,
+      headers: { cookie: memberCookie },
+      payload: {
+        headword: "CrlfWord",
+        definitionHtml: "First paragraph.\r\nSecond paragraph.",
+        inflections: [],
+      },
+    });
+    expect(res.statusCode).toBe(201);
+    const body = res.json<{ definitionHtml: string }>();
+    expect(body.definitionHtml).toBe("First paragraph.<br /><br />Second paragraph.");
+  });
+
+  it("turns a lone carriage return into a single line break", async () => {
+    const memberCookie = await setupMember();
+    const series = await createTestSeries("plain-text-cr");
+    const res = await app.inject({
+      method: "POST",
+      url: `/api/series/${series.slug}/entries`,
+      headers: { cookie: memberCookie },
+      payload: {
+        headword: "CrWord",
+        definitionHtml: "First line.\rSecond line.",
+        inflections: [],
+      },
+    });
+    expect(res.statusCode).toBe(201);
+    const body = res.json<{ definitionHtml: string }>();
+    expect(body.definitionHtml).toBe("First line.<br />Second line.");
+  });
+
+  it("turns a tab in the definition into visible spacing", async () => {
+    const memberCookie = await setupMember();
+    const series = await createTestSeries("plain-text-tab");
+    const res = await app.inject({
+      method: "POST",
+      url: `/api/series/${series.slug}/entries`,
+      headers: { cookie: memberCookie },
+      payload: {
+        headword: "TabWord",
+        definitionHtml: "Word:\tDefinition",
+        inflections: [],
+      },
+    });
+    expect(res.statusCode).toBe(201);
+    const body = res.json<{ definitionHtml: string }>();
+    // sanitizeDefinitionHtml decodes the "&nbsp;" entities plainTextToSafeHtml
+    // inserted into real non-breaking-space (U+00A0) characters on write.
+    expect(body.definitionHtml).toBe("Word:    Definition");
+  });
+
+  it("preserves a literal ampersand in ordinary prose as visible text", async () => {
+    const memberCookie = await setupMember();
+    const series = await createTestSeries("plain-text-amp");
+    const res = await app.inject({
+      method: "POST",
+      url: `/api/series/${series.slug}/entries`,
+      headers: { cookie: memberCookie },
+      payload: {
+        headword: "AmpWord",
+        definitionHtml: "Fish & chips",
+        inflections: [],
+      },
+    });
+    expect(res.statusCode).toBe(201);
+    const body = res.json<{ definitionHtml: string }>();
+    expect(body.definitionHtml).toBe("Fish &amp; chips");
   });
 
   it("returns 409 when the headword duplicates an existing headword (case-insensitive, trimmed)", async () => {

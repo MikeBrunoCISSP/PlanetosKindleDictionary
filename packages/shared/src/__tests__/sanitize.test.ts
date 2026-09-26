@@ -104,4 +104,24 @@ describe("plainTextToSafeHtml", () => {
     expect(result).toBe("Fish &amp; chips");
     expect(definitionExcerpt(sanitizeDefinitionHtml(result))).toBe("Fish & chips");
   });
+
+  it("turns a Windows-style line ending into two line breaks, same as a double newline", () => {
+    const result = plainTextToSafeHtml("First paragraph.\r\nSecond paragraph.");
+    expect(result).toBe("First paragraph.<br><br>Second paragraph.");
+  });
+
+  it("turns a lone carriage return into a single line break", () => {
+    const result = plainTextToSafeHtml("First line.\rSecond line.");
+    expect(result).toBe("First line.<br>Second line.");
+  });
+
+  it("turns a tab into a run of non-breaking spaces", () => {
+    const result = plainTextToSafeHtml("Word:\tDefinition");
+    expect(result).toBe("Word:&nbsp;&nbsp;&nbsp;&nbsp;Definition");
+  });
+
+  it("handles a mix of \\r\\n, a lone \\r, \\n, and \\t together", () => {
+    const result = plainTextToSafeHtml("A\r\nB\rC\nD\tE");
+    expect(result).toBe("A<br><br>B<br>C<br>D&nbsp;&nbsp;&nbsp;&nbsp;E");
+  });
 });

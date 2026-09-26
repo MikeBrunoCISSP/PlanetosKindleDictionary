@@ -8,7 +8,7 @@ import {
   type EntrySummaryDto,
   type PublicEntryDto,
 } from "@planetos/shared";
-import { sanitizeDefinitionHtml } from "@planetos/shared/sanitize";
+import { plainTextToSafeHtml, sanitizeDefinitionHtml } from "@planetos/shared/sanitize";
 import { makeRequireAdmin } from "../plugins/requireAdmin.js";
 import { makeRequireAuth, makeRequireApproved } from "../plugins/requireAuth.js";
 import { WRITE_RATE_LIMIT } from "../plugins/rateLimit.js";
@@ -106,7 +106,7 @@ const entriesRoutes: FastifyPluginAsync<{ prisma: PrismaClient }> = async (fasti
       const series = await prisma.series.findUnique({ where: { slug }, select: { id: true } });
       if (!series) throw Errors.NOT_FOUND();
 
-      const definitionHtml = sanitizeDefinitionHtml(body.definitionHtml);
+      const definitionHtml = sanitizeDefinitionHtml(plainTextToSafeHtml(body.definitionHtml));
       const sortKey = normalizeWord(body.headword);
 
       try {

@@ -26,15 +26,22 @@ export function sanitizeDefinitionHtml(html: string): string {
 }
 
 // Escapes so a stray "<" or "&" in imported plain text can't be mistaken
-// for markup, then turns newlines into real line breaks - for plain-text
-// sources (e.g. a bulk-import file) that were never meant to carry HTML.
-// Escaping happens before the "<br>" tags are inserted so the tags
-// themselves aren't escaped too. Run the result through
+// for markup, then normalizes line endings and turns them into real line
+// breaks - for plain-text sources (e.g. a bulk-import file) that were never
+// meant to carry HTML. A "\r\n" pair becomes two line breaks (same as
+// "\n\n"), and a lone "\r" becomes one line break (same as a lone "\n"), so
+// no raw control character is ever left embedded in the stored HTML. A tab
+// becomes a small run of non-breaking spaces, since a literal tab character
+// would otherwise collapse to nothing under normal HTML whitespace rules.
+// Escaping happens before the "<br>"/"&nbsp;" markup is inserted so the
+// markup itself isn't escaped too. Run the result through
 // sanitizeDefinitionHtml as well before storing it (defense-in-depth,
 // consistent with the single-entry write path).
 export function plainTextToSafeHtml(text: string): string {
   const escaped = text.replace(/&/g, "&amp;").replace(/</g, "&lt;");
-  return escaped.replace(/\n/g, "<br>");
+  const normalizedBreaks = escaped.replace(/\r\n/g, "\n\n").replace(/\r/g, "\n");
+  const withLineBreaks = normalizedBreaks.replace(/\n/g, "<br>");
+  return withLineBreaks.replace(/\t/g, "&nbsp;&nbsp;&nbsp;&nbsp;");
 }
 
 // sanitize-html re-escapes text nodes for safe HTML re-serialization (its
