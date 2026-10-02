@@ -9,7 +9,9 @@ cd infra
 docker compose up -d
 ```
 
-Starts Postgres 16 (`:5432`), Redis 7 (`:6379`), and MinIO (`:9000` / `:9001`). Wait a few seconds for the health checks to pass before continuing.
+Starts Postgres 16 (`:5432`), Redis 7 (`:6379`), MinIO (`:9000` / `:9001`), and Mailpit (`:1025` SMTP / `:8025` web UI). Wait a few seconds for the health checks to pass before continuing.
+
+After first-time setup, use `pnpm dev:up` instead (see [Day-to-day development](#day-to-day-development)). It does this step for you.
 
 ### 2. Create your `.env`
 
@@ -63,6 +65,72 @@ pnpm dev
 - Web: `http://localhost:5173`
 
 Log in at `http://localhost:5173/login` with the credentials from your `.env`.
+
+---
+
+## Day-to-day development
+
+Once first-time setup is done, three root scripts cover starting and stopping everything.
+
+| Command | What it does |
+|---|---|
+| `pnpm dev:up` | Starts the containers if needed, then starts the app |
+| `pnpm stop:app` | Stops the app dev servers; leaves the containers running |
+| `pnpm stop:containers` | Stops the containers; leaves the app alone |
+
+### Start everything: `pnpm dev:up`
+
+```bash
+pnpm dev:up
+```
+
+1. Checks that Docker is running. If it isn't, it exits and tells you to start Docker Desktop.
+2. Checks every service in `infra/docker-compose.yml`. If they're all running and healthy, it skips straight to the app.
+3. Otherwise it runs `docker compose up -d` and waits up to 90 seconds for the containers to become healthy, printing each one's status every 2 seconds.
+4. Runs `pnpm run dev`, which builds the shared packages and then starts the web, API, and worker dev servers in watch mode.
+
+It's safe to run at any time. Press `Ctrl+C` to stop the app; the containers keep running.
+
+### Debugging locally
+
+While `pnpm dev:up` is running:
+
+| What | Where |
+|---|---|
+| Web app (Vite, hot reload) | http://localhost:5173 |
+| API (`tsx watch`, restarts on save) | http://localhost:3000 |
+| Emails the app sends (Mailpit inbox) | http://localhost:8025 |
+| MinIO console (built `.epub` and `sources.zip` files) | http://localhost:9001 |
+
+- The web dev server proxies `/api` to `:3000`, so in the browser, call the API through `:5173` the same way the app does.
+- API and worker logs share one terminal, labelled `[api]` (blue) and `[worker]` (magenta).
+- Nothing sends real email locally. Verification and password-reset emails land in Mailpit, so open its inbox to click their links.
+- If a container won't become healthy, `pnpm dev:up` times out and names it. Check that container's logs with `docker compose -f infra/docker-compose.yml logs <service>`.
+
+### Stop just the app: `pnpm stop:app`
+
+```bash
+pnpm stop:app
+```
+
+Stops the Vite, `tsx watch`, and `tsc --watch` processes for this repo, along with the `pnpm` and `concurrently` processes wrapping them. It finds them by command line, not PID file. That means it also stops dev servers started by an editor, an agent, or a terminal you've closed.
+
+It only matches processes whose command line contains this repo's path, so dev servers from other projects are left alone. The containers keep running.
+
+### Stop just the containers: `pnpm stop:containers`
+
+```bash
+pnpm stop:containers
+```
+
+Runs `docker compose stop` on Postgres, Redis, MinIO, and Mailpit. The containers are stopped, not removed, and their volumes are kept, so your database and built dictionary files are still there on the next `pnpm dev:up`.
+
+To stop everything, run both:
+
+```bash
+pnpm stop:app
+pnpm stop:containers
+```
 
 ---
 

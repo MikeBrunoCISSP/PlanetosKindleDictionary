@@ -16,9 +16,10 @@ import {
 interface DictionaryMultiSelectProps {
   selectedIds: string[];
   onChange: (ids: string[]) => void;
+  triggerClassName?: string;
 }
 
-export function DictionaryMultiSelect({ selectedIds, onChange }: DictionaryMultiSelectProps) {
+export function DictionaryMultiSelect({ selectedIds, onChange, triggerClassName }: DictionaryMultiSelectProps) {
   const [open, setOpen] = useState(false);
 
   // 200 = the server's own hard max (apps/api/src/routes/series.ts's listQuerySchema).
@@ -49,8 +50,8 @@ export function DictionaryMultiSelect({ selectedIds, onChange }: DictionaryMulti
 
   return (
     <div className="space-y-1.5">
-      <Button type="button" variant="outline" onClick={() => setOpen(true)}>
-        Filter by dictionary...
+      <Button type="button" variant="outline" className={triggerClassName} onClick={() => setOpen(true)}>
+        Filter by dictionary…
       </Button>
 
       {selectedSeries.length > 0 && (

@@ -1,7 +1,7 @@
 try {
-  if (localStorage.getItem("planetos-theme") === "dark") {
+  if (localStorage.getItem("planetos-theme") !== "light") {
     document.documentElement.classList.add("dark");
   }
 } catch (e) {
-  // ignore
+  document.documentElement.classList.add("dark");
 }

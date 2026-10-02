@@ -1,7 +1,7 @@
 import { createFileRoute, useNavigate, Link } from "@tanstack/react-router";
 import { useEffect, useState, type FormEvent } from "react";
 import { z } from "zod";
-import { ArrowRightIcon } from "lucide-react";
+import { SearchIcon } from "lucide-react";
 import { seriesIdsFilterSchema } from "@planetos/shared";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -45,47 +45,54 @@ function SearchPage() {
 
   const hasQuery = Boolean(q && q.length > 0);
 
-  if (!hasQuery) {
-    return (
-      <div className="flex min-h-svh items-center justify-center p-4">
-        <div className="w-full max-w-xl text-center space-y-6">
-          <h1 className="text-4xl font-bold">eReader Dictionaries</h1>
-          <form onSubmit={handleSubmit} className="flex gap-2">
-            <Input
-              autoFocus
-              value={inputValue}
-              onChange={(event) => setInputValue(event.target.value)}
-              placeholder="Search dictionary entries…"
-              className="h-12 text-lg"
-            />
-            <Button type="submit" size="icon" className="h-12 w-12" aria-label="Search">
-              <ArrowRightIcon className="size-5" />
-            </Button>
-          </form>
-          <Link to="/downloads" className="text-sm underline underline-offset-2 hover:no-underline">
-            Download the latest dictionaries
-          </Link>
-        </div>
-      </div>
-    );
-  }
-
   return (
-    <div className="mx-auto max-w-4xl w-full space-y-6 p-4 sm:p-8">
+    <div className="mx-auto w-full max-w-3xl px-4 py-10 sm:px-8 sm:py-14">
+      {!hasQuery && (
+        <div className="mb-8">
+          <h1 className="text-4xl font-semibold sm:text-5xl">Look up a word</h1>
+          <p className="mt-3 font-serif text-lg text-muted-foreground">
+            Search headwords and their forms across every dictionary, or narrow it to the series you're reading.
+          </p>
+        </div>
+      )}
       <div className="flex flex-wrap items-start gap-2">
-        <form onSubmit={handleSubmit} className="flex min-w-48 flex-1 gap-2">
+        <form onSubmit={handleSubmit} role="search" className="flex min-w-56 flex-1 gap-2">
           <Input
+            autoFocus={!hasQuery}
             value={inputValue}
             onChange={(event) => setInputValue(event.target.value)}
             placeholder="Search dictionary entries…"
+            aria-label="Search dictionary entries"
+            className={hasQuery ? "h-10 text-base" : "h-12 font-serif text-xl md:text-xl"}
           />
-          <Button type="submit" size="icon" aria-label="Search">
-            <ArrowRightIcon className="size-4" />
+          <Button
+            type="submit"
+            size="icon"
+            className={hasQuery ? "size-10" : "size-12"}
+            aria-label="Search"
+          >
+            <SearchIcon className="size-5" />
           </Button>
         </form>
-        <DictionaryMultiSelect selectedIds={seriesIds ?? []} onChange={handleSeriesIdsChange} />
+        <DictionaryMultiSelect
+          selectedIds={seriesIds ?? []}
+          onChange={handleSeriesIdsChange}
+          triggerClassName={hasQuery ? "h-10 px-3" : "h-12 px-4 text-base"}
+        />
       </div>
-      <SearchResults query={q ?? ""} page={page} seriesIds={seriesIds ?? []} />
+      {hasQuery ? (
+        <div className="mt-8">
+          <SearchResults query={q ?? ""} page={page} seriesIds={seriesIds ?? []} />
+        </div>
+      ) : (
+        <p className="mt-6 text-sm text-muted-foreground">
+          Looking for a whole dictionary instead?{" "}
+          <Link to="/downloads" className="underline underline-offset-2 hover:text-foreground">
+            Download one
+          </Link>
+          .
+        </p>
+      )}
     </div>
   );
 }

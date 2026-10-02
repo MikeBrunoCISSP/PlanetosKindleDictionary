@@ -11,7 +11,7 @@ function getStoredTheme(): Theme {
   } catch {
     // localStorage unavailable (private browsing, etc.)
   }
-  return "light";
+  return "dark";
 }
 
 interface ThemeContextValue {
@@ -20,7 +20,7 @@ interface ThemeContextValue {
 }
 
 export const ThemeContext = createContext<ThemeContextValue>({
-  theme: "light",
+  theme: "dark",
   setTheme: () => undefined,
 });
 

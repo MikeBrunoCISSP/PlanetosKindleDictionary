@@ -14,17 +14,25 @@ function ExternalLink({ href, children }: { href: string; children: ReactNode })
 }
 
 function SectionHeading({ children }: { children: ReactNode }) {
-  return <h2 className="text-xl font-bold mt-8 mb-3">{children}</h2>;
+  return <h2 className="mt-12 mb-4 border-b pb-3 text-3xl font-semibold">{children}</h2>;
 }
 
-function StepHeading({ children }: { children: ReactNode }) {
-  return <h3 className="font-semibold mt-6 mb-1.5">{children}</h3>;
+function StepHeading({ step, children }: { step: number; children: ReactNode }) {
+  return (
+    <h3 className="mt-10 mb-2 flex items-baseline gap-3 text-xl font-semibold">
+      <span aria-hidden="true" className="w-6 shrink-0 text-right text-2xl font-normal text-primary">
+        {step}
+      </span>
+      <span className="sr-only">Step {step}: </span>
+      {children}
+    </h3>
+  );
 }
 
 export function KindleConversionInstructions() {
   return (
-    <div className="space-y-4 text-sm leading-relaxed">
-      <SectionHeading>A Note for Kindle Users</SectionHeading>
+    <div className="space-y-4 text-base leading-relaxed [&_code]:rounded-sm [&_code]:bg-muted [&_code]:px-1 [&_code]:text-[0.92em] [&_a]:text-primary">
+      <SectionHeading>A note for Kindle users</SectionHeading>
       <p>
         The dictionary files downloaded from this page will need to be converted to <code>.mobi</code> format before
         being loaded onto your device. The following video by{" "}
@@ -35,7 +43,7 @@ export function KindleConversionInstructions() {
         href="https://www.youtube.com/watch?v=b7xAchBBNjo"
         target="_blank"
         rel="noopener noreferrer"
-        className="group relative block aspect-video w-full max-w-xl overflow-hidden rounded-md border"
+        className="group relative block aspect-video w-full max-w-xl overflow-hidden rounded-lg border focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
       >
         <img
           src="https://img.youtube.com/vi/b7xAchBBNjo/maxresdefault.jpg"
@@ -58,9 +66,9 @@ export function KindleConversionInstructions() {
         </div>
       </a>
 
-      <SectionHeading>Detailed Instructions</SectionHeading>
+      <SectionHeading>Detailed instructions</SectionHeading>
 
-      <StepHeading>1. Download and install Kindle Previewer</StepHeading>
+      <StepHeading step={1}>Download and install Kindle Previewer</StepHeading>
       <p>
         Visit Amazon's{" "}
         <ExternalLink href="https://www.amazon.com/Kindle-Previewer/b?ie=UTF8&node=21381691011">
@@ -90,7 +98,7 @@ export function KindleConversionInstructions() {
         These instructions are for a physical Kindle e-reader.
       </p>
 
-      <StepHeading>2. Convert the EPUB to a .mobi file</StepHeading>
+      <StepHeading step={2}>Convert the EPUB to a .mobi file</StepHeading>
       <p>The conversion steps are the same on Windows and Mac:</p>
       <ol className="list-decimal pl-5 space-y-1">
         <li>Open Kindle Previewer.</li>
@@ -130,7 +138,7 @@ export function KindleConversionInstructions() {
         .
       </p>
 
-      <StepHeading>3. Copy the dictionary to your Kindle over USB</StepHeading>
+      <StepHeading step={3}>Copy the dictionary to your Kindle over USB</StepHeading>
       <p>
         Use a USB cable that supports data transfer. For this workflow, copy the exported MOBI directly over USB; do
         not email it or upload it through wireless Send to Kindle.
@@ -191,7 +199,7 @@ export function KindleConversionInstructions() {
         original EPUB and exported MOBI on your computer for future reinstalls.
       </p>
 
-      <StepHeading>4. Select your custom dictionary</StepHeading>
+      <StepHeading step={4}>Select your custom dictionary</StepHeading>
       <ol className="list-decimal pl-5 space-y-1">
         <li>
           On the Kindle, open <strong>Settings &gt; All Settings</strong>, if shown.
@@ -207,7 +215,7 @@ export function KindleConversionInstructions() {
       </ol>
       <p>The setting applies per language. The dictionary's displayed title may differ from its filename.</p>
 
-      <StepHeading>5. Look up a word while reading</StepHeading>
+      <StepHeading step={5}>Look up a word while reading</StepHeading>
       <p>
         Open a book in the matching language and <strong>press and hold a word</strong> included in your custom
         dictionary. Its definition should appear in the lookup popup. Where supported, tap the dictionary name to
