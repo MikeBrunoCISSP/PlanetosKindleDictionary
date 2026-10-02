@@ -8,6 +8,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { CheckIcon, XIcon } from "lucide-react";
 import { Turnstile } from "@marsidev/react-turnstile";
 import { cn } from "@/lib/utils";
+import { SiteLogo } from "@/components/SiteLogo";
 import {
   apiGetTurnstileConfig,
   apiLogin,
@@ -80,10 +81,14 @@ function LoginPage() {
   };
 
   return (
-    <div className="flex min-h-svh items-center justify-center p-4">
+    <div className="flex flex-1 justify-center px-4 py-10 sm:py-16">
       <div className="w-full max-w-md">
-        <div className="mb-6 text-center">
-          <h1 className="text-2xl font-bold">eReader Dictionaries</h1>
+        <div className="mb-8 flex items-center gap-4">
+          <SiteLogo size={56} />
+          <div>
+            <h1 className="text-3xl font-semibold">Contributor account</h1>
+            <p className="text-muted-foreground">Sign in or register to add and edit entries.</p>
+          </div>
         </div>
         {mode === "forgot-password" ? (
           <ForgotPasswordForm />
@@ -469,7 +474,7 @@ function RegisterForm() {
                       key={requirement.id}
                       className={cn(
                         "flex items-center gap-1.5 text-sm",
-                        satisfied ? "text-green-600" : "text-red-600"
+                        satisfied ? "text-primary" : "text-destructive"
                       )}
                     >
                       {satisfied ? (

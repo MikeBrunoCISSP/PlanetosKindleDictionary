@@ -1,10 +1,10 @@
-import { useMemo, useRef, useState } from "react";
-import { createFileRoute } from "@tanstack/react-router";
+import { useMemo, useRef, useState, type ReactNode } from "react";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { XIcon } from "lucide-react";
+import { PencilIcon, XIcon } from "lucide-react";
 import {
   submitEntryEditProposalSchema,
   normalizeWord,
@@ -12,7 +12,7 @@ import {
   type SubmitEntryEditProposalDto,
   type PublicEntryDto,
 } from "@planetos/shared";
-import { apiGetEntryPublic, apiGetSeriesWords, apiSubmitEntryEditProposal, ApiError } from "@/lib/api";
+import { apiGetEntryPublic, apiGetSeries, apiGetSeriesWords, apiSubmitEntryEditProposal, ApiError } from "@/lib/api";
 import { definitionHtmlToPlainText } from "@/lib/definitionPlainText";
 import { useMe } from "@/lib/useMe";
 import { Button } from "@/components/ui/button";
@@ -35,59 +35,85 @@ function EntryDetailPage() {
     queryFn: () => apiGetEntryPublic(id),
   });
 
-  if (isLoading) return <p className="p-8 text-muted-foreground">Loading…</p>;
-  if (error || !entry) return <p className="p-8 text-destructive">Entry not found.</p>;
+  if (isLoading) return <p className="p-8 text-muted-foreground">Loading entry…</p>;
+  if (error || !entry) {
+    return <p className="p-8 text-destructive">This entry doesn't exist or has been removed.</p>;
+  }
 
   const canEdit = Boolean(me) && entry.approvalStatus === "APPROVED";
 
   return (
-    <div className="mx-auto max-w-3xl w-full space-y-6 p-4 sm:p-8">
+    <div className="mx-auto max-w-3xl w-full space-y-6 px-4 py-10 sm:px-8 sm:py-14">
       {mode === "edit" ? (
         <EntryEditForm entry={entry} onCancel={() => setMode("view")} onSubmitted={() => setMode("view")} />
       ) : (
         <>
-          {canEdit && (
-            <Button variant="outline" onClick={() => setMode("edit")}>
-              Edit
-            </Button>
-          )}
           {entry.approvalStatus === "PENDING" && (
-            <p className="rounded-md bg-muted p-3 text-sm text-muted-foreground">
+            <p className="border-l-2 border-primary bg-muted/60 py-2 pr-3 pl-4 text-sm text-muted-foreground">
               This entry is awaiting administrator approval.
             </p>
           )}
-          <EntryReadOnlyView entry={entry} />
+          <EntryReadOnlyView
+            entry={entry}
+            action={
+              canEdit && (
+                <Button variant="ghost" onClick={() => setMode("edit")} className="gap-1.5">
+                  <PencilIcon />
+                  Edit
+                </Button>
+              )
+            }
+          />
         </>
       )}
     </div>
   );
 }
 
-function EntryReadOnlyView({ entry }: { entry: PublicEntryDto }) {
+function EntryReadOnlyView({ entry, action }: { entry: PublicEntryDto; action?: ReactNode }) {
+  const { data: series } = useQuery({
+    queryKey: ["series", entry.seriesSlug],
+    queryFn: () => apiGetSeries(entry.seriesSlug),
+    staleTime: 60_000,
+  });
+
   return (
-    <div className="space-y-4">
-      <h1 className="text-3xl font-bold">{entry.headword}</h1>
+    <article className="space-y-6">
+      <div className="flex items-center justify-between gap-4">
+        <Link
+          to="/series/$slug"
+          params={{ slug: entry.seriesSlug }}
+          className="min-w-0 truncate font-serif text-lg text-muted-foreground italic hover:text-foreground"
+        >
+          {series?.title ?? "Dictionary"}
+        </Link>
+        {action}
+      </div>
+
+      <header className="border-b pb-5">
+        <h1 className="font-headword text-5xl leading-none font-medium break-words">{entry.headword}</h1>
+        {entry.inflections.length > 0 && (
+          <p className="mt-3 font-serif text-lg text-muted-foreground">
+            also{" "}
+            {entry.inflections.map((inflection, index) => (
+              <span key={inflection.id}>
+                {index > 0 && ", "}
+                <em className="text-foreground">{inflection.value}</em>
+              </span>
+            ))}
+          </p>
+        )}
+      </header>
+
       <div
-        className="text-sm"
+        className="prose-definition"
         // definitionHtml is sanitized to a strict allowlist server-side on save
         // (SPEC.md §5.4, packages/shared/sanitize.ts) before it can ever reach
         // storage - there is no path for unsanitized markup to appear here.
         // eslint-disable-next-line react/no-danger -- see comment above
         dangerouslySetInnerHTML={{ __html: entry.definitionHtml }}
       />
-      <div>
-        <p className="mb-1 text-sm font-medium">Inflections</p>
-        {entry.inflections.length === 0 ? (
-          <p className="text-sm text-muted-foreground">No inflections.</p>
-        ) : (
-          <ul className="list-inside list-disc text-sm">
-            {entry.inflections.map((inflection) => (
-              <li key={inflection.id}>{inflection.value}</li>
-            ))}
-          </ul>
-        )}
-      </div>
-    </div>
+    </article>
   );
 }
 

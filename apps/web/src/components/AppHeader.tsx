@@ -30,16 +30,17 @@ import { Button } from "@/components/ui/button";
 import { useMe, ME_QUERY_KEY } from "@/lib/useMe";
 import { apiGetSeriesList, apiDeleteSeries, apiLogout, ApiError } from "@/lib/api";
 import { cn } from "@/lib/utils";
+import { SiteLogo } from "@/components/SiteLogo";
+import { TopMenuStrip } from "@/components/TopMenuStrip";
 
 export function AppHeader() {
   const me = useMe();
 
   return (
-    <header className="flex items-center justify-between px-4 py-3 border-b bg-background">
-      <Link to="/" className="font-semibold text-lg">
-        eReader Dictionaries
-      </Link>
-      <div className="flex items-center gap-1">
+    <header className="flex items-center gap-4 border-b bg-background px-4 py-2.5 sm:px-6">
+      <Wordmark />
+      <TopMenuStrip placement="inline" />
+      <div className="ml-auto flex items-center gap-1">
         {me ? (
           <AccountMenu me={me} />
         ) : (
@@ -50,6 +51,21 @@ export function AppHeader() {
         <AppMenu me={me ?? null} />
       </div>
     </header>
+  );
+}
+
+export function Wordmark({ className }: { className?: string }) {
+  return (
+    <Link
+      to="/"
+      className={cn(
+        "flex shrink-0 items-center gap-2 rounded-md font-serif text-xl italic focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+        className
+      )}
+    >
+      <SiteLogo size={30} />
+      eReader Dictionaries
+    </Link>
   );
 }
 

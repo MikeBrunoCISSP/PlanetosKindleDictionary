@@ -2,7 +2,6 @@ import { useQuery } from "@tanstack/react-query";
 import { Link, useNavigate } from "@tanstack/react-router";
 import type { SearchResultItemDto } from "@planetos/shared";
 import { apiSearchEntries } from "@/lib/api";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
 
 export function SearchResults({
@@ -22,12 +21,16 @@ export function SearchResults({
     enabled: query.length > 0,
   });
 
-  if (isLoading) return <p className="text-muted-foreground">Loading search results…</p>;
-  if (error) return <p className="text-destructive">Failed to load search results.</p>;
+  if (isLoading) return <p className="text-muted-foreground">Searching…</p>;
+  if (error) return <p className="text-destructive">Couldn't load results. Try searching again.</p>;
   if (!data) return null;
 
   if (data.items.length === 0) {
-    return <p className="text-muted-foreground">No results for &quot;{query}&quot;.</p>;
+    return (
+      <p className="font-serif text-lg text-muted-foreground">
+        No entries match &ldquo;{query}&rdquo;. Try a different spelling or another dictionary.
+      </p>
+    );
   }
 
   function goToPage(newPage: number) {
@@ -35,69 +38,77 @@ export function SearchResults({
   }
 
   return (
-    <div className="space-y-4">
-      <Table>
-        <TableHeader>
-          <TableRow>
-            <TableHead>Dictionary</TableHead>
-            <TableHead>Word</TableHead>
-          </TableRow>
-        </TableHeader>
-        <TableBody>
-          {data.items.map((item) => (
-            <SearchResultRow key={item.entryId} item={item} />
-          ))}
-        </TableBody>
-      </Table>
+    <div className="space-y-8">
+      <ol className="divide-y border-y">
+        {data.items.map((item) => (
+          <SearchResultRow key={item.entryId} item={item} query={query} />
+        ))}
+      </ol>
 
-      <div className="flex items-center justify-center gap-4">
-        <Button variant="outline" size="sm" disabled={data.page <= 1} onClick={() => goToPage(data.page - 1)}>
-          Previous
-        </Button>
-        <span className="text-sm text-muted-foreground">
-          Page {data.page} of {data.totalPages}
-        </span>
-        <Button
-          variant="outline"
-          size="sm"
-          disabled={data.page >= data.totalPages}
-          onClick={() => goToPage(data.page + 1)}
-        >
-          Next
-        </Button>
-      </div>
+      {data.totalPages > 1 && (
+        <nav aria-label="Search result pages" className="flex items-center justify-between gap-4">
+          <Button variant="outline" disabled={data.page <= 1} onClick={() => goToPage(data.page - 1)}>
+            Previous
+          </Button>
+          <span className="text-sm text-muted-foreground tabular-nums">
+            Page {data.page} of {data.totalPages}
+          </span>
+          <Button variant="outline" disabled={data.page >= data.totalPages} onClick={() => goToPage(data.page + 1)}>
+            Next
+          </Button>
+        </nav>
+      )}
     </div>
   );
 }
 
-function SearchResultRow({ item }: { item: SearchResultItemDto }) {
+// Marks the part of a matched word that the query hit; falls back to the
+// whole word when the server matched it some other way (e.g. normalization).
+function MatchedWord({ text, query }: { text: string; query: string }) {
+  const index = query ? text.toLowerCase().indexOf(query.toLowerCase()) : -1;
+  if (index < 0) return <mark>{text}</mark>;
   return (
-    <TableRow>
-      <TableCell className="align-top whitespace-normal">
+    <>
+      {text.slice(0, index)}
+      <mark>{text.slice(index, index + query.length)}</mark>
+      {text.slice(index + query.length)}
+    </>
+  );
+}
+
+function SearchResultRow({ item, query }: { item: SearchResultItemDto; query: string }) {
+  return (
+    <li className="grid gap-x-6 gap-y-1 py-5 sm:grid-cols-[1fr_auto]">
+      <div className="min-w-0">
         <Link
-          to="/series/$slug"
-          params={{ slug: item.seriesSlug }}
-          className="underline underline-offset-2 hover:no-underline"
+          to="/entries/$id"
+          params={{ id: item.entryId }}
+          className="font-headword text-2xl leading-tight font-medium hover:underline hover:underline-offset-4"
         >
-          {item.seriesTitle}
+          {item.headwordMatched ? <MatchedWord text={item.headword} query={query} /> : item.headword}
         </Link>
-      </TableCell>
-      <TableCell className="max-w-xl align-top whitespace-normal">
-        <Link to="/entries/$id" params={{ id: item.entryId }} className="underline underline-offset-2 hover:no-underline">
-          {item.headwordMatched ? <strong>{item.headword}</strong> : item.headword}
-        </Link>
-        <p className="mt-1 text-sm text-muted-foreground">{item.definitionExcerpt}</p>
         {item.inflections.length > 0 && (
-          <p className="mt-1 text-sm text-muted-foreground">
+          <p className="mt-0.5 font-serif text-muted-foreground">
+            also{" "}
             {item.inflections.map((inflection, index) => (
               <span key={inflection.value}>
                 {index > 0 && ", "}
-                {inflection.matched ? <strong>{inflection.value}</strong> : inflection.value}
+                <em>{inflection.matched ? <MatchedWord text={inflection.value} query={query} /> : inflection.value}</em>
               </span>
             ))}
           </p>
         )}
-      </TableCell>
-    </TableRow>
+        <p className="mt-1.5 line-clamp-2 max-w-[68ch] font-serif text-[1.05rem] leading-relaxed">
+          {item.definitionExcerpt}
+        </p>
+      </div>
+      <Link
+        to="/series/$slug"
+        params={{ slug: item.seriesSlug }}
+        className="self-start truncate text-sm text-muted-foreground italic hover:text-foreground sm:max-w-48 sm:pt-1.5"
+      >
+        {item.seriesTitle}
+      </Link>
+    </li>
   );
 }

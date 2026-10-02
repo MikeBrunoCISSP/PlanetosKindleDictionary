@@ -47,7 +47,7 @@ function VerifyEmailPage() {
   }, [token]);
 
   return (
-    <div className="flex min-h-svh items-center justify-center p-4">
+    <div className="flex flex-1 items-center justify-center p-4 py-12">
       <div className="w-full max-w-md">
         <Card>
           {status === "verifying" && (

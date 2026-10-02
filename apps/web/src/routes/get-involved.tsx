@@ -13,7 +13,7 @@ function GetInvolvedPage() {
   const isPending = me != null && me.role !== "ADMIN" && me.approvalStatus !== "APPROVED";
 
   return (
-    <div className="flex min-h-svh items-center justify-center p-4">
+    <div className="flex flex-1 items-center justify-center p-4 py-12">
       <div className="w-full max-w-md">
         <Card>
           <CardHeader>
