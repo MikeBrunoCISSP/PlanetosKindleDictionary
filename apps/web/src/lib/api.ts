@@ -304,6 +304,16 @@ export async function apiDeleteSeries(slug: string): Promise<void> {
   return handleResponse<void>(res);
 }
 
+// Admin-only: queues an immediate build of the series' dictionary, even when
+// its content hasn't changed since the last build.
+export async function apiRebuildSeries(slug: string): Promise<{ jobId: string }> {
+  const res = await fetch(`/api/series/${slug}/rebuild`, {
+    method: "POST",
+    credentials: "include",
+  });
+  return handleResponse<{ jobId: string }>(res);
+}
+
 export async function apiGetSeriesWords(seriesSlug: string): Promise<string[]> {
   const res = await fetch(`/api/series/${seriesSlug}/entries/words`, { credentials: "include" });
   return handleResponse<string[]>(res);

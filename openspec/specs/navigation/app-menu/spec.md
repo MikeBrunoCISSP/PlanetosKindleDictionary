@@ -20,7 +20,7 @@ The application header SHALL display a hamburger menu button to every logged-in 
 
 ### Requirement: Accordion Section Expansion
 
-The menu SHALL present top-level sections (e.g., "Create", "Update") that expand and collapse inline when clicked. Only one section SHALL be open at a time; clicking an already-open section collapses it. The expanded content appears directly below the section header within the menu panel — no flyout or separate popup.
+The menu SHALL present top-level sections (e.g., "Dictionaries", "Entries") that expand and collapse inline when clicked. Only one section SHALL be open at a time; clicking an already-open section collapses it. The expanded content appears directly below the section header within the menu panel — no flyout or separate popup.
 
 #### Scenario: Section expands on click
 
@@ -56,10 +56,10 @@ The items rendered inside each expanded shelf SHALL reflect the current user's p
 - **WHEN** a user with role `ADMIN` expands the "Dictionaries" section
 - **THEN** a "Delete" action item is visible in the shelf
 
-#### Scenario: Member sees empty Dictionaries shelf
+#### Scenario: Member's Dictionaries shelf contains only Download
 
 - **WHEN** a user with role `MEMBER` expands the "Dictionaries" section
-- **THEN** the shelf is empty — no action items are displayed
+- **THEN** a "Download" action item is visible in the shelf, and none of the admin-only Dictionaries actions are displayed
 
 #### Scenario: Member sees Add but not Delete under Entries
 
@@ -121,6 +121,45 @@ The Dictionaries shelf SHALL contain a "Delete" action item visible only to admi
 
 - **WHEN** an admin expands the Dictionaries section and clicks "Delete"
 - **THEN** a searchable dialog opens listing all dictionaries for deletion
+
+### Requirement: Regenerate Action in Dictionaries Shelf
+
+The Dictionaries shelf SHALL contain a "Regenerate" action item visible only to admins. Activating it SHALL open a searchable selection dialog whose first option is "All dictionaries", followed by one option per dictionary. Choosing an option SHALL request an immediate rebuild - bypassing change detection, as defined by build-automation's Administrator Manual Rebuild requirement - for the chosen dictionary, or for every dictionary when "All dictionaries" is chosen. The user SHALL be told the outcome: that the rebuild was queued, or why the request failed. Regenerating SHALL NOT require a separate confirmation step, since a rebuild does not remove or alter any dictionary content.
+
+#### Scenario: Admin sees Regenerate item under Dictionaries
+
+- **WHEN** a user with role `ADMIN` expands the "Dictionaries" section
+- **THEN** a "Regenerate" action item is visible in the shelf
+
+#### Scenario: Non-admin does not see Regenerate
+
+- **WHEN** a user with role `MEMBER`, or an unauthenticated visitor, expands the "Dictionaries" section
+- **THEN** no "Regenerate" action item is displayed
+
+#### Scenario: Regenerate opens dictionary selection dialog
+
+- **WHEN** an admin expands the Dictionaries section and clicks "Regenerate"
+- **THEN** a searchable selection dialog opens, listing "All dictionaries" first, followed by each dictionary
+
+#### Scenario: Admin regenerates one dictionary
+
+- **WHEN** an admin chooses a single dictionary in the Regenerate dialog
+- **THEN** the dialog closes, a rebuild is requested for that dictionary only, and the admin is told the rebuild was queued
+
+#### Scenario: Admin regenerates all dictionaries
+
+- **WHEN** an admin chooses "All dictionaries" in the Regenerate dialog
+- **THEN** the dialog closes, a rebuild is requested for every dictionary, and the admin is told how many rebuilds were queued
+
+#### Scenario: Some rebuild requests fail
+
+- **WHEN** an admin chooses "All dictionaries" and the rebuild request for one or more dictionaries fails
+- **THEN** the rebuilds that succeeded remain queued, and the admin is told how many were queued and how many failed
+
+#### Scenario: A single rebuild request fails
+
+- **WHEN** an admin chooses a single dictionary and the rebuild request fails
+- **THEN** the admin is shown an error explaining that the rebuild could not be queued
 
 ### Requirement: Download Action in Dictionaries Shelf
 
@@ -343,7 +382,7 @@ When no user is logged in, the header SHALL display a "Log In/Register" link in 
 
 ### Requirement: Minimal Menu for Anonymous Visitors
 
-For an unauthenticated visitor, the hamburger menu SHALL render without the user-info header row (there is no logged-in user to show). Of the menu's top-level sections, only "Dictionaries" and "Help" SHALL be present; "Entries" and "Administration" SHALL NOT be rendered at all for an anonymous visitor. The "Dictionaries" shelf, when expanded by an anonymous visitor, SHALL contain only the "Download" action item — none of the admin-only actions ("Create", "Update", "Delete"). The "Help" shelf, when expanded by an anonymous visitor, SHALL contain the "Contact" action item.
+For an unauthenticated visitor, the hamburger menu SHALL render without the user-info header row (there is no logged-in user to show). Of the menu's top-level sections, only "Dictionaries" and "Help" SHALL be present; "Entries" and "Administration" SHALL NOT be rendered at all for an anonymous visitor. The "Dictionaries" shelf, when expanded by an anonymous visitor, SHALL contain only the "Download" action item — none of the admin-only Dictionaries actions. The "Help" shelf, when expanded by an anonymous visitor, SHALL contain the "Contact" action item.
 
 #### Scenario: Anonymous visitor sees only the Dictionaries section
 
@@ -353,7 +392,7 @@ For an unauthenticated visitor, the hamburger menu SHALL render without the user
 #### Scenario: Anonymous visitor's Dictionaries shelf contains only Download
 
 - **WHEN** an unauthenticated visitor expands the "Dictionaries" section
-- **THEN** a "Download" action item is visible in the shelf, and no "Create", "Update", or "Delete" action item is displayed
+- **THEN** a "Download" action item is visible in the shelf, and none of the admin-only Dictionaries actions are displayed
 
 #### Scenario: Anonymous visitor's Help shelf contains Contact
 

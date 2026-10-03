@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Link, useNavigate } from "@tanstack/react-router";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { MenuIcon, ChevronDownIcon, UserIcon } from "lucide-react";
+import { toast } from "sonner";
 import type { SeriesListItemDto, UserDto } from "@planetos/shared";
 import {
   DropdownMenu,
@@ -28,7 +29,7 @@ import {
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { useMe, ME_QUERY_KEY } from "@/lib/useMe";
-import { apiGetSeriesList, apiDeleteSeries, apiLogout, ApiError } from "@/lib/api";
+import { apiGetSeriesList, apiDeleteSeries, apiRebuildSeries, apiLogout, ApiError } from "@/lib/api";
 import { cn } from "@/lib/utils";
 
 export function AppHeader() {
@@ -95,12 +96,13 @@ function AppMenu({ me }: { me: UserDto | null }) {
   const [commandOpen, setCommandOpen] = useState(false);
   const [deleteCommandOpen, setDeleteCommandOpen] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<SeriesListItemDto | null>(null);
+  const [regenerateCommandOpen, setRegenerateCommandOpen] = useState(false);
 
   const { data: seriesList = [] } = useQuery({
     queryKey: ["series", "list"],
     queryFn: () => apiGetSeriesList(),
     staleTime: 60_000,
-    enabled: commandOpen || deleteCommandOpen,
+    enabled: commandOpen || deleteCommandOpen || regenerateCommandOpen,
   });
 
   const deleteMutation = useMutation({
@@ -112,6 +114,34 @@ function AppMenu({ me }: { me: UserDto | null }) {
     onError: (err) => {
       console.error(err instanceof ApiError ? err.message : "Delete failed");
       setDeleteTarget(null);
+    },
+  });
+
+  const regenerateMutation = useMutation({
+    mutationFn: (series: SeriesListItemDto) => apiRebuildSeries(series.slug),
+    onSuccess: (_result, series) => {
+      toast.success(`Regenerating ${series.title}. The new file will be ready in a few minutes.`);
+    },
+    onError: (err, series) => {
+      const reason = err instanceof ApiError ? (err.detail ?? err.message) : "Try again.";
+      toast.error(`Couldn't regenerate ${series.title}. ${reason}`);
+    },
+  });
+
+  // One request per dictionary - the rebuild endpoint is per-series. allSettled
+  // (not all) so one failure can't hide the others that were queued.
+  const regenerateAllMutation = useMutation({
+    mutationFn: async (allSeries: SeriesListItemDto[]) => {
+      const results = await Promise.allSettled(allSeries.map((series) => apiRebuildSeries(series.slug)));
+      const failed = results.filter((result) => result.status === "rejected").length;
+      return { queued: results.length - failed, failed };
+    },
+    onSuccess: ({ queued, failed }) => {
+      if (failed > 0) {
+        toast.warning(`${queued} queued, ${failed} failed.`);
+      } else {
+        toast.success(`Regenerating ${queued} ${queued === 1 ? "dictionary" : "dictionaries"}.`);
+      }
     },
   });
 
@@ -173,6 +203,12 @@ function AppMenu({ me }: { me: UserDto | null }) {
                     onClick={() => setDeleteCommandOpen(true)}
                   >
                     Delete
+                  </DropdownMenuItem>
+                  <DropdownMenuItem
+                    className="pl-6"
+                    onClick={() => setRegenerateCommandOpen(true)}
+                  >
+                    Regenerate
                   </DropdownMenuItem>
                 </>
               )}
@@ -337,6 +373,45 @@ function AppMenu({ me }: { me: UserDto | null }) {
                 onSelect={() => {
                   setDeleteCommandOpen(false);
                   setDeleteTarget(s);
+                }}
+              >
+                {s.title}
+              </CommandItem>
+            ))}
+          </CommandGroup>
+        </CommandList>
+      </CommandDialog>
+
+      {/* Regenerate dictionary selection dialog - no confirmation step, since a
+          rebuild never removes or changes content */}
+      <CommandDialog
+        open={regenerateCommandOpen}
+        onOpenChange={setRegenerateCommandOpen}
+        title="Regenerate Dictionary"
+      >
+        <CommandInput placeholder="Search dictionaries..." />
+        <CommandList>
+          <CommandEmpty>No dictionaries found.</CommandEmpty>
+          <CommandGroup>
+            <CommandItem
+              value="All dictionaries"
+              disabled={seriesList.length === 0}
+              onSelect={() => {
+                setRegenerateCommandOpen(false);
+                regenerateAllMutation.mutate(seriesList);
+              }}
+            >
+              All dictionaries
+            </CommandItem>
+          </CommandGroup>
+          <CommandGroup>
+            {seriesList.map((s) => (
+              <CommandItem
+                key={s.id}
+                value={s.title}
+                onSelect={() => {
+                  setRegenerateCommandOpen(false);
+                  regenerateMutation.mutate(s);
                 }}
               >
                 {s.title}
